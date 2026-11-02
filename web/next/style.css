@@ -540,3 +540,36 @@ textarea::placeholder, input::placeholder { color: #5f718e; }
 .config-grid .wide-field textarea { min-height: 84px; }
 .gw-log { max-height: 520px; }
 .gw-log.expanded { max-height: none; overflow: visible; }
+/* 无黑框：让内容直接落在背景上 */
+.topbar, .brand, .rail, .status-line, .two-col > div, .discover-block,
+.character-sheet, .config-panel, .character-dock, .settings-list,
+.story-toolbar, .task-result, .gw-log {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.topbar, .brand { border: 0; }
+.rail { border-right: 0; }
+.character-sheet { padding: 8px 0 0; }
+.config-panel { padding: 18px 0; }
+.two-col > div { padding: 10px 0; }
+.discover-block { padding: 16px 0; }
+.character-dock { padding: 10px 0; }
+.dock-caption { background: transparent; border: 0; box-shadow: none; }
+.settings-list { overflow: visible; }
+.gw-log { border-left: 1px solid var(--line); border-radius: 0; padding-left: 14px; }
+.task-result { border-left: 1px solid rgba(232,196,124,.45); }
+/* 输入区也不做成黑框 */
+select, input, textarea {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgba(168, 198, 255, .2);
+  border-radius: 0;
+}
+textarea {
+  border-left: 1px solid rgba(168, 198, 255, .14);
+  padding-left: 12px;
+}
+select { color: var(--text); }
+select option { background: #0b1426; color: var(--text); }
