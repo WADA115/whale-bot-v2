@@ -318,6 +318,7 @@ state/story/<chat>/.meta.json
 temp + rename 原子写
 版本号递增
 editor 用旧版本写入会冲突并跳过
+Editor 按会话排队，连续消息不抢版本
 过期锁自动接管
 ```
 
