@@ -573,3 +573,18 @@ textarea {
 }
 select { color: var(--text); }
 select option { background: #0b1426; color: var(--text); }
+.speech {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.emotion-grid img {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+.emotion-grid img:hover {
+  border: 0;
+  box-shadow: none;
+}
