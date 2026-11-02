@@ -5,6 +5,7 @@ import { chooseSticker } from '../character/expression.js';
 import { matchSlang } from '../character/slang.js';
 import { buildNotices } from './notices.js';
 import { selectRelevantSlices } from '../story/retrieval.js';
+import { sendHumanReply } from './speech.js';
 
 export function createActorTurn({
   config,
@@ -217,38 +218,27 @@ export function createActorTurn({
       return;
     }
     try {
-      if (sticker) {
-        await gateway.sendMessage(current.kind, current.id, [
-          { type: 'text', data: { text: reply } },
-          { type: 'image', data: { file: sticker.url } }
-        ]);
-        expressionCooldowns.set(key, Date.now());
-        logger.info('expression.sent', { key, desc: sticker.desc });
-      } else {
-        await gateway.sendText(current.kind, current.id, reply);
-      }
-      stats.sent += 1;
-      metrics?.inc('qqbot_replies_sent_total', { kind: current.kind });
-      metrics?.observe('qqbot_turn_duration_seconds', (Date.now() - startedAt) / 1000, { kind });
-      character.director.recordReply(key, reply);
-      if (current.kind === 'group') groupCooldowns.set(key, Date.now());
       const wantsVoice = Boolean(current.voices?.length) || /语音|声音|念一下|读一下|唱/.test(text);
       const ttsAllowed = tts
         && !(config.tts.privateOnly !== false && current.kind !== 'private')
         && wantsVoice;
-      if (ttsAllowed) {
-        try {
-          const voiceFile = await tts.synthesize(reply);
-          if (voiceFile) {
-            await gateway.sendMessage(current.kind, current.id, [{ type: 'record', data: { file: voiceFile } }]);
-            metrics?.inc('qqbot_tts_requests_total', { outcome: 'ok' });
-            logger.info('tts.sent', { key, chars: reply.length });
-          }
-        } catch (error) {
-          metrics?.inc('qqbot_tts_requests_total', { outcome: 'error' });
-          logger.warn('tts.failed', { key, error: String(error?.message ?? error) });
-        }
-      }
+      const delivery = await sendHumanReply({
+        gateway,
+        kind: current.kind,
+        id: current.id,
+        text: reply,
+        sticker,
+        tts,
+        ttsAllowed,
+        logger
+      });
+      stats.sent += 1;
+      metrics?.inc('qqbot_replies_sent_total', { kind: current.kind });
+      metrics?.observe('qqbot_turn_duration_seconds', (Date.now() - startedAt) / 1000, { kind });
+      if (delivery.stickerSent) expressionCooldowns.set(key, Date.now());
+      if (delivery.voiceSent) metrics?.inc('qqbot_tts_requests_total', { outcome: 'ok' });
+      character.director.recordReply(key, reply);
+      if (current.kind === 'group') groupCooldowns.set(key, Date.now());
       if (storyEditor && story) {
         void enqueueEditor({
           key,

@@ -22,3 +22,4 @@ import './metrics.test.mjs';
 import './people.test.mjs';
 import './retrieval.test.mjs';
 import './maturity.test.mjs';
+import './speech.test.mjs';
