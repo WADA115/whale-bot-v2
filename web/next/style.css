@@ -348,7 +348,7 @@ select:focus, input:focus, textarea:focus {
   border-color: rgba(232,196,124,.65);
   box-shadow: 0 0 0 3px rgba(232,196,124,.08), 0 0 22px rgba(142,231,255,.08);
 }
-textarea { width: 100%; resize: vertical; line-height: 1.85; font-size: 14px; }
+textarea { width: 100%; resize: vertical; line-height: 1.85; font-size: 14px; overflow-y: hidden; }
 textarea::placeholder, input::placeholder { color: #5f718e; }
 
 .episode-list { display: grid; gap: 14px; }
@@ -531,3 +531,11 @@ textarea::placeholder, input::placeholder { color: #5f718e; }
 
 #gwCapabilities { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
 #gwCapabilities .result-item { min-height: 44px; }
+/* 长文本不要被截断 */
+.prose, .task-result, .result-item, .result-item small, .episode p, .setting-row, .gw-log {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.config-grid .wide-field { grid-column: 1 / -1; }
+.config-grid .wide-field textarea { min-height: 84px; }
+.gw-log { max-height: 520px; }

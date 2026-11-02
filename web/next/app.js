@@ -40,6 +40,16 @@ function esc(value) {
   return String(value ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
+function autoGrow(el) {
+  if (!el || el.offsetParent === null) return;
+  el.style.height = 'auto';
+  el.style.height = `${el.scrollHeight + 2}px`;
+}
+
+function autoGrowAll() {
+  requestAnimationFrame(() => $$('textarea').forEach(autoGrow));
+}
+
 async function getJson(url, fallback = null) {
   try {
     const res = await fetch(url, { cache: 'no-store' });
@@ -122,6 +132,7 @@ function renderCharacter() {
   $('#cardValues').value = (card.values || []).join('\n');
   $('#cardBounds').value = (card.boundaries || []).join('\n');
   $('#cardMaturity').value = (card.maturity || []).join('\n');
+  autoGrowAll();
 }
 
 function renderDiscover() {
@@ -269,6 +280,7 @@ async function loadConfig() {
   $('#cfgMaxChars').value = cfg.character?.maxChars ?? 6000;
   $('#cfgCooldown').value = cfg.character?.groupCooldownMs ?? 60000;
   $('#cfgTaskAck').value = cfg.character?.taskAck || '';
+  autoGrowAll();
   $('#cfgTaskAuto').checked = Boolean(cfg.character?.taskAutoRun);
   $('#cfgPrivateOnly').checked = Boolean(cfg.character?.privateOnly);
   $('#cfgVision').checked = Boolean(cfg.vision?.enabled);
@@ -421,6 +433,7 @@ async function loadStory(key) {
   if (!story) story = key === 'private_demo' ? demoStory : { self: '', relationship: '', now: '', episodes: [] };
   $('#storyNow').value = story.now || '';
   $('#storyRelation').value = story.relationship || '';
+  autoGrowAll();
   $('#charSelf').textContent = story.self || '还没有 self.md。';
   $('#storyEpisodes').innerHTML = (story.episodes || []).length
     ? story.episodes.map((e) => `<article class="episode"><h3>${esc(e.title || '一件小事')}</h3><p>${esc(e.text || '')}</p></article>`).join('')
@@ -451,6 +464,7 @@ async function loadPerson() {
   $('#storyPersonHead').value = data.head || '';
   $('#storyPersonMiddle').value = data.middle || '';
   $('#storyPersonTail').value = data.tail || '';
+  autoGrowAll();
 }
 
 async function savePerson() {
@@ -575,6 +589,7 @@ function switchPage(name) {
   activePage = name;
   $$('.rail-item').forEach((btn) => btn.classList.toggle('active', btn.dataset.page === name));
   $$('.page').forEach((page) => page.classList.toggle('active', page.id === `page-${name}`));
+  autoGrowAll();
   if (name === 'gateway') loadGateway();
 }
 
@@ -605,6 +620,9 @@ $('#taskList').addEventListener('click', (event) => {
   if (button) markTaskDone(button.dataset.id);
 });
 
+document.addEventListener('input', (event) => {
+  if (event.target instanceof HTMLTextAreaElement) autoGrow(event.target);
+});
 loadState();
 
 const initialPage = new URLSearchParams(location.search).get('page');
