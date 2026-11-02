@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { loadConfig, ROOT } from '../src/config.js';
+import { OneBotGateway } from '../src/gateway/onebot.js';
+import { createVisionRouter } from '../src/core/vision.js';
+const { config } = loadConfig({ configPath: path.join(ROOT, 'config.json') });
+const gw = new OneBotGateway({ ...config.gateway, logger: console });
+const b64 = fs.readFileSync(path.join(ROOT, 'web', 'assets', 'xiaoshen', 'avatar.png')).toString('base64');
+const msg = gw.normalize({ post_type:'message', message_type:'private', user_id:10001, self_id:10002, message_id:1, sender:{user_id:10001,nickname:'test'}, message:[{type:'image',data:{url:`data:image/png;base64,${b64}`}}] });
+console.log('images', msg.images.length, msg.segments.length);
+const local = config.vision.providers.find(x=>x.id==='local');
+const router = createVisionRouter({ providers:[local], logger:console });
+const r = await router.describe({ message: msg, prompt:'只描述主体，20字以内。' });
+console.log(r.provider, r.text.slice(0,80));

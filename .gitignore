@@ -1,0 +1,11 @@
+node_modules/
+state/
+config.json
+*.log
+.env
+config.preview.json
+config.preview.json.bak-settings
+*.bak-*
+web/next/preview*.png
+web/next/snowluma-ui.png
+scripts/local.paths.ps1

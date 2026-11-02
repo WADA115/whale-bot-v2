@@ -1,0 +1,16 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { loadConfig, ROOT } from '../src/config.js';
+import { createModelRouter } from '../src/core/router.js';
+import { createTaskInbox } from '../src/character/tasks.js';
+import { createTaskExecutor } from '../src/character/executor.js';
+const { config } = loadConfig({ configPath: path.join(ROOT, 'config.json') });
+const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'task-real-'));
+const tasks = createTaskInbox({ file: path.join(dir, 'tasks.json') });
+const router = createModelRouter({ providers: config.models.text });
+const executor = createTaskExecutor({ tasks, textRouter: router, outDir: path.join(dir, 'results') });
+const task = tasks.add({ key: 'private:10001', text: '帮我写一句今天的周报，20字以内' });
+const done = await executor.execute(task);
+console.log({ status: done.status, type: done.taskType, provider: done.provider, result: done.result, file: done.resultFile });
+fs.rmSync(dir, { recursive: true, force: true });

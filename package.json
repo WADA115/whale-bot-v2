@@ -1,0 +1,16 @@
+{
+  "name": "qq-bridge-v2",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Static-module QQ bridge core: OneBot gateway, per-chat actor, model router, shadow mode.",
+  "scripts": {
+    "start": "node src/index.js",
+    "shadow": "node src/index.js --shadow",
+    "test": "node tests/run.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT"
+}

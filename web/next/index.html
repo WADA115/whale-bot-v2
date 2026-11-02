@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>小深 · DeepSeek Runtime</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="ambient" aria-hidden="true">
+    <div class="bg-scene"></div>
+    <div class="aurora aurora-a"></div>
+    <div class="aurora aurora-b"></div>
+    <div class="stars"></div>
+    <div class="orb orb-a"></div>
+    <div class="orb orb-b"></div>
+    <div class="orb orb-c"></div>
+  </div>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <img class="brand-avatar" src="../assets/xiaoshen/avatar.png" alt="小深">
+        <div>
+          <strong>小深</strong>
+          <span>DEEPSEEK RUNTIME</span>
+        </div>
+      </div>
+      <div class="top-status" id="topStatus">
+        <span class="dot"></span>
+        <span>连接中</span>
+      </div>
+    </header>
+
+    <div class="layout">
+      <nav class="rail">
+        <button class="rail-item active" data-page="today"><span>01</span>今天</button>
+        <button class="rail-item" data-page="character"><span>02</span>角色</button>
+        <button class="rail-item" data-page="story"><span>03</span>故事</button>
+        <button class="rail-item" data-page="discover"><span>04</span>发现</button>
+        <button class="rail-item" data-page="settings"><span>05</span>设置</button>
+        <button class="rail-item" data-page="gateway"><span>06</span>网关</button>
+        <div class="rail-foot">只读 / 本地</div>
+      </nav>
+
+      <main class="main" id="main">
+        <section class="page active" id="page-today">
+          <div class="page-head">
+            <p class="eyebrow">TODAY</p>
+            <h1>今天</h1>
+            <p class="lede" id="todayLede">先听她说。</p>
+          </div>
+
+          <div class="status-line" id="todayStatus"></div>
+
+          <div class="two-col">
+            <div>
+              <h2>此刻</h2>
+              <div class="prose" id="todayNow">还没有故事。</div>
+            </div>
+            <div>
+              <h2>最近</h2>
+              <div class="scene-list" id="todayScenes"><p class="muted">还没有对话。</p></div>
+            </div>
+          </div>
+
+          <div class="rule"></div>
+
+          <div class="two-col">
+            <div>
+              <h2>她记得</h2>
+              <div class="list-lines" id="todayMemory"><p class="muted">还没有被写下来的事。</p></div>
+            </div>
+            <div>
+              <h2>她打算</h2>
+              <div class="prose" id="todayPlan">没有特别的打算。</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" id="page-character">
+          <div class="page-head">
+            <p class="eyebrow">CHARACTER</p>
+            <h1>角色</h1>
+            <p class="lede">不是设定集，是她现在相信的自己。</p>
+          </div>
+          <div class="character-sheet">
+            <img src="../assets/xiaoshen/normal.png" alt="小深立绘">
+            <div>
+              <h2 id="charName">小深</h2>
+              <p class="prose" id="charIdentity"></p>
+              <h3>说话</h3>
+              <div class="list-lines" id="charVoice"></div>
+              <h3>边界</h3>
+              <div class="list-lines" id="charBounds"></div>
+              <div class="actions">
+                <a class="text-btn" href="/api/character/export">导出角色卡</a>
+
+              </div>
+            </div>
+          </div>
+          <div class="config-panel">
+            <div class="config-head"><h2>角色卡</h2><span class="muted">保存会备份旧卡</span></div>
+            <div class="config-grid">
+              <label>名字<input id="cardName" type="text"></label>
+              <label>身份<input id="cardIdentity" type="text"></label>
+            </div>
+            <label>说话（每行一条）<textarea id="cardVoice" rows="5"></textarea></label>
+            <label>在意（每行一条）<textarea id="cardValues" rows="5"></textarea></label>
+            <label>边界（每行一条）<textarea id="cardBounds" rows="4"></textarea></label>
+            <div class="config-actions">
+              <button class="text-btn" id="saveCard" type="button">保存角色卡</button>
+              <label class="text-btn file-btn">导入 JSON<input id="cardFile" type="file" accept="application/json"></label>
+              <span class="muted" id="cardStatus"></span>
+            </div>
+          </div>
+          <div class="rule"></div>
+          <h2>self.md</h2>
+          <div class="prose" id="charSelf">还没有 self.md。</div>
+          <div class="rule"></div>
+          <h2>表情</h2>
+          <div class="emotion-grid">
+            <img src="../assets/xiaoshen/emotions/01.png" alt="">
+            <img src="../assets/xiaoshen/emotions/02.png" alt="">
+            <img src="../assets/xiaoshen/emotions/03.png" alt="">
+            <img src="../assets/xiaoshen/emotions/04.png" alt="">
+            <img src="../assets/xiaoshen/emotions/05.png" alt="">
+            <img src="../assets/xiaoshen/emotions/06.png" alt="">
+            <img src="../assets/xiaoshen/emotions/07.png" alt="">
+            <img src="../assets/xiaoshen/emotions/08.png" alt="">
+            <img src="../assets/xiaoshen/emotions/09.png" alt="">
+            <img src="../assets/xiaoshen/emotions/10.png" alt="">
+            <img src="../assets/xiaoshen/emotions/11.png" alt="">
+            <img src="../assets/xiaoshen/emotions/12.png" alt="">
+            <img src="../assets/xiaoshen/emotions/13.png" alt="">
+            <img src="../assets/xiaoshen/emotions/14.png" alt="">
+            <img src="../assets/xiaoshen/emotions/15.png" alt="">
+            <img src="../assets/xiaoshen/emotions/16.png" alt="">
+          </div>
+        </section>
+
+        <section class="page" id="page-story">
+          <div class="page-head">
+            <p class="eyebrow">STORY</p>
+            <h1>故事</h1>
+            <p class="lede">记忆不是档案，是她现在还记得的部分。</p>
+          </div>
+          <div class="story-toolbar">
+            <select id="storyKey"></select>
+            <button class="text-btn" id="storyLoad">读取</button>
+            <button class="text-btn" id="storySave">保存</button>
+          </div>
+          <div class="two-col">
+            <div>
+              <h2>此刻 / 心里 / 打算</h2>
+              <textarea id="storyNow" rows="16" placeholder="此刻、心里、猜、打算"></textarea>
+            </div>
+            <div>
+              <h2>我们</h2>
+              <textarea id="storyRelation" rows="16" placeholder="关系章节"></textarea>
+            </div>
+          </div>
+          <div class="rule"></div>
+          <h2>被想起的事</h2>
+          <div class="episode-list" id="storyEpisodes"><p class="muted">还没有 episode。</p></div>
+
+          <div class="rule"></div>
+          <div class="config-head">
+            <h2>人物</h2>
+            <div class="search-row">
+              <input id="storyPersonId" placeholder="对方 QQ 号">
+              <button class="text-btn" id="storyPersonLoad" type="button">读取</button>
+              <button class="text-btn" id="storyPersonForget" type="button">忘记</button>
+            </div>
+          </div>
+          <div class="two-col">
+            <div>
+              <h3>头部 · 我确定他是什么样的人</h3>
+              <textarea id="storyPersonHead" rows="8" placeholder="长期模式，不因一句话改写"></textarea>
+              <h3>中部 · 让我改观的事</h3>
+              <textarea id="storyPersonMiddle" rows="10" placeholder="可以矛盾，也可以没看懂"></textarea>
+            </div>
+            <div>
+              <h3>尾部 · 他今天给我的感觉</h3>
+              <textarea id="storyPersonTail" rows="18" placeholder="允许不安、吃醋、猜错"></textarea>
+              <p class="config-actions"><button class="text-btn" id="storyPersonSave" type="button">保存人物</button></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" id="page-discover">
+          <div class="page-head">
+            <p class="eyebrow">DISCOVER</p>
+            <h1>发现</h1>
+            <p class="lede">只收视频和动态，不看动画、电影、纪录片和明星。</p>
+          </div>
+
+          <div class="discover-block">
+            <div class="block-head"><h2>B站</h2><span id="biliState">未登录</span></div>
+            <div class="search-row">
+              <input id="biliQuery" placeholder="搜一个关键词，比如：机器人">
+              <button class="text-btn" id="biliSearch">搜索</button>
+              <button class="text-btn" id="biliPopular">热门</button>
+              <button class="text-btn" id="biliLogin">扫码登录</button>
+              <button class="text-btn" id="biliLogout">退出登录</button>
+            </div>
+            <div id="biliQr" class="bili-qr"></div>
+            <div id="biliResults" class="result-list"></div>
+          </div>
+
+          <div class="discover-block">
+            <div class="block-head"><h2>QQ 动态</h2><button class="text-btn" id="qzoneLoad">读取好友动态</button></div>
+            <div class="qzone-compose">
+              <textarea id="qzoneText" rows="3" placeholder="写一条说说"></textarea>
+              <div class="search-row">
+                <select id="qzoneRight">
+                  <option value="4">好友可见</option>
+                  <option value="1">所有人可见</option>
+                  <option value="64">仅自己可见</option>
+                </select>
+                <button class="text-btn" id="qzoneSend">发布</button>
+                <span class="muted" id="qzoneStatus"></span>
+              </div>
+            </div>
+            <div id="qzoneResults" class="result-list"></div>
+          </div>
+
+          <div class="discover-block">
+            <div class="block-head"><h2>她刷到的</h2><span class="muted" id="autoState"></span><button class="text-btn" id="autoTick">现在采集</button></div>
+            <div id="autoResults" class="result-list"></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-settings">
+          <div class="page-head">
+            <p class="eyebrow">SETTINGS</p>
+            <h1>设置</h1>
+            <p class="lede">运行层的东西，不写进她的故事。</p>
+          </div>
+          <div class="settings-list" id="settingsList"></div>
+
+          <div class="config-panel">
+            <div class="config-head">
+              <h2>运行配置</h2>
+              <span class="muted" id="cfgFile">config.json</span>
+            </div>
+            <div class="config-grid">
+              <label>模式
+                <select id="cfgMode">
+                  <option value="shadow">shadow</option>
+                  <option value="live">live</option>
+                </select>
+              </label>
+              <label>回复上限
+                <input id="cfgMaxReply" type="number" min="1" max="2000">
+              </label>
+              <label>角色上下文上限
+                <input id="cfgMaxChars" type="number" min="300" max="20000">
+              </label>
+              <label>群聊冷却（毫秒）
+                <input id="cfgCooldown" type="number" min="0" max="3600000">
+              </label>
+            </div>
+            <label>群白名单（每行一个）
+              <textarea id="cfgGroups" rows="3"></textarea>
+            </label>
+            <label>私聊白名单（每行一个）
+              <textarea id="cfgPrivate" rows="3"></textarea>
+            </label>
+            <label>任务回执
+              <input id="cfgTaskAck" type="text">
+            </label>
+            <div class="switch-grid">
+              <label class="switch"><input id="cfgPrivateOnly" type="checkbox"><span>角色只接私聊</span></label>
+              <label class="switch"><input id="cfgTaskAuto" type="checkbox"><span>任务自动执行</span></label>
+              <label class="switch"><input id="cfgVision" type="checkbox"><span>视觉识别</span></label>
+              <label class="switch"><input id="cfgAsr" type="checkbox"><span>语音识别</span></label>
+              <label class="switch"><input id="cfgTts" type="checkbox"><span>语音回复</span></label>
+              <label class="switch"><input id="cfgKnowledge" type="checkbox"><span>知识库场景注入</span></label>
+              <label class="switch"><input id="cfgAutonomy" type="checkbox"><span>自主发现</span></label>
+              <label class="switch"><input id="cfgBili" type="checkbox"><span>B站</span></label>
+              <label class="switch"><input id="cfgEditor" type="checkbox"><span>Story Editor</span></label>
+              <label class="switch"><input id="cfgAgency" type="checkbox"><span>Story Agency</span></label>
+            </div>
+            <div class="config-actions">
+              <button class="text-btn" id="saveConfig" type="button">保存配置</button>
+              <span class="muted" id="cfgStatus">保存后需要重启服务</span>
+            </div>
+          </div>
+
+          <div class="rule"></div>
+          <h2>任务入站箱</h2>
+          <div id="taskList" class="result-list"></div>
+          <p>
+            <button class="text-btn" id="runTasks" type="button">执行待办</button>
+            <button class="text-btn" id="clearTasks" type="button">清空任务</button>
+          </p>
+
+          <div class="rule"></div>
+          <h2>场景</h2>
+          <div id="sceneList" class="result-list"></div>
+          <p><button class="text-btn" id="clearScenes" type="button">清空场景</button></p>
+
+          <div class="rule"></div>
+          <h2>入口</h2>
+
+          <p><a class="text-btn" href="/api/state">查看原始状态 JSON</a></p>
+        </section>
+
+        <section class="page" id="page-gateway">
+          <div class="page-head">
+            <p class="eyebrow">GATEWAY</p>
+            <h1>网关</h1>
+            <p class="lede">SnowLuma、桥接和 QQ 连接，都在这里。</p>
+          </div>
+          <div class="status-line">
+            <span>连接 <b id="gwConnected">—</b></span>
+            <span>SnowLuma <b id="gwSnow">—</b></span>
+            <span>模式 <b id="gwMode">—</b></span>
+            <span>会话 <b id="gwSessions">—</b></span>
+            <span>审批 <b id="gwPending">—</b></span>
+          </div>
+          <div class="two-col">
+            <div>
+              <h2>SnowLuma 上游</h2>
+              <div id="gwSnowDetail" class="prose">读取中…</div>
+            </div>
+            <div>
+              <h2>会话映射 / 审批</h2>
+              <div id="gwSessionDetail" class="result-list"><p class="muted">读取中…</p></div>
+            </div>
+          </div>
+          <div class="config-panel">
+            <div class="config-head"><h2>能力矩阵</h2><button class="text-btn" id="gwCapRefresh" type="button">刷新</button></div>
+            <div id="gwCapabilities" class="result-list"><p class="muted">读取中…</p></div>
+          </div>
+          <div class="config-panel">
+            <div class="config-head"><h2>活动日志</h2><div class="search-row"><select id="gwLogType"><option value="v2">v2</option><option value="watchdog">watchdog</option><option value="start">start-all</option></select><button class="text-btn" id="gwRefresh" type="button">刷新</button></div></div>
+            <pre id="gwLog" class="gw-log">读取中…</pre>
+          </div>
+          <div class="config-panel">
+            <h2>白名单 / 安全</h2>
+            <p class="muted">群白名单、私聊白名单、管理员和权限都在设置页维护。</p>
+            <div class="config-actions">
+              <a class="text-btn" href="http://127.0.0.1:5099/" target="_blank" rel="noreferrer">打开 SnowLuma 控制台</a>
+              <button class="text-btn" id="gwStartAll" type="button">启动全部</button>
+              <button class="text-btn" type="button" onclick="switchPage('settings')">打开设置</button>
+              <a class="text-btn" href="/api/gateway/overview" target="_blank" rel="noreferrer">原始网关 JSON</a>
+            </div>
+            <p class="muted" style="margin:12px 0 0">注入 Hook、选择 QQ 进程和查看 SnowLuma 日志，都在 SnowLuma 控制台里。</p>
+            <div class="search-row" style="margin-top:14px"><input id="gwTestText" placeholder="测试发送内容"><button class="text-btn" id="gwTestSend" type="button">测试私聊</button><button class="text-btn" id="gwRestart" type="button">重启 v2</button></div>
+          </div>
+        </section>
+      </main>
+
+      <aside class="character-dock">
+        <div class="dock-halo" aria-hidden="true"></div>
+        <div class="speech" id="speech">在。</div>
+        <div class="dock-frame">
+          <img src="../assets/xiaoshen/normal.png" alt="小深">
+          <span class="dock-spark s1" aria-hidden="true">✦</span>
+          <span class="dock-spark s2" aria-hidden="true">✧</span>
+          <span class="dock-spark s3" aria-hidden="true">✦</span>
+        </div>
+        <div class="dock-caption">
+          <span>小深</span>
+          <small id="dockStatus">等待连接</small>
+        </div>
+      </aside>
+    </div>
+  </div>
+  <script src="./app.js"></script>
+</body>
+</html>

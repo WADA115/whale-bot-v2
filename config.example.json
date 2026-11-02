@@ -1,0 +1,162 @@
+{
+  "mode": "shadow",
+  "gateway": {
+    "enabled": true,
+    "httpUrl": "http://127.0.0.1:3000",
+    "wsUrl": "ws://127.0.0.1:3001",
+    "accessToken": "",
+    "wsAccessToken": "",
+    "reconnectMs": 3000
+  },
+  "allow": {
+    "groups": [],
+    "private": []
+  },
+  "role": {
+    "name": "小鲸鱼",
+    "aliases": [
+      "鱼鱼",
+      "小鲸鱼"
+    ],
+    "groupTrigger": "mention",
+    "otherBots": [
+      "小鲸鱼",
+      "肥鱼",
+      "蓝汐"
+    ]
+  },
+  "actor": {
+    "coalesceMs": 1200,
+    "maxQueue": 20,
+    "maxReplyChars": 160
+  },
+  "models": {
+    "text": [
+      {
+        "id": "deepseek",
+        "type": "openai",
+        "baseURL": "https://api.deepseek.com/v1",
+        "model": "deepseek-flash",
+        "apiKeyEnv": "DEEPSEEK_API_KEY",
+        "timeoutMs": 15000
+      },
+      {
+        "id": "local",
+        "type": "ollama",
+        "baseURL": "http://127.0.0.1:11434",
+        "model": "qwen3:4b",
+        "timeoutMs": 25000
+      }
+    ]
+  },
+  "healthPort": 3201,
+  "secretsFile": "state/secrets.json",
+  "shadow": {
+    "callModels": false
+  },
+  "roleFile": "roles/小鲸鱼.md",
+  "knowledge": {
+    "enabled": true,
+    "dbPath": "../qq-bridge/state/knowledge/knowledge.db",
+    "topK": 4
+  },
+  "vision": {
+    "enabled": true,
+    "providers": [
+      {
+        "id": "zhipu-paid",
+        "type": "openai",
+        "baseURL": "https://open.bigmodel.cn/api/paas/v4",
+        "model": "glm-4.6v",
+        "secretName": "zhipuApiKey",
+        "timeoutMs": 30000,
+        "maxTokens": 400
+      },
+      {
+        "id": "local",
+        "type": "ollama",
+        "baseURL": "http://127.0.0.1:11434",
+        "model": "qwen3-vl:4b",
+        "timeoutMs": 90000,
+        "maxTokens": 700,
+        "numCtx": 4096
+      },
+      {
+        "id": "zhipu-flash",
+        "type": "openai",
+        "baseURL": "https://open.bigmodel.cn/api/paas/v4",
+        "model": "glm-4.6v-flash",
+        "secretName": "zhipuApiKey",
+        "timeoutMs": 30000,
+        "maxTokens": 400
+      }
+    ]
+  },
+  "character": {
+    "enabled": true,
+    "cardFile": "characters/小鲸鱼.json",
+    "sceneFile": "state/scenes.json",
+    "privateOnly": true,
+    "maxChars": 2500,
+    "groupCooldownMs": 8000,
+    "taskFile": "state/tasks.json",
+    "taskAck": "任务记下了，执行层还没接。",
+    "taskAckGroups": false,
+    "expression": {
+      "enabled": true,
+      "privateOnly": true,
+      "cooldownMs": 600000,
+      "stickersFile": "state/stickers.json"
+    },
+    "slangFile": "state/slang.json"
+  },
+  "bilibili": {
+    "enabled": true,
+    "cookieFile": "state/bilibili.json"
+  },
+  "autonomy": {
+    "enabled": true,
+    "stateFile": "state/autonomy.json",
+    "intervalMs": 1800000,
+    "notifyOwner": true,
+    "owner": "",
+    "maxPerDay": 1,
+    "minGapMinutes": 360,
+    "minIdleMinutes": 360,
+    "quietStart": 0,
+    "quietEnd": 8,
+    "maxItems": 5,
+    "sources": {
+      "bilibili": false,
+      "bilibiliSearch": true,
+      "qzone": true
+    },
+    "keywords": [
+      "AI工具",
+      "机器人",
+      "科技",
+      "编程",
+      "数码",
+      "互联网"
+    ],
+    "allowCommentary": true
+  },
+  "story": {
+    "enabled": true,
+    "dir": "state/story",
+    "editor": {
+      "enabled": true
+    },
+    "agency": {
+      "enabled": true,
+      "stateFile": "state/agency.json",
+      "intervalMs": 600000,
+      "minIdleMinutes": 180,
+      "maxPerDay": 1,
+      "minGapMinutes": 360,
+      "quietStart": 0,
+      "quietEnd": 8,
+      "maxChars": 2500
+    }
+  }
+}
