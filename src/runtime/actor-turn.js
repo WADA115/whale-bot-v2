@@ -167,12 +167,19 @@ export function createActorTurn({
     const slangLines = matchSlang(text, slang);
     const slangBlock = slangLines.length ? `黑话：${slangLines.join('；')}` : '';
     let groupHistory = '';
-    if (current.kind === 'group' && /群里|群消息|看看群|他们刚才|刚才.*(说|聊)/.test(text)) {
+    if (/群里|群消息|看看群|他们刚才|刚才.*(说|聊)/.test(text)) {
+      const groupIds = current.kind === 'group'
+        ? [current.id]
+        : (config.allow?.groups || []);
       try {
-        const lines = await readGroupHistory({ gateway, groupId: current.id });
-        if (lines.length) {
-          groupHistory = `群里的原话：\n${lines.join('\n')}`;
-          logger.info('group.history_read', { key, count: lines.length });
+        const blocks = [];
+        for (const groupId of groupIds) {
+          const lines = await readGroupHistory({ gateway, groupId });
+          if (lines.length) blocks.push(lines.join('\n'));
+        }
+        if (blocks.length) {
+          groupHistory = `群里的原话：\n${blocks.join('\n\n')}`;
+          logger.info('group.history_read', { key, groups: groupIds.length });
         }
       } catch (error) {
         logger.warn('group.history_failed', { key, error: String(error?.message ?? error) });
