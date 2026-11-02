@@ -27,7 +27,6 @@ import { createActorTurn } from './runtime/actor-turn.js';
 import { createPanelHandler } from './http/routes.js';
 import { createCapabilities } from './runtime/capabilities.js';
 import { createMetrics } from './runtime/metrics.js';
-import { createGroupContext } from './runtime/group-context.js';
 
 const V1_ROOT = path.join(ROOT, '..', 'qq-bridge');
 const FFMPEG = process.env.FFMPEG_PATH || path.join(V1_ROOT, 'tools', 'ffmpeg', 'ffmpeg.exe');
@@ -154,7 +153,6 @@ ${task.result}`);
   let connected = false;
   const groupCooldowns = new Map();
   const inboundSeq = new Map();
-  const groupContext = createGroupContext();
 
   const stats = { sent: 0, imageCount: 0 };
   const metrics = createMetrics();
@@ -181,7 +179,6 @@ ${task.result}`);
     stats,
     metrics,
     inboundSeq,
-    groupContext,
     callModels
   });
 
@@ -200,7 +197,6 @@ ${task.result}`);
   });
 
   function dispatchMessage(message) {
-    if (message.kind === 'group') groupContext.observe(message);
     if (gateway.isSelf(message)) {
       logger.debug('message.self_ignored', { key: message.key });
       return;
