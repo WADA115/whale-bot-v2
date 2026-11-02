@@ -7,6 +7,7 @@ import { buildNotices } from './notices.js';
 import { selectRelevantSlices } from '../story/retrieval.js';
 import { sendHumanReply } from './speech.js';
 import { shouldReflect } from '../story/reflect.js';
+import { readGroupHistory } from './group-history.js';
 
 export function createActorTurn({
   config,
@@ -165,6 +166,18 @@ export function createActorTurn({
     }
     const slangLines = matchSlang(text, slang);
     const slangBlock = slangLines.length ? `黑话：${slangLines.join('；')}` : '';
+    let groupHistory = '';
+    if (current.kind === 'group' && /群里|群消息|看看群|他们刚才|刚才.*(说|聊)/.test(text)) {
+      try {
+        const lines = await readGroupHistory({ gateway, groupId: current.id });
+        if (lines.length) {
+          groupHistory = `群里的原话：\n${lines.join('\n')}`;
+          logger.info('group.history_read', { key, count: lines.length });
+        }
+      } catch (error) {
+        logger.warn('group.history_failed', { key, error: String(error?.message ?? error) });
+      }
+    }
     if (!story) {
       logger.warn('story.missing', { key });
       return;
@@ -184,6 +197,7 @@ export function createActorTurn({
       turns: promptTurns,
       intent: scene.intent,
       notes: [
+        groupHistory,
         reference,
         slangBlock,
         imageDesc ? `图片：${imageDesc}\n（这一轮有图，回应里自然带出你看到的内容，不要装作没看到）` : '',
