@@ -16,13 +16,21 @@ export function imageSegments(message) {
   return (message?.segments ?? []).filter((seg) => seg?.type === 'image' && (seg?.data?.url || seg?.data?.file));
 }
 
-async function fetchImage(url, { timeoutMs = 15000, fetchImpl = fetch } = {}) {
-  const res = await fetchImpl(url, { signal: AbortSignal.timeout(timeoutMs) });
-  if (!res.ok) throw new Error(`image http ${res.status}`);
-  const type = String(res.headers.get('content-type') || 'image/jpeg').split(';')[0];
-  const buf = Buffer.from(await res.arrayBuffer());
-  if (!buf.length || buf.length > 6 * 1024 * 1024) throw new Error('image too large or empty');
-  return { base64: buf.toString('base64'), mime: type.startsWith('image/') ? type : 'image/jpeg' };
+async function fetchImage(url, { timeoutMs = 30000, fetchImpl = fetch } = {}) {
+  let lastError;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const res = await fetchImpl(url, { signal: AbortSignal.timeout(timeoutMs) });
+      if (!res.ok) throw new Error(`image http ${res.status}`);
+      const type = String(res.headers.get('content-type') || 'image/jpeg').split(';')[0];
+      const buf = Buffer.from(await res.arrayBuffer());
+      if (!buf.length || buf.length > 6 * 1024 * 1024) throw new Error('image too large or empty');
+      return { base64: buf.toString('base64'), mime: type.startsWith('image/') ? type : 'image/jpeg' };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError;
 }
 
 function requestFor(provider, { system, user, images }) {

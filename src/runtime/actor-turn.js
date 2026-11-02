@@ -32,6 +32,7 @@ export function createActorTurn({
   stats,
   metrics,
   inboundSeq,
+  liveGroup,
   callModels
 }) {
   const editorQueue = new Map();
@@ -174,8 +175,12 @@ export function createActorTurn({
       try {
         const blocks = [];
         for (const groupId of groupIds) {
-          const lines = await readGroupHistory({ gateway, groupId });
-          if (lines.length) blocks.push(lines.join('\n'));
+          const live = liveGroup?.recent(`group:${groupId}`) || [];
+          if (live.length) blocks.push(live.join('\n'));
+          else {
+            const lines = await readGroupHistory({ gateway, groupId });
+            if (lines.length) blocks.push(lines.join('\n'));
+          }
         }
         if (blocks.length) {
           groupHistory = `群里的原话：\n${blocks.join('\n\n')}`;
