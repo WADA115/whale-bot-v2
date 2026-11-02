@@ -373,6 +373,80 @@ async function runTasks() {
   }
 }
 
+function readCardForm() {
+  const lines = (id) => $(id).value.split('\n').map((x) => x.trim()).filter(Boolean);
+  return {
+    name: $('#cardName').value.trim(),
+    identity: $('#cardIdentity').value.trim(),
+    voice: lines('#cardVoice'),
+    values: lines('#cardValues'),
+    boundaries: lines('#cardBounds')
+  };
+}
+
+function fillCardForm(card) {
+  $('#cardName').value = card.name || '';
+  $('#cardIdentity').value = card.identity || '';
+  $('#cardVoice').value = (card.voice || []).join('\n');
+  $('#cardValues').value = (card.values || []).join('\n');
+  $('#cardBounds').value = (card.boundaries || []).join('\n');
+  autoGrowAll();
+}
+
+async function personaRequest(path, body) {
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `请求失败 ${res.status}`);
+  return data.card;
+}
+
+async function personaDraft() {
+  const brief = $('#personaBrief').value.trim();
+  if (!brief) {
+    $('#personaStatus').textContent = '先写一句想让她是什么样。';
+    return;
+  }
+  const button = $('#personaDraft');
+  button.disabled = true;
+  $('#personaStatus').textContent = '起草中…';
+  try {
+    const card = await personaRequest('/api/persona/draft', { brief });
+    fillCardForm(card);
+    $('#personaStatus').textContent = '已填入。检查后点“保存角色卡”。';
+  } catch (error) {
+    $('#personaStatus').textContent = String(error.message || error);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function personaRefine() {
+  const instruction = $('#personaInstruction').value.trim();
+  if (!instruction) {
+    $('#personaStatus').textContent = '写一句想怎么改。';
+    return;
+  }
+  const button = $('#personaRefine');
+  button.disabled = true;
+  $('#personaStatus').textContent = '精修中…';
+  try {
+    const card = await personaRequest('/api/persona/refine', {
+      card: readCardForm(),
+      instruction
+    });
+    fillCardForm(card);
+    $('#personaStatus').textContent = '已改。检查后点“保存角色卡”。';
+  } catch (error) {
+    $('#personaStatus').textContent = String(error.message || error);
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function saveCard() {
   const lines = (id) => $(id).value.split('\n').map((x) => x.trim()).filter(Boolean);
   const body = {
@@ -602,6 +676,8 @@ $('#qzoneLoad').addEventListener('click', qzoneLoad);
 $('#qzoneSend').addEventListener('click', qzoneSend);
 $('#autoTick').addEventListener('click', autoTick);
 $('#saveCard').addEventListener('click', saveCard);
+$('#personaDraft').addEventListener('click', personaDraft);
+$('#personaRefine').addEventListener('click', personaRefine);
 $('#cardFile').addEventListener('change', importCard);
 $('#clearScenes').addEventListener('click', clearScenes);
 $('#saveConfig').addEventListener('click', saveConfig);

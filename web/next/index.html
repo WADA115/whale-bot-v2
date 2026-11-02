@@ -113,6 +113,18 @@
               <span class="muted" id="cardStatus"></span>
             </div>
           </div>
+          <div class="config-panel">
+            <div class="config-head"><h2>人格工坊</h2><span class="muted">AI 起草，你来改；保存才生效</span></div>
+            <label>想让她是什么样<textarea id="personaBrief" rows="4" placeholder="例如：一个不太爱解释、说话很短的人。对熟人放松，对陌生人客气"></textarea></label>
+            <div class="config-actions">
+              <button class="text-btn" id="personaDraft" type="button">生成人格</button>
+              <span class="muted" id="personaStatus"></span>
+            </div>
+            <label>再改一点<textarea id="personaInstruction" rows="3" placeholder="例如：再冷一点，别老是反问；把在意的东西写具体一点"></textarea></label>
+            <div class="config-actions">
+              <button class="text-btn" id="personaRefine" type="button">按这句话精修</button>
+            </div>
+          </div>
           <div class="rule"></div>
           <h2>self.md</h2>
           <div class="prose" id="charSelf">还没有 self.md。</div>

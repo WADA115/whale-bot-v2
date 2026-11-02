@@ -14,6 +14,39 @@ const TYPES = {
   '.ico': 'image/x-icon'
 };
 
+export function personaFromText(raw, fallback = {}) {
+  const value = String(raw ?? '');
+  const match = value.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('模型没有返回角色卡 JSON');
+  const parsed = JSON.parse(match[0]);
+  const text = (item, max) => String(item ?? '').trim().slice(0, max);
+  const list = (items, max) => (Array.isArray(items) ? items : String(items ?? '').split('\n'))
+    .map((item) => String(item).trim()).filter(Boolean).slice(0, max);
+  const card = {
+    name: text(parsed.name, 40) || text(fallback.name, 40),
+    identity: text(parsed.identity, 1200) || text(fallback.identity, 1200),
+    voice: list(parsed.voice, 12),
+    values: list(parsed.values, 12),
+    boundaries: list(parsed.boundaries, 12)
+  };
+  if (!card.name) throw new Error('角色卡缺少名字');
+  if (!card.identity) throw new Error('角色卡缺少身份');
+  return card;
+}
+
+export function personaPrompt(brief, current = null, instruction = '') {
+  const system = [
+    '你是 QQ 角色卡编辑助手。',
+    '根据用户描述写一张角色卡，只输出 JSON，不要 Markdown，不要解释。',
+    '字段：name 字符串，identity 字符串，voice 字符串数组，values 字符串数组，boundaries 字符串数组。',
+    '不要写年龄、天数、年限、次数、分数、等级、概率、函数、固定台词、示例对话。',
+    '身份要像一个人，不要写客服、助手、工具人。'
+  ].join('\n');
+  const user = current
+    ? `当前角色卡：\n${JSON.stringify(current, null, 2)}\n\n精修要求：\n${instruction}`
+    : `角色描述：\n${brief}`;
+  return { system, user };
+}
 export function createPanelHandler(ctx) {
   const { config, logger } = ctx;
 
@@ -342,7 +375,42 @@ export function createPanelHandler(ctx) {
       json(res, 200, { ok: true });
       return;
     }
-    if (req.url === '/api/character' && req.method === 'POST') {
+    if (pathname === '/api/persona/draft' && req.method === 'POST') {
+      readBody(req).then(async (body) => {
+        if (!ctx.textRouter) return json(res, 503, { error: 'text model unavailable' });
+        const brief = String(body?.brief ?? '').trim();
+        if (!brief) return json(res, 400, { error: 'brief required' });
+        try {
+          const result = await ctx.textRouter.generate(personaPrompt(brief));
+          const card = personaFromText(result.text, ctx.character?.card);
+          logger.info('persona.drafted', { provider: result.provider });
+          return json(res, 200, { ok: true, card });
+        } catch (error) {
+          logger.warn('persona.draft_failed', { error: String(error?.message ?? error) });
+          return json(res, 502, { error: String(error?.message ?? error) });
+        }
+      }).catch(() => json(res, 400, { error: 'invalid json' }));
+      return;
+    }
+    if (pathname === '/api/persona/refine' && req.method === 'POST') {
+      readBody(req).then(async (body) => {
+        if (!ctx.textRouter) return json(res, 503, { error: 'text model unavailable' });
+        const instruction = String(body?.instruction ?? '').trim();
+        if (!instruction) return json(res, 400, { error: 'instruction required' });
+        const current = body?.card && typeof body.card === 'object' ? body.card : ctx.character?.card;
+        if (!current) return json(res, 409, { error: 'character unavailable' });
+        try {
+          const result = await ctx.textRouter.generate(personaPrompt('', current, instruction));
+          const card = personaFromText(result.text, current);
+          logger.info('persona.refined', { provider: result.provider });
+          return json(res, 200, { ok: true, card });
+        } catch (error) {
+          logger.warn('persona.refine_failed', { error: String(error?.message ?? error) });
+          return json(res, 502, { error: String(error?.message ?? error) });
+        }
+      }).catch(() => json(res, 400, { error: 'invalid json' }));
+      return;
+    }    if (req.url === '/api/character' && req.method === 'POST') {
       readBody(req).then((body) => {
         if (!ctx.character) return json(res, 409, { error: 'character disabled' });
         const input = body?.card ?? body ?? {};
