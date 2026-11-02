@@ -31,6 +31,7 @@ export function createActorTurn({
   stats,
   metrics,
   inboundSeq,
+  groupContext,
   callModels
 }) {
   const editorQueue = new Map();
@@ -184,6 +185,7 @@ export function createActorTurn({
       turns: promptTurns,
       intent: scene.intent,
       notes: [
+        groupContext?.format(key, current.messageId) || '',
         reference,
         slangBlock,
         imageDesc ? `图片：${imageDesc}\n（这一轮有图，回应里自然带出你看到的内容，不要装作没看到）` : '',
