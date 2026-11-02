@@ -6,6 +6,7 @@ import test from 'node:test';
 import { createStoryStore } from '../src/story/store.js';
 import { buildCharacterPrompt } from '../src/character/actor.js';
 import { buildNarrativePrompt } from '../src/story/prompt.js';
+import { createStoryEditor } from '../src/story/editor.js';
 
 const card = {
   name: '小鲸鱼',
@@ -40,4 +41,29 @@ test('旧角色 prompt 也带心理成熟', () => {
   const prompt = buildCharacterPrompt({ card });
   assert.match(prompt.user, /心理成熟/);
   assert.match(prompt.user, /可以生气/);
+});
+test('Editor 把改正写成回忆，不写系统话', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'maturity-editor-'));
+  const store = createStoryStore({ root });
+  store.ensure('private:1', card);
+  let captured = '';
+  const editor = createStoryEditor({
+    store,
+    textRouter: {
+      generate: async (prompt) => {
+        captured = prompt.system;
+        return { text: '【此刻】\n在听。' };
+      }
+    }
+  });
+  await editor.update({
+    key: 'private:1',
+    card,
+    story: store.read('private:1'),
+    turns: [],
+    userText: '我叫张三',
+    reply: '嗯。'
+  });
+  assert.match(captured, /原来以为/);
+  assert.match(captured, /不像日志/);
 });
