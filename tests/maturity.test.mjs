@@ -34,8 +34,7 @@ test('prompt 直接是她，不是扮演她', () => {
   assert.match(prompt.system, /你是小鲸鱼/);
   assert.doesNotMatch(prompt.system, /你在扮演/);
   assert.doesNotMatch(prompt.system, /心理成熟/);
-  assert.match(prompt.system, /说话短一点/);
-  assert.match(prompt.system, /被指出习惯时先改/);
+  assert.doesNotMatch(prompt.system, /一句|每句/);
 });
 
 test('旧角色 prompt 也不再塞成熟清单', () => {

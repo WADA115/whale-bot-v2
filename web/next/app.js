@@ -131,7 +131,6 @@ function renderCharacter() {
   $('#cardVoice').value = (card.voice || []).join('\n');
   $('#cardValues').value = (card.values || []).join('\n');
   $('#cardBounds').value = (card.boundaries || []).join('\n');
-  $('#cardMaturity').value = (card.maturity || []).join('\n');
   autoGrowAll();
 }
 
@@ -381,8 +380,7 @@ async function saveCard() {
     identity: $('#cardIdentity').value,
     voice: lines('#cardVoice'),
     values: lines('#cardValues'),
-    boundaries: lines('#cardBounds'),
-    maturity: lines('#cardMaturity')
+    boundaries: lines('#cardBounds')
   };
   $('#cardStatus').textContent = '保存中…';
   try {
