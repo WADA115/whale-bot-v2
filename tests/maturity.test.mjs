@@ -33,6 +33,7 @@ test('叙事 prompt 带心理成熟', () => {
   });
   assert.match(prompt.system, /心理成熟/);
   assert.match(prompt.system, /可爱是外观/);
+  assert.match(prompt.system, /不要用括号/);
 });
 
 test('旧角色 prompt 也带心理成熟', () => {

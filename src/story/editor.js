@@ -137,7 +137,7 @@ export function createStoryEditor({ store, textRouter, logger = null }) {
       key,
       now: Boolean(parsed.now),
       relationship: Boolean(parsed.relationship),
-      event: Boolean(parsed.event?.title),
+      hasEvent: Boolean(parsed.event?.title),
       old: Boolean(parsed.old?.title),
       chapter: Boolean(parsed.chapter?.title),
       person: Boolean(parsed.person?.head || parsed.person?.middle || parsed.person?.tail)
