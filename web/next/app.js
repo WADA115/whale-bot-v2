@@ -607,6 +607,10 @@ $('#saveCard').addEventListener('click', saveCard);
 $('#cardFile').addEventListener('change', importCard);
 $('#clearScenes').addEventListener('click', clearScenes);
 $('#saveConfig').addEventListener('click', saveConfig);
+$('#gwExpand').addEventListener('click', () => {
+  const expanded = $('#gwLog').classList.toggle('expanded');
+  $('#gwExpand').textContent = expanded ? '收起' : '展开';
+});
 $('#gwRefresh').addEventListener('click', () => { loadGateway(); loadGatewayLog(); });
 $('#gwLogType').addEventListener('change', loadGatewayLog);
 $('#gwCapRefresh').addEventListener('click', loadCapabilities);

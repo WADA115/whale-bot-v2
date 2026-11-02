@@ -539,3 +539,4 @@ textarea::placeholder, input::placeholder { color: #5f718e; }
 .config-grid .wide-field { grid-column: 1 / -1; }
 .config-grid .wide-field textarea { min-height: 84px; }
 .gw-log { max-height: 520px; }
+.gw-log.expanded { max-height: none; overflow: visible; }
