@@ -27,3 +27,4 @@ import './reflect.test.mjs';
 import './reply.test.mjs';
 import './group-history.test.mjs';
 import './live-group.test.mjs';
+import './router-tools.test.mjs';

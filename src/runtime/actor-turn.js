@@ -200,6 +200,37 @@ export function createActorTurn({
         logger.warn('group.history_failed', { key, error: String(error?.message ?? error) });
       }
     }
+
+    const groupTool = {
+      type: 'function',
+      function: {
+        name: 'look_group_history',
+        description: '想看看群里最近的原话时使用。返回群名和原话，不返回摘要。',
+        parameters: { type: 'object', properties: {} }
+      }
+    };
+    const lookAtGroups = async () => {
+      const groupIds = current.kind === 'group'
+        ? [current.id]
+        : (config.allow?.groups || []);
+      const names = [];
+      const blocks = [];
+      for (const groupId of groupIds) {
+        const groupKey = `group:${groupId}`;
+        const live = liveGroup?.recent(groupKey) || [];
+        const liveName = liveGroup?.name(groupKey) || '';
+        if (liveName) names.push(liveName);
+        if (live.length) {
+          blocks.push(`${liveName || groupId}：\n${live.join('\n')}`);
+        } else {
+          const { groupName, lines } = await readGroupHistory({ gateway, groupId });
+          if (groupName) names.push(groupName);
+          if (lines.length) blocks.push(`${groupName || groupId}：\n${lines.join('\n')}`);
+        }
+      }
+      if (!blocks.length) return `你在这些群里：${[...new Set(names)].join('、') || '没有可读的群'}。这段时间没有读到原话。`;
+      return `你在这些群里：${[...new Set(names)].join('、')}\n\n${blocks.join('\n\n')}`;
+    };
     if (!story) {
       logger.warn('story.missing', { key });
       return;
@@ -235,7 +266,13 @@ export function createActorTurn({
     logger.info('character.actor_prompt', { key, chars: prompt.chars, story: true });
     let result;
     try {
-      result = await textRouter.generate(prompt);
+      result = textRouter.generateWithTools
+        ? await textRouter.generateWithTools({
+          ...prompt,
+          tools: [groupTool],
+          execute: async (name) => (name === 'look_group_history' ? lookAtGroups() : '没有这个动作。')
+        })
+        : await textRouter.generate(prompt);
     } catch (error) {
       metrics?.inc('qqbot_errors_total', { area: 'model' });
       logger.error('turn.model_failed', { key, error: String(error?.message ?? error) });

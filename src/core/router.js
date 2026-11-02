@@ -25,8 +25,7 @@ function providerRequest(provider, { system, user, fetchImpl }) {
       }),
       signal: AbortSignal.timeout(Number(provider.timeoutMs) || 15000)
     });
-  }
-  if (provider.type === 'ollama') {
+  }  if (provider.type === 'ollama') {
     return fetchImpl(`${String(provider.baseURL).replace(/\/+$/, '').replace(/\/v1$/, '')}/api/chat`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -66,6 +65,27 @@ async function parseResponse(provider, response) {
   return stripThink(data?.message?.content ?? '');
 }
 
+async function openaiToolTurn(provider, { messages, tools, fetchImpl }) {
+  if (!provider.apiKey) throw new Error('missing api key');
+  const response = await fetchImpl(`${String(provider.baseURL).replace(/\/+$/, '')}/chat/completions`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${provider.apiKey}` },
+    body: JSON.stringify({
+      model: provider.model,
+      messages,
+      tools,
+      tool_choice: 'auto',
+      max_tokens: Number(provider.maxTokens) || 500,
+      temperature: Number(provider.temperature) || 0.7
+    }),
+    signal: AbortSignal.timeout(Number(provider.timeoutMs) || 30000)
+  });
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`${provider.id} http ${response.status}${body ? ': ' + body.slice(0, 200) : ''}`);
+  }
+  return response.json();
+}
 export function createModelRouter({ providers = [], logger = null, fetchImpl = fetch, cooldownMs = 60000 } = {}) {
   if (!Array.isArray(providers) || !providers.length) throw new Error('providers required');
   const health = new Map(providers.map((p) => [p.id, { failures: 0, downUntil: 0 }]));
@@ -98,5 +118,56 @@ export function createModelRouter({ providers = [], logger = null, fetchImpl = f
     throw new Error(`all providers failed: ${errors.join(' | ')}`);
   }
 
-  return { generate, health: () => Object.fromEntries(health) };
+  async function generateWithTools({ system = '', user, tools = [], execute } = {}) {
+    if (!Array.isArray(tools) || !tools.length || typeof execute !== 'function') {
+      return generate({ system, user });
+    }
+    for (const provider of providers) {
+      if (provider.type !== 'openai') continue;
+      const messages = [
+        ...(system ? [{ role: 'system', content: system }] : []),
+        { role: 'user', content: user }
+      ];
+      try {
+        for (let round = 0; round < 3; round += 1) {
+          const data = await openaiToolTurn(provider, { messages, tools, fetchImpl });
+          const message = data?.choices?.[0]?.message || {};
+          const calls = Array.isArray(message.tool_calls) ? message.tool_calls : [];
+          if (calls.length) {
+            messages.push({
+              role: 'assistant',
+              content: message.content ?? null,
+              tool_calls: calls
+            });
+            for (const call of calls) {
+              let result = '';
+              try {
+                const args = call.function?.arguments ? JSON.parse(call.function.arguments) : {};
+                result = await execute(call.function?.name, args);
+              } catch (error) {
+                result = `读取失败：${String(error?.message ?? error)}`;
+              }
+              messages.push({
+                role: 'tool',
+                tool_call_id: String(call.id ?? ''),
+                content: String(result ?? '')
+              });
+            }
+            continue;
+          }
+          const text = stripThink(message.content ?? '');
+          if (text) {
+            logger?.info('router.ok', { provider: provider.id, tools: true });
+            return { text, provider: provider.id, tools: true };
+          }
+          throw new Error('empty response');
+        }
+        throw new Error('tool loop exhausted');
+      } catch (error) {
+        logger?.warn('router.tools_failed', { provider: provider.id, error: String(error?.message ?? error) });
+      }
+    }
+    return generate({ system, user });
+  }
+  return { generate, generateWithTools, health: () => Object.fromEntries(health) };
 }
