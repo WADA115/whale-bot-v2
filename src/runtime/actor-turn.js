@@ -237,6 +237,11 @@ export function createActorTurn({
         interrupted,
         logger
       });
+      if (!delivery.bubbles) {
+        logger.info('turn.interrupted_before_send', { key });
+        return;
+      }
+      const deliveredReply = delivery.deliveredText || reply;
       stats.sent += 1;
       metrics?.inc('qqbot_replies_sent_total', { kind: current.kind });
       metrics?.observe('qqbot_turn_duration_seconds', (Date.now() - startedAt) / 1000, { kind });
@@ -252,7 +257,7 @@ export function createActorTurn({
           notices,
           turns: scene.turns.slice(0, -1),
           userText: text,
-          reply
+          reply: deliveredReply
         }).catch((error) => logger.warn('story.editor_failed', { key, error: String(error?.message ?? error) }));
       }
       logger.info('turn.sent', { key, provider: result.provider, chars: deliveredReply.length, preview: deliveredReply.slice(0, 80), interrupted: delivery.interrupted });

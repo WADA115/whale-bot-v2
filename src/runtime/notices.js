@@ -14,6 +14,9 @@ export function buildNotices({ message = null, text = '' } = {}) {
   const notices = [];
   const safety = safetyNotice(content);
   if (safety) notices.push(safety);
+  if (/(不要|别|以后最好|能不能不|不许|停止|别再)/.test(content)) {
+    notices.push(`[请求：对方明确说“${content.trim().slice(0, 80)}”]`);
+  }
   if (/(我说过|我真的|确实|没骗你|是真的|我答应)/.test(content)) {
     notices.push('[事实确认：对方确认了之前说过或答应过的事]');
   }

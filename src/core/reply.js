@@ -33,7 +33,7 @@ export function sanitizeReply(raw, maxChars = 160) {
   let text = stripThink(raw);
   text = text.replace(/```[\s\S]*?```/g, ' ');
   text = text.replace(/^\s*(?:回复|回答|输出)[:：]\s*/i, '');
-  text = text.replace(/\s+/g, ' ').trim();
+  text = text.replace(/[ \t\f\v]+/g, ' ').replace(/\s*\n\s*/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
   if (!text) return '';
   if (text.length > maxChars) text = text.slice(0, maxChars).replace(/[，,、；;：:]\s*$/, '');
   return text;
