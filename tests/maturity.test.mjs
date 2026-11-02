@@ -29,11 +29,13 @@ test('prompt 直接是她，不是扮演她', () => {
   const prompt = buildNarrativePrompt({
     card,
     story: { self: '我是鱼', relationship: '不熟', now: '在听' },
+    facts: ['你在测试群里。'],
     turns: []
   });
   assert.match(prompt.system, /你是小鲸鱼/);
   assert.doesNotMatch(prompt.system, /你在扮演/);
   assert.doesNotMatch(prompt.system, /心理成熟/);
+  assert.match(prompt.system, /你在测试群里/);
   assert.doesNotMatch(prompt.system, /一句|每句/);
 });
 

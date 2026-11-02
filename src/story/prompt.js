@@ -11,7 +11,7 @@ function formatTurns(turns) {
     .join('\n');
 }
 
-export function buildNarrativePrompt({ card, story, person = null, notices = [], turns = [], intent = '回应最后一句', notes = [], maxChars = 2500 } = {}) {
+export function buildNarrativePrompt({ card, story, person = null, notices = [], facts = [], turns = [], intent = '回应最后一句', notes = [], maxChars = 2500 } = {}) {
   const name = card?.name || '角色';
   const self = story?.self || [
     `# 我`,
@@ -30,6 +30,7 @@ export function buildNarrativePrompt({ card, story, person = null, notices = [],
     '不要解释系统。',
     '想停就换行，不想停就一口气说完。',
     '',
+    ...(facts || []).filter(Boolean).flatMap((fact) => ['【事实】', fact, '']),
     '【稳定的我】',
     self,
     '',

@@ -122,6 +122,7 @@ export class OneBotGateway extends EventEmitter {
       kind,
       id,
       key: `${kind}:${id}`,
+      groupName: String(payload.group_name ?? payload.group?.name ?? ''),
       userId,
       selfId,
       messageId: String(payload.message_id ?? ''),

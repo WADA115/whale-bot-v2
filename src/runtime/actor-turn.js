@@ -168,23 +168,33 @@ export function createActorTurn({
     const slangLines = matchSlang(text, slang);
     const slangBlock = slangLines.length ? `黑话：${slangLines.join('；')}` : '';
     let groupHistory = '';
+    let groupFact = '';
     if (/群里|群消息|看看群|他们刚才|刚才.*(说|聊)/.test(text)) {
       const groupIds = current.kind === 'group'
         ? [current.id]
         : (config.allow?.groups || []);
       try {
+        const names = [];
         const blocks = [];
         for (const groupId of groupIds) {
-          const live = liveGroup?.recent(`group:${groupId}`) || [];
-          if (live.length) blocks.push(live.join('\n'));
-          else {
-            const lines = await readGroupHistory({ gateway, groupId });
-            if (lines.length) blocks.push(lines.join('\n'));
+          const keyOfGroup = `group:${groupId}`;
+          const live = liveGroup?.recent(keyOfGroup) || [];
+          const liveName = liveGroup?.name(keyOfGroup) || '';
+          if (liveName) names.push(liveName);
+          if (live.length) {
+            blocks.push(`${liveName || groupId}：\n${live.join('\n')}`);
+          } else {
+            const { groupName, lines } = await readGroupHistory({ gateway, groupId });
+            if (groupName) names.push(groupName);
+            if (lines.length) blocks.push(`${groupName || groupId}：\n${lines.join('\n')}`);
           }
         }
-        if (blocks.length) {
-          groupHistory = `群里的原话：\n${blocks.join('\n\n')}`;
-          logger.info('group.history_read', { key, groups: groupIds.length });
+        if (names.length || blocks.length) {
+          if (names.length) groupFact = `事实：你在这些群里：${[...new Set(names)].join('、')}。这些群的原话你可以读。`;
+          groupHistory = blocks.length
+            ? `群里的原话：\n${blocks.join('\n\n')}`
+            : '';
+          logger.info('group.history_read', { key, groups: groupIds.length, names: names.length });
         }
       } catch (error) {
         logger.warn('group.history_failed', { key, error: String(error?.message ?? error) });
@@ -206,6 +216,7 @@ export function createActorTurn({
       story: storyForPrompt,
       person,
       notices,
+      facts: groupFact ? [groupFact] : [],
       turns: promptTurns,
       intent: scene.intent,
       notes: [
