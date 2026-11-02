@@ -22,7 +22,6 @@ export function buildCharacterPrompt({ card, sceneCard, turns = [], memories = [
   const voice = (card.voice ?? []).join('；');
   const values = (card.values ?? []).join('；');
   const boundaries = (card.boundaries ?? []).join('；');
-  const maturity = (card.maturity ?? []).join('；');
   const examples = (card.examples ?? []).slice(0, 2).map((x) => `例：${x}`).join('\n');
 
   const recent = turns
@@ -35,7 +34,6 @@ export function buildCharacterPrompt({ card, sceneCard, turns = [], memories = [
     section('说话方式', voice),
     section('在意什么', values),
     section('不会做什么', boundaries),
-    section('心理成熟', maturity),
     examples,
     section('此刻', sceneCard),
     section('你还记得', memories.join('；')),
@@ -50,7 +48,6 @@ export function buildCharacterPrompt({ card, sceneCard, turns = [], memories = [
       section('你是谁', card.identity),
       section('说话方式', voice),
       section('不会做什么', boundaries),
-      section('心理成熟', maturity),
       section('此刻', sceneCard),
       section('这轮想做什么', intent)
     ].filter(Boolean).join('\n\n').slice(0, maxChars);

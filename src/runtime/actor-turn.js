@@ -6,6 +6,7 @@ import { matchSlang } from '../character/slang.js';
 import { buildNotices } from './notices.js';
 import { selectRelevantSlices } from '../story/retrieval.js';
 import { sendHumanReply } from './speech.js';
+import { shouldReflect } from '../story/reflect.js';
 
 export function createActorTurn({
   config,
@@ -29,6 +30,7 @@ export function createActorTurn({
   expressionCooldowns,
   stats,
   metrics,
+  inboundSeq,
   callModels
 }) {
   const editorQueue = new Map();
@@ -55,6 +57,8 @@ export function createActorTurn({
     const last = batch[batch.length - 1];
     const kind = last?.kind || 'unknown';
     const startedAt = Date.now();
+    const turnSeq = inboundSeq?.get(key) || 0;
+    const interrupted = () => (inboundSeq?.get(key) || 0) !== turnSeq;
     metrics?.inc('qqbot_turns_total', { kind });
     metrics?.inc('qqbot_messages_received_total', { kind }, batch.length);
     const text = batch.map((m) => m.text).filter(Boolean).join('\n');
@@ -230,6 +234,7 @@ export function createActorTurn({
         sticker,
         tts,
         ttsAllowed,
+        interrupted,
         logger
       });
       stats.sent += 1;
@@ -237,9 +242,9 @@ export function createActorTurn({
       metrics?.observe('qqbot_turn_duration_seconds', (Date.now() - startedAt) / 1000, { kind });
       if (delivery.stickerSent) expressionCooldowns.set(key, Date.now());
       if (delivery.voiceSent) metrics?.inc('qqbot_tts_requests_total', { outcome: 'ok' });
-      character.director.recordReply(key, reply);
+      character.director.recordReply(key, deliveredReply);
       if (current.kind === 'group') groupCooldowns.set(key, Date.now());
-      if (storyEditor && story) {
+      if (storyEditor && story && shouldReflect({ text, imageDesc, voiceDesc, notices })) {
         void enqueueEditor({
           key,
           card: character.card,
@@ -250,7 +255,7 @@ export function createActorTurn({
           reply
         }).catch((error) => logger.warn('story.editor_failed', { key, error: String(error?.message ?? error) }));
       }
-      logger.info('turn.sent', { key, provider: result.provider, chars: reply.length, preview: reply.slice(0, 80) });
+      logger.info('turn.sent', { key, provider: result.provider, chars: deliveredReply.length, preview: deliveredReply.slice(0, 80), interrupted: delivery.interrupted });
     } catch (error) {
       metrics?.inc('qqbot_errors_total', { area: 'send' });
       logger.error('turn.send_failed', { key, error: String(error?.message ?? error) });

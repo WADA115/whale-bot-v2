@@ -23,3 +23,4 @@ import './people.test.mjs';
 import './retrieval.test.mjs';
 import './maturity.test.mjs';
 import './speech.test.mjs';
+import './reflect.test.mjs';

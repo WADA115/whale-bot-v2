@@ -23,9 +23,6 @@ function selfFromCard(card) {
     '',
     '## 边界',
     ...(card.boundaries || []).map((x) => `- ${x}`),
-    '',
-    '## 心理成熟',
-    ...(card.maturity || []).map((x) => `- ${x}`),
     ''
   ].join('\n');
 }

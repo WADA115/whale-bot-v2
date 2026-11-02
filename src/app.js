@@ -152,6 +152,7 @@ ${task.result}`);
   const startedAt = Date.now();
   let connected = false;
   const groupCooldowns = new Map();
+  const inboundSeq = new Map();
 
   const stats = { sent: 0, imageCount: 0 };
   const metrics = createMetrics();
@@ -177,6 +178,7 @@ ${task.result}`);
     expressionCooldowns,
     stats,
     metrics,
+    inboundSeq,
     callModels
   });
 
@@ -204,6 +206,7 @@ ${task.result}`);
       logger.debug('message.skipped', { key: message.key, reason: decision.reason, text: String(message.text ?? '').slice(0, 60) });
       return;
     }
+    inboundSeq.set(message.key, (inboundSeq.get(message.key) || 0) + 1);
     actors.enqueue(message.key, message);
   }
 

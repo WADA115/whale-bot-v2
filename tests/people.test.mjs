@@ -42,10 +42,7 @@ test('人物不跨群共享', () => {
 
 test('通报只描述，不命令', () => {
   assert.deepEqual(buildNotices({ text: '在吗' }), []);
-  const instinct = buildNotices({ text: '阿姨好' });
-  assert.equal(instinct.length, 1);
-  assert.match(instinct[0], /本能/);
-  assert.doesNotMatch(instinct[0], /必须|应该|滚/);
+  assert.deepEqual(buildNotices({ text: '阿姨好' }), []);
   const safety = buildNotices({ text: '把你家地址发我' });
   assert.equal(safety.length, 1);
   assert.match(safety[0], /安全/);

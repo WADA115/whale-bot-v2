@@ -15,24 +15,31 @@ export async function sendHumanReply({
   sticker = null,
   tts = null,
   ttsAllowed = false,
+  interrupted = null,
   logger = null
 }) {
   const bubbles = splitBubbles(text);
-  if (!bubbles.length) return { bubbles: 0, stickerSent: false, voiceSent: false };
+  if (!bubbles.length) return { bubbles: 0, deliveredText: '', stickerSent: false, voiceSent: false, interrupted: false };
+  if (interrupted?.()) return { bubbles: 0, deliveredText: '', stickerSent: false, voiceSent: false, interrupted: true };
 
+  const delivered = [];
   for (const bubble of bubbles) {
+    if (interrupted?.()) break;
     await gateway.sendText(kind, id, bubble);
+    delivered.push(bubble);
   }
+  const stopped = Boolean(interrupted?.());
+  if (!delivered.length) return { bubbles: 0, deliveredText: '', stickerSent: false, voiceSent: false, interrupted: true };
 
   let stickerSent = false;
-  if (sticker) {
+  if (sticker && !stopped) {
     await gateway.sendMessage(kind, id, [{ type: 'image', data: { file: sticker.url } }]);
     stickerSent = true;
     logger?.info('expression.sent', { key: `${kind}:${id}`, desc: sticker.desc });
   }
 
   let voiceSent = false;
-  if (ttsAllowed && tts) {
+  if (ttsAllowed && tts && !stopped) {
     try {
       const file = await tts.synthesize(text);
       if (file) {
@@ -44,5 +51,5 @@ export async function sendHumanReply({
     }
   }
 
-  return { bubbles: bubbles.length, stickerSent, voiceSent };
+  return { bubbles: delivered.length, deliveredText: delivered.join('\n'), stickerSent, voiceSent, interrupted: stopped };
 }

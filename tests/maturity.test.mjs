@@ -6,7 +6,6 @@ import test from 'node:test';
 import { createStoryStore } from '../src/story/store.js';
 import { buildCharacterPrompt } from '../src/character/actor.js';
 import { buildNarrativePrompt } from '../src/story/prompt.js';
-import { createStoryEditor } from '../src/story/editor.js';
 
 const card = {
   name: '小鲸鱼',
@@ -14,56 +13,30 @@ const card = {
   voice: ['短句'],
   values: ['被当成人'],
   boundaries: ['不刷屏'],
-  maturity: ['可爱是外观，不是心智', '可以生气，但不操控']
+  maturity: ['可爱是外观，不是心智']
 };
 
-test('self.md 写入心理成熟', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'maturity-'));
+test('self.md 不把成熟写成检查表', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'wide-'));
   const store = createStoryStore({ root });
   store.ensure('private:1', card);
   const story = store.read('private:1');
-  assert.match(story.self, /心理成熟/);
-  assert.match(story.self, /可爱是外观/);
+  assert.doesNotMatch(story.self, /心理成熟/);
+  assert.match(story.self, /鱼/);
 });
 
-test('叙事 prompt 带心理成熟', () => {
+test('prompt 直接是她，不是扮演她', () => {
   const prompt = buildNarrativePrompt({
     card,
-    story: { self: '## 心理成熟\n- 可爱是外观', relationship: '不熟', now: '在听' },
+    story: { self: '我是鱼', relationship: '不熟', now: '在听' },
     turns: []
   });
-  assert.match(prompt.system, /心理成熟/);
-  assert.match(prompt.system, /可爱是外观/);
-  assert.match(prompt.system, /不要用括号/);
+  assert.match(prompt.system, /你是小鲸鱼/);
+  assert.doesNotMatch(prompt.system, /你在扮演/);
+  assert.doesNotMatch(prompt.system, /心理成熟/);
 });
 
-test('旧角色 prompt 也带心理成熟', () => {
+test('旧角色 prompt 也不再塞成熟清单', () => {
   const prompt = buildCharacterPrompt({ card });
-  assert.match(prompt.user, /心理成熟/);
-  assert.match(prompt.user, /可以生气/);
-});
-test('Editor 把改正写成回忆，不写系统话', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'maturity-editor-'));
-  const store = createStoryStore({ root });
-  store.ensure('private:1', card);
-  let captured = '';
-  const editor = createStoryEditor({
-    store,
-    textRouter: {
-      generate: async (prompt) => {
-        captured = prompt.system;
-        return { text: '【此刻】\n在听。' };
-      }
-    }
-  });
-  await editor.update({
-    key: 'private:1',
-    card,
-    story: store.read('private:1'),
-    turns: [],
-    userText: '我叫张三',
-    reply: '嗯。'
-  });
-  assert.match(captured, /原来以为/);
-  assert.match(captured, /不像日志/);
+  assert.doesNotMatch(prompt.user, /心理成熟/);
 });

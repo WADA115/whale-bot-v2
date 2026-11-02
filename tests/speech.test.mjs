@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { splitBubbles } from '../src/runtime/speech.js';
+import { splitBubbles, sendHumanReply } from '../src/runtime/speech.js';
 
 test('没有换行就是一条', () => {
   assert.deepEqual(splitBubbles('在，咋了'), ['在，咋了']);
@@ -16,4 +16,18 @@ test('她写下的换行就是节奏', () => {
 
 test('空文本不发送', () => {
   assert.deepEqual(splitBubbles('   '), []);
+});
+test('说到一半被新消息打断，剩余气泡不再发', async () => {
+  const sent = [];
+  let count = 0;
+  const delivery = await sendHumanReply({
+    gateway: { sendText: async (kind, id, text) => { sent.push(text); count += 1; } },
+    kind: 'private',
+    id: '1',
+    text: '第一句\n第二句\n第三句',
+    interrupted: () => count > 0
+  });
+  assert.deepEqual(sent, ['第一句']);
+  assert.equal(delivery.interrupted, true);
+  assert.equal(delivery.deliveredText, '第一句');
 });
