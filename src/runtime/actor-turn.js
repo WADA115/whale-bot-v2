@@ -200,7 +200,11 @@ export function createActorTurn({
         groupHistory,
         reference,
         slangBlock,
-        imageDesc ? `图片：${imageDesc}\n（这一轮有图，回应里自然带出你看到的内容，不要装作没看到）` : '',
+        imageDesc
+          ? `图片：${imageDesc}\n（这一轮有图，回应里自然带出你看到的内容，不要装作没看到）`
+          : current.images?.length
+            ? '这一轮有图片，但没读出内容；不要编造画面。'
+            : '这一轮没有图片；不要说自己看到了画面。',
         voiceDesc ? `语音：${voiceDesc}` : ''
       ],
       maxChars: character.maxChars
