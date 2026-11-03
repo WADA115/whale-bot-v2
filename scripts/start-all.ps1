@@ -1,3 +1,5 @@
+param([switch]$Resume)
+
 $ErrorActionPreference = 'Continue'
 $v2 = Split-Path -Parent $PSScriptRoot
 $v1 = Join-Path (Split-Path -Parent $v2) 'qq-bridge'
@@ -25,6 +27,15 @@ function Wait-Port($port, $seconds) {
     Start-Sleep -Milliseconds 500
   }
   return (Port-Open $port)
+}
+
+$maintenance = Join-Path $v2 'state\maintenance.flag'
+if ($Resume) {
+  Remove-Item $maintenance -Force -ErrorAction SilentlyContinue
+  Write-Log 'resume requested'
+} elseif (Test-Path $maintenance) {
+  Write-Log 'maintenance flag; skip'
+  exit 0
 }
 
 Write-Log 'start-all begin'

@@ -1,5 +1,7 @@
 import http from 'node:http';
+import fs from 'node:fs';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { loadConfig, ROOT } from './config.js';
 import { createLogger } from './log.js';
 import { OneBotGateway } from './gateway/onebot.js';
@@ -60,6 +62,14 @@ export async function main(argv = process.argv.slice(2)) {
   const logger = createLogger({ dir: path.join(ROOT, 'state', 'logs'), level: 'info' });
   const runtimeLock = acquireRuntimeLock({ file: path.join(ROOT, 'state', 'runtime.lock'), logger });
   if (!runtimeLock.ok) return { skipped: true, reason: 'already-running' };
+  const shutdownTokenFile = path.join(ROOT, 'state', 'shutdown.token');
+  let shutdownToken = '';
+  try { shutdownToken = fs.readFileSync(shutdownTokenFile, 'utf8').trim(); } catch {}
+  if (!shutdownToken) {
+    shutdownToken = randomUUID();
+    fs.mkdirSync(path.dirname(shutdownTokenFile), { recursive: true });
+    fs.writeFileSync(shutdownTokenFile, shutdownToken, 'utf8');
+  }
   const gateway = new OneBotGateway({ ...config.gateway, logger });
   const textRouter = createModelRouter({ providers: config.models.text, logger });
   const visionRouter = createVisionRouter({ providers: config.vision?.providers ?? [], logger });
@@ -320,6 +330,7 @@ ${task.result}`);
     return metrics.prometheus();
   }
 
+  let shutdownHandler = null;
   const handler = createPanelHandler({
     root: ROOT,
     config,
@@ -343,7 +354,9 @@ ${task.result}`);
     metrics: metricsText,
     metricsJson: metricsState,
     dispatch: dispatchMessage,
-    capabilities
+    capabilities,
+    shutdownToken,
+    shutdown: () => shutdownHandler?.()
   });
   const server = http.createServer(handler);
   await new Promise((resolve, reject) => {
@@ -370,6 +383,7 @@ ${task.result}`);
     server.close(() => process.exit(0));
     setTimeout(() => process.exit(0), 1000).unref();
   };
+  shutdownHandler = shutdown;
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
 

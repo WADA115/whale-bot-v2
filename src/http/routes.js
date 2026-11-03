@@ -226,7 +226,14 @@ export function createPanelHandler(ctx) {
       res.end(body);
       return;
     }
-    if (req.url === '/api/mind' && req.method === 'GET') {
+    if (req.url === '/api/shutdown' && req.method === 'POST') {
+    if (!ctx.shutdownToken || req.headers['x-shutdown-token'] !== ctx.shutdownToken) {
+      return json(res, 403, { error: 'forbidden' });
+    }
+    json(res, 202, { ok: true });
+    setTimeout(() => ctx.shutdown?.(), 100);
+    return;
+  }  if (req.url === '/api/mind' && req.method === 'GET') {
     if (!ctx.mind) return json(res, 409, { error: 'mind disabled' });
     return json(res, 200, ctx.mind.read());
   }
