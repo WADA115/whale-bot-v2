@@ -1,4 +1,4 @@
-﻿param([switch]$All)
+﻿param([switch]$All, [switch]$KeepServices)
 
 $ErrorActionPreference = 'Continue'
 $v2 = Split-Path -Parent $PSScriptRoot
@@ -40,13 +40,22 @@ Get-CimInstance Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyCon
   Where-Object { $_.CommandLine -match 'watchdog\.mjs' } |
   ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 
-if ($All) {
-  Get-CimInstance Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyContinue |
-    Where-Object { $_.CommandLine -match 'index\.mjs' } |
+if (-not $KeepServices) {
+  foreach ($port in 3000, 3001, 5099, 3199) {
+    $conn = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($conn -and $conn.OwningProcess) {
+      $ownerId = [int]$conn.OwningProcess
+      Write-Host ("停止端口 " + $port + "，进程 " + $ownerId)
+      Stop-Process -Id $ownerId -Force -ErrorAction SilentlyContinue
+    }
+  }
+  Get-CimInstance Win32_Process -Filter "Name='python.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -match 'asr-server\.py' } |
     ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+  Write-Host 'SnowLuma / ASR / WebUI 已停止。'
 }
 
 Write-Host ''
-Write-Host '维护标记：state\maintenance.flag'
+Write-Host '维护标记：state\maintenance.flag（全部服务已关，QQ 未动）'
 Write-Host '计划任务和 watchdog 不会再把 v2 拉起来。'
 Write-Host '重新启动：scripts\start-runtime.ps1'
