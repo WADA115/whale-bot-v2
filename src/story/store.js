@@ -62,7 +62,7 @@ export function createStoryStore({ root, logger = null } = {}) {
       'self.md': card ? selfFromCard(card) : '# 我\n\n我还不知道自己是谁。\n',
       'relationship.md': '# 我们\n\n还不熟。\n',
       'now.md': '# 此刻\n\n没什么特别想的，先听他说。\n',
-      'life.md': '# 我正在\n\n'
+      'life.md': ''
     };
     for (const [name, content] of Object.entries(files)) {
       const file = path.join(dir, name);
