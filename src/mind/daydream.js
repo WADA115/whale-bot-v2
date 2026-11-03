@@ -1,10 +1,4 @@
-function timeWord(ms) {
-  if (!Number.isFinite(ms) || ms < 0) return '有一阵没声音了';
-  if (ms < 40 * 60 * 1000) return '刚安静下来';
-  if (ms < 3 * 60 * 60 * 1000) return '有一阵没人说话了';
-  if (ms < 12 * 60 * 60 * 1000) return '安静了很久';
-  return '很久没有声音了';
-}
+import { durationWord } from './time.js';
 
 export function createDaydream({
   mind,
@@ -30,7 +24,7 @@ export function createDaydream({
     const state = mind.read();
     const lastContact = Number(state.presence?.lastContactAt) || 0;
     const elapsed = lastContact ? Date.now() - lastContact : NaN;
-    const when = timeWord(elapsed);
+    const when = durationWord(elapsed);
     const memory = await recentMemory();
     const answer = await textRouter.generate({
       system: [

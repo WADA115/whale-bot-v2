@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { createMindStore } from '../src/mind/store.js';
 import { createDaydream } from '../src/mind/daydream.js';
+import { durationWord } from '../src/mind/time.js';
 
 const card = { name: '鱼', identity: '鱼', drive: '如果没人叫我，我还算存在吗。', world: ['有人只回了一个字。'] };
 
@@ -33,4 +34,9 @@ test('暗流可以空白', async () => {
   });
   await daydream.run();
   assert.equal(mind.read().undercurrent, '');
+});
+test('她知道断了多久，但不用数字', () => {
+  assert.equal(durationWord(15 * 60 * 60 * 1000), '差不多一天');
+  assert.equal(durationWord(72 * 60 * 60 * 1000), '三四天');
+  assert.equal(durationWord(60 * 1000), '刚才断了一下');
 });

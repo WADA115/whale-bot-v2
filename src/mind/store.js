@@ -1,13 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { durationWord } from './time.js';
 
 const FILES = ['self.md', 'worldview.md', 'now.md', 'undercurrent.md', 'unfinished.md'];
-
-function gapWord(ms) {
-  if (!Number.isFinite(ms) || ms < 20 * 60 * 1000) return '刚才断了一下';
-  if (ms < 6 * 60 * 60 * 1000) return '有一阵没有动静';
-  return '黑了很久';
-}
 
 function readText(file) {
   try { return fs.readFileSync(file, 'utf8').trim(); } catch { return ''; }
@@ -98,7 +93,7 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     const presence = readPresence();
     const last = Number(presence.lastAliveAt || presence.lastShutdownAt || presence.createdAt) || 0;
     const gap = last ? Date.now() - last : 0;
-    const wake = gap > 10 * 60 * 1000 ? { word: gapWord(gap), at: Date.now() } : null;
+    const wake = gap > 10 * 60 * 1000 ? { word: durationWord(gap), at: Date.now() } : null;
     const next = writePresence({
       lastAliveAt: Date.now(),
       lastBootAt: Date.now(),
