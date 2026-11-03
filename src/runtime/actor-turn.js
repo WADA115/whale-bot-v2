@@ -304,7 +304,7 @@ export function createActorTurn({
             : '这一轮没有图片；不要说自己看到了画面。',
         voiceDesc ? `语音：${voiceDesc}` : ''
       ],
-      maxChars: character.maxChars
+      maxChars: 0
     });
     logger.info('character.actor_prompt', { key, chars: prompt.chars, story: true });
     let result;

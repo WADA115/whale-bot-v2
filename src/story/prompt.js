@@ -6,12 +6,11 @@ function clip(text, max) {
 
 function formatTurns(turns) {
   return (turns || [])
-    .slice(-3)
-    .map((t) => `${t.role === 'assistant' ? '我' : '对方'}：${String(t.text ?? '').slice(0, 200)}`)
+    .map((t) => `${t.role === 'assistant' ? '我' : '对方'}：${String(t.text ?? '')}`)
     .join('\n');
 }
 
-export function buildNarrativePrompt({ card, story, person = null, notices = [], facts = [], turns = [], intent = '回应最后一句', notes = [], maxChars = 2500 } = {}) {
+export function buildNarrativePrompt({ card, story, person = null, notices = [], facts = [], turns = [], intent = '回应最后一句', notes = [], maxChars = 0 } = {}) {
   const name = card?.name || '角色';
   const self = story?.self || [
     `# 我`,
@@ -78,17 +77,17 @@ export function buildNarrativePrompt({ card, story, person = null, notices = [],
   let chars = system.length + user.length;
 
   // 中间层先让位，头尾不动。
-  if (chars > maxChars && episodes) {
+  if (maxChars > 0 && chars > maxChars && episodes) {
     episodes = clip(episodes, Math.max(0, maxChars - system.length - notesPart.length - turnsPart.length - 500));
     user = makeUser(episodes, notesPart, turnsPart);
     chars = system.length + user.length;
   }
-  if (chars > maxChars && notesPart) {
+  if (maxChars > 0 && chars > maxChars && notesPart) {
     notesPart = clip(notesPart, Math.max(0, maxChars - system.length - turnsPart.length - 300));
     user = makeUser(episodes, notesPart, turnsPart);
     chars = system.length + user.length;
   }
-  if (chars > maxChars) {
+  if (maxChars > 0 && chars > maxChars) {
     user = clip(user, Math.max(0, maxChars - system.length));
     chars = system.length + user.length;
   }
