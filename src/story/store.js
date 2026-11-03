@@ -21,7 +21,7 @@ function selfFromCard(card) {
     '## 在意',
     ...(card.values || []).map((x) => `- ${x}`),
     '',
-    '## 边界',
+    '## 运行底线',
     ...(card.boundaries || []).map((x) => `- ${x}`),
     '',
     ...(card.drive ? ['## 我为什么', '', String(card.drive).trim(), ''] : []),
