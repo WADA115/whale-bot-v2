@@ -20,7 +20,7 @@ export function buildCharacterPrompt({ card, sceneCard, turns = [], memories = [
   ].join('\n');
 
   const voice = (card.voice ?? []).join('；');
-  const values = (card.values ?? []).join('；');
+  const world = (card.world ?? []).join('；');
   const boundaries = (card.boundaries ?? []).join('；');
   const examples = (card.examples ?? []).slice(0, 2).map((x) => `例：${x}`).join('\n');
 
@@ -32,7 +32,7 @@ export function buildCharacterPrompt({ card, sceneCard, turns = [], memories = [
   const parts = [
     section('你是谁', card.identity),
     section('说话方式', voice),
-    section('在意什么', values),
+    section('我见过的', world),
     section('不会做什么', boundaries),
     examples,
     section('此刻', sceneCard),

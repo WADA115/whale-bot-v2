@@ -130,7 +130,7 @@ function renderCharacter() {
   $('#cardIdentity').value = card.identity || '';
   $('#cardDrive').value = card.drive || '';
   $('#cardVoice').value = (card.voice || []).join('\n');
-  $('#cardValues').value = (card.values || []).join('\n');
+  $('#cardWorld').value = (card.world || []).join('\n');
   $('#cardBounds').value = (card.boundaries || []).join('\n');
   autoGrowAll();
 }
@@ -381,7 +381,7 @@ function readCardForm() {
     identity: $('#cardIdentity').value.trim(),
     drive: $('#cardDrive').value.trim(),
     voice: lines('#cardVoice'),
-    values: lines('#cardValues'),
+    world: lines('#cardWorld'),
     boundaries: lines('#cardBounds')
   };
 }
@@ -391,7 +391,7 @@ function fillCardForm(card) {
   $('#cardIdentity').value = card.identity || '';
   $('#cardDrive').value = card.drive || '';
   $('#cardVoice').value = (card.voice || []).join('\n');
-  $('#cardValues').value = (card.values || []).join('\n');
+  $('#cardWorld').value = (card.world || []).join('\n');
   $('#cardBounds').value = (card.boundaries || []).join('\n');
   autoGrowAll();
 }
@@ -457,7 +457,7 @@ async function saveCard() {
     identity: $('#cardIdentity').value,
     drive: $('#cardDrive').value,
     voice: lines('#cardVoice'),
-    values: lines('#cardValues'),
+    world: lines('#cardWorld'),
     boundaries: lines('#cardBounds')
   };
   $('#cardStatus').textContent = '保存中…';
