@@ -10,6 +10,8 @@ import { bingSearch } from './core/websearch.js';
 import { createVisionRouter } from './core/vision.js';
 import { createAsr } from './core/asr.js';
 import { createTts } from './core/tts.js';
+import { createDraw } from './core/draw.js';
+import { createSing } from './core/sing.js';
 import { createKnowledge } from './core/knowledge.js';
 import { loadCharacterCard } from './character/actor.js';
 import { createSceneStore } from './character/scene.js';
@@ -73,6 +75,22 @@ export async function main(argv = process.argv.slice(2)) {
       logger
     })
     : null;
+  const draw = config.draw?.enabled !== false
+    ? createDraw({
+      pythonPath: config.draw?.pythonPath || '',
+      outDir: config.draw?.outDir || path.join(ROOT, 'state', 'draw'),
+      logger
+    })
+    : null;
+  const sing = config.sing?.enabled !== false
+    ? createSing({
+      voice: config.tts?.voice || 'zh-CN-XiaoyiNeural',
+      ttsScript: config.tts?.scriptPath || TTS_SCRIPT,
+      outDir: config.sing?.outDir || path.join(ROOT, 'state', 'sing'),
+      logger
+    })
+    : null;
+
   const knowledge = config.knowledge?.enabled
     ? createKnowledge({ dbPath: config.knowledge.dbPath, topK: config.knowledge.topK, logger })
     : null;
@@ -172,6 +190,8 @@ ${task.result}`);
     visionRouter,
     asr,
     tts,
+    draw,
+    sing,
     knowledge,
     slang,
     stickers,
