@@ -63,7 +63,8 @@ if (-not (Port-Open 3199)) {
 $env:DEEPSEEK_API_KEY = [Environment]::GetEnvironmentVariable('DEEPSEEK_API_KEY', 'User')
 if (-not $env:OLLAMA_MODELS) { $env:OLLAMA_MODELS = Join-Path (Split-Path -Parent $v2) 'ollama\models' }
 
-if (-not (Port-Open 3201)) {
+$watchdog = Get-CimInstance Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -match 'watchdog\.mjs' } | Select-Object -First 1
+if (-not $watchdog) {
   Write-Log 'starting v2 watchdog'
   Start-Process -FilePath 'node.exe' -ArgumentList 'scripts\watchdog.mjs' -WorkingDirectory $v2 -WindowStyle Hidden
 }

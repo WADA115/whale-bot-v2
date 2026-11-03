@@ -62,7 +62,8 @@ export function createStoryStore({ root, logger = null } = {}) {
       'self.md': card ? selfFromCard(card) : '# 我\n\n我还不知道自己是谁。\n',
       'relationship.md': '# 我们\n\n还不熟。\n',
       'now.md': '# 此刻\n\n没什么特别想的，先听他说。\n',
-      'life.md': ''
+      'life.md': '',
+      'world.md': ''
     };
     for (const [name, content] of Object.entries(files)) {
       const file = path.join(dir, name);
@@ -165,6 +166,7 @@ export function createStoryStore({ root, logger = null } = {}) {
       relationship: readFile('relationship.md'),
       now: readFile('now.md'),
       life: readFile('life.md'),
+      world: readFile('world.md'),
       episodes,
       chapters,
       version: meta.version,
@@ -242,8 +244,25 @@ export function createStoryStore({ root, logger = null } = {}) {
       return true;
     });
   }
+  function appendWorld(key, lines, card = null) {
+    const list = (Array.isArray(lines) ? lines : [lines])
+      .map((line) => String(line ?? '').trim())
+      .filter(Boolean);
+    if (!list.length) return { added: 0 };
+    return withLock(key, (dir) => {
+      const file = path.join(dir, 'world.md');
+      const before = readText(file);
+      const added = [...new Set(list)].filter((line) => !before.includes(line));
+      if (!added.length) return { added: 0 };
+      const body = before || '# 我见过的\n';
+      atomicWrite(file, `${body.trimEnd()}\n\n${added.map((line) => `- ${line}`).join('\n')}\n`);
+      bumpMeta(dir, 'world');
+      return { added: added.length };
+    });
+  }
+
   function writeSection(key, section, text, card = null) {
-    const allowed = new Set(['self', 'relationship', 'now', 'life']);
+    const allowed = new Set(['self', 'relationship', 'now', 'life', 'world']);
     if (!allowed.has(section)) throw new Error('invalid story section');
     return withLock(key, (dir) => {
       atomicWrite(path.join(dir, `${section}.md`), String(text ?? '').trim() + '\n');
@@ -350,5 +369,5 @@ export function createStoryStore({ root, logger = null } = {}) {
     });
   }
 
-  return { ensure, read, writeSection, readPerson, writePerson, listPeople, forgetPerson, addEpisode, writeTrace, addChapter, findEpisode, listEpisodes, listChats, dirOf, apply };
+  return { ensure, read, writeSection, appendWorld, readPerson, writePerson, listPeople, forgetPerson, addEpisode, writeTrace, addChapter, findEpisode, listEpisodes, listChats, dirOf, apply };
 }

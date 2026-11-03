@@ -505,6 +505,7 @@ async function loadStory(key) {
   $('#storyNow').value = story.now || '';
   $('#storyRelation').value = story.relationship || '';
   $('#storyLife').value = story.life || '';
+  $('#storyWorld').value = story.world || '';
   autoGrowAll();
   $('#charSelf').textContent = story.self || '还没有 self.md。';
   $('#storyEpisodes').innerHTML = (story.episodes || []).length
@@ -516,7 +517,7 @@ async function loadStory(key) {
 async function saveStory() {
   const key = $('#storyKey').value;
   if (!key) return;
-  for (const [section, el] of [['now', '#storyNow'], ['relationship', '#storyRelation'], ['life', '#storyLife']]) {
+  for (const [section, el] of [['now', '#storyNow'], ['relationship', '#storyRelation'], ['life', '#storyLife'], ['world', '#storyWorld']]) {
     const res = await fetch('/api/story/section', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

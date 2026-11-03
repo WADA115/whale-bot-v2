@@ -28,6 +28,7 @@ import { createPanelHandler } from './http/routes.js';
 import { createCapabilities } from './runtime/capabilities.js';
 import { createMetrics } from './runtime/metrics.js';
 import { createLiveGroup } from './runtime/live-group.js';
+import { createWorldObserver } from './runtime/world-observer.js';
 
 const V1_ROOT = path.join(ROOT, '..', 'qq-bridge');
 const FFMPEG = process.env.FFMPEG_PATH || path.join(V1_ROOT, 'tools', 'ffmpeg', 'ffmpeg.exe');
@@ -185,6 +186,18 @@ ${task.result}`);
     bilibili,
     callModels
   });
+
+  const worldObserver = storyStore ? createWorldObserver({
+    config: config.world ?? {},
+    storyStore,
+    liveGroup,
+    gateway,
+    bilibili,
+    textRouter,
+    character,
+    logger
+  }) : null;
+  worldObserver?.start();
 
   const actors = createActorRegistry({
     coalesceMs: config.actor.coalesceMs,

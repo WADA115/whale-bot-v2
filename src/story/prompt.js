@@ -22,6 +22,7 @@ export function buildNarrativePrompt({ card, story, person = null, notices = [],
   const relationship = story?.relationship || '# 我们\n\n还不熟。';
   const now = story?.now || '# 此刻\n\n没什么特别想的，先接住他这句话。';
   const life = story?.life || '';
+  const world = story?.world || '';
 
   // U 型：开头固定人设，结尾是此刻和刚刚发生的事；中间只放少量被想起的片段。
   const system = [
@@ -61,6 +62,7 @@ export function buildNarrativePrompt({ card, story, person = null, notices = [],
     '【此刻】',
     now,
     life ? `【我正在】\n${life}` : '',
+    world ? `【我见过的】\n${world}` : '',
     '',
     '【刚才】',
     turnsPart || '（还没有对话）',

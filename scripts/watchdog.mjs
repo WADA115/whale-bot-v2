@@ -7,9 +7,9 @@ import { ROOT } from '../src/config.js';
 const healthUrl = 'http://127.0.0.1:3201/healthz';
 const lockFile = path.join(ROOT, 'state', 'watchdog.lock');
 const logFile = path.join(ROOT, 'state', 'logs', 'watchdog.log');
-const snowHome = 'E:\\新建文件夹 (3)';
-const asrPython = 'E:\\AI\\ComfyUI\\venv\\Scripts\\python.exe';
-const asrScript = 'E:\\deepseek_qq.bot\\qq-bridge\\src\\asr-server.py';
+const snowHome = process.env.SNOWLUMA_DIR || 'E:\\新建文件夹 (3)';
+const asrPython = process.env.ASR_PY || 'E:\\AI\\ComfyUI\\venv\\Scripts\\python.exe';
+const asrScript = process.env.ASR_SCRIPT || 'E:\\deepseek_qq.bot\\qq-bridge\\src\\asr-server.py';
 fs.mkdirSync(path.dirname(logFile), { recursive: true });
 
 function log(message) {
@@ -55,7 +55,7 @@ let lastSnowStart = 0;
 let lastAsrStart = 0;
 async function ensureServices() {
   const now = Date.now();
-  if (((!await portOpen(3000)) || (!await portOpen(3001))) && !(await portOpen(5099))) {
+  if ((!await portOpen(3000)) || (!await portOpen(3001))) {
     if (now - lastSnowStart > 20000) {
       lastSnowStart = now;
       log('starting SnowLuma');
