@@ -1,3 +1,34 @@
+function hash(text) {
+  let value = 0;
+  for (let i = 0; i < text.length; i += 1) value = (value * 31 + text.charCodeAt(i)) >>> 0;
+  return value;
+}
+
+function pauseMs(text, kind) {
+  const value = String(text ?? '');
+  const base = 900 + Math.min(1800, value.length * 13);
+  const variance = hash(value) % 420;
+  return Math.round((base + variance) * (kind === 'group' ? 0.8 : 1));
+}
+
+function typingMs(text) {
+  const value = String(text ?? '');
+  const marks = (value.match(/[，,。！？!?；;：:]/g) || []).length;
+  return 240 + Math.min(1900, value.length * 34 + marks * 90);
+}
+
+function wait(ms, interrupted) {
+  return new Promise((resolve) => {
+    const started = Date.now();
+    const timer = setInterval(() => {
+      if (interrupted?.() || Date.now() - started >= ms) {
+        clearInterval(timer);
+        resolve(!interrupted?.());
+      }
+    }, 90);
+  });
+}
+
 export function splitBubbles(text) {
   const value = String(text ?? '').replace(/\r/g, '').trim();
   if (!value) return [];
@@ -16,17 +47,27 @@ export async function sendHumanReply({
   tts = null,
   ttsAllowed = false,
   interrupted = null,
+  timing = true,
   logger = null
 }) {
   const bubbles = splitBubbles(text);
   if (!bubbles.length) return { bubbles: 0, deliveredText: '', stickerSent: false, voiceSent: false, interrupted: false };
   if (interrupted?.()) return { bubbles: 0, deliveredText: '', stickerSent: false, voiceSent: false, interrupted: true };
 
+  if (timing) {
+    const ready = await wait(pauseMs(text, kind), interrupted);
+    if (!ready) return { bubbles: 0, deliveredText: '', stickerSent: false, voiceSent: false, interrupted: true };
+  }
+
   const delivered = [];
-  for (const bubble of bubbles) {
+  for (let i = 0; i < bubbles.length; i += 1) {
     if (interrupted?.()) break;
-    await gateway.sendText(kind, id, bubble);
-    delivered.push(bubble);
+    await gateway.sendText(kind, id, bubbles[i]);
+    delivered.push(bubbles[i]);
+    if (timing && i < bubbles.length - 1) {
+      const ready = await wait(typingMs(bubbles[i]), interrupted);
+      if (!ready) break;
+    }
   }
   const stopped = Boolean(interrupted?.());
   if (!delivered.length) return { bubbles: 0, deliveredText: '', stickerSent: false, voiceSent: false, interrupted: true };

@@ -25,6 +25,7 @@ test('说到一半被新消息打断，剩余气泡不再发', async () => {
     kind: 'private',
     id: '1',
     text: '第一句\n第二句\n第三句',
+    timing: false,
     interrupted: () => count > 0
   });
   assert.deepEqual(sent, ['第一句']);
