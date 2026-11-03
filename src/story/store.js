@@ -254,8 +254,8 @@ export function createStoryStore({ root, logger = null } = {}) {
       const before = readText(file);
       const added = [...new Set(list)].filter((line) => !before.includes(line));
       if (!added.length) return { added: 0 };
-      const body = before || '# 我见过的\n';
-      atomicWrite(file, `${body.trimEnd()}\n\n${added.map((line) => `- ${line}`).join('\n')}\n`);
+      const body = before;
+      atomicWrite(file, `${body.trimEnd()}${body ? '\n\n' : ''}${added.map((line) => `- ${line}`).join('\n')}\n`);
       bumpMeta(dir, 'world');
       return { added: added.length };
     });
