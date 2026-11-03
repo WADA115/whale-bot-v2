@@ -583,6 +583,52 @@ async function biliPopular() {
   $('#biliResults').innerHTML = (data.list || []).map((x) => `<div class="result-item">${esc(x.title)}<small>${esc(x.owner || '')}</small></div>`).join('') || '<p class="muted">没有结果。</p>';
 }
 
+async function biliContent() {
+  const raw = $('#biliContentInput').value.trim();
+  const bvid = raw.match(/BV[0-9A-Za-z]{10}/)?.[0];
+  const box = $('#biliContentResult');
+  if (!bvid) {
+    box.textContent = '给我 BV 号或视频链接。';
+    return;
+  }
+  box.textContent = '读取中…';
+  try {
+    const data = await getJson('/api/bilibili/content?bvid=' + encodeURIComponent(bvid), null);
+    box.textContent = [
+      data.title || '',
+      data.owner ? 'UP：' + data.owner : '',
+      data.text || '这个视频没有可读的字幕或简介。',
+      data.url || ''
+    ].filter(Boolean).join('\n\n');
+  } catch (error) {
+    box.textContent = String(error.message || error);
+  }
+}
+
+function renderBiliList(list, empty) {
+  const html = (list || []).map((item) => {
+    const title = esc(item.title || '');
+    const meta = [item.owner || item.author || '', item.folder || '', item.time || ''].filter(Boolean).map(esc).join(' · ');
+    return `<div class="result-item">${title}${meta ? `<small>${meta}</small>` : ''}</div>`;
+  }).join('');
+  $('#biliResults').innerHTML = html || `<p class="muted">${esc(empty)}</p>`;
+}
+
+async function biliDynamics() {
+  const data = await getJson('/api/bilibili/dynamics', { list: [] });
+  renderBiliList(data.list, '没有关注动态。');
+}
+
+async function biliFavorites() {
+  const data = await getJson('/api/bilibili/favorites', { list: [] });
+  renderBiliList(data.list, '收藏夹是空的。');
+}
+
+async function biliHistory() {
+  const data = await getJson('/api/bilibili/history', { list: [] });
+  renderBiliList(data.list, '没有观看历史。');
+}
+
 async function biliLogin() {
   const box = $('#biliQr');
   box.innerHTML = '<span class="muted">正在生成二维码…</span>';
@@ -670,6 +716,10 @@ $('#storyLoad').addEventListener('click', () => loadStory($('#storyKey').value))
 $('#storySave').addEventListener('click', saveStory);
 $('#biliSearch').addEventListener('click', biliSearch);
 $('#biliPopular').addEventListener('click', biliPopular);
+$('#biliContentBtn').addEventListener('click', biliContent);
+$('#biliDynamics').addEventListener('click', biliDynamics);
+$('#biliFavorites').addEventListener('click', biliFavorites);
+$('#biliHistory').addEventListener('click', biliHistory);
 $('#biliLogin').addEventListener('click', biliLogin);
 $('#biliLogout').addEventListener('click', biliLogout);
 $('#qzoneLoad').addEventListener('click', qzoneLoad);

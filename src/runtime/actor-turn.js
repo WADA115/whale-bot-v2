@@ -33,6 +33,7 @@ export function createActorTurn({
   metrics,
   inboundSeq,
   liveGroup,
+  bilibili,
   callModels
 }) {
   const editorQueue = new Map();
@@ -231,6 +232,48 @@ export function createActorTurn({
       if (!blocks.length) return `你在这些群里：${[...new Set(names)].join('、') || '没有可读的群'}。这段时间没有读到原话。`;
       return `你在这些群里：${[...new Set(names)].join('、')}\n\n${blocks.join('\n\n')}`;
     };
+    const biliTools = bilibili ? [
+      {
+        type: 'function',
+        function: {
+          name: 'bili_video_content',
+          description: '看一个 B站视频的字幕或简介。参数是 BV 号。',
+          parameters: {
+            type: 'object',
+            properties: { bvid: { type: 'string', description: 'BV 号或视频链接' } },
+            required: ['bvid']
+          }
+        }
+      },
+      ...(bilibili.status?.().loggedIn ? [
+        { type: 'function', function: { name: 'bili_dynamics', description: '看 B站关注动态。', parameters: { type: 'object', properties: {} } } },
+        { type: 'function', function: { name: 'bili_favorites', description: '看 B站收藏夹。', parameters: { type: 'object', properties: {} } } },
+        { type: 'function', function: { name: 'bili_history', description: '看 B站观看历史。', parameters: { type: 'object', properties: {} } } }
+      ] : [])
+    ] : [];
+    const runBili = async (name, args = {}) => {
+      try {
+        if (name === 'bili_video_content') {
+          const item = await bilibili.content(args.bvid);
+          return [item.title, item.owner ? `UP：${item.owner}` : '', item.text || '没有字幕或简介。'].filter(Boolean).join('\n');
+        }
+        if (name === 'bili_dynamics') {
+          const list = await bilibili.dynamics();
+          return list.slice(0, 12).map((item) => `${item.author}：${item.title}`).join('\n') || '没有关注动态。';
+        }
+        if (name === 'bili_favorites') {
+          const list = await bilibili.favorites();
+          return list.slice(0, 12).map((item) => `${item.folder}｜${item.title}`).join('\n') || '收藏夹是空的。';
+        }
+        if (name === 'bili_history') {
+          const list = await bilibili.history();
+          return list.slice(0, 12).map((item) => `${item.author}：${item.title}`).join('\n') || '没有观看历史。';
+        }
+      } catch (error) {
+        return `读取失败：${String(error?.message ?? error)}`;
+      }
+      return '没有这个动作。';
+    };
     if (!story) {
       logger.warn('story.missing', { key });
       return;
@@ -269,8 +312,8 @@ export function createActorTurn({
       result = textRouter.generateWithTools
         ? await textRouter.generateWithTools({
           ...prompt,
-          tools: [groupTool],
-          execute: async (name) => (name === 'look_group_history' ? lookAtGroups() : '没有这个动作。')
+          tools: [...biliTools, groupTool],
+          execute: async (name, args) => (name === 'look_group_history' ? lookAtGroups() : runBili(name, args))
         })
         : await textRouter.generate(prompt);
     } catch (error) {

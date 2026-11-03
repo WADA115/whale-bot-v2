@@ -180,6 +180,108 @@ export function createBilibili({ file, logger = null, fetchImpl = fetch } = {}) 
     }));
   }
 
+  async function apiJson(url, options = {}) {
+    const headers = {
+      referer: 'https://www.bilibili.com/',
+      ...(data.cookies?.SESSDATA ? { cookie: cookieHeader(data.cookies) } : {}),
+      ...(options.headers ?? {})
+    };
+    return json(url, { ...options, headers });
+  }
+
+  function bvidOf(value) {
+    return String(value ?? '').match(/BV[0-9A-Za-z]{10}/)?.[0] || '';
+  }
+
+  async function content(input) {
+    const bvid = bvidOf(input);
+    if (!bvid) throw new Error('invalid bvid');
+    const view = await apiJson(`https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`);
+    if (view.code !== 0) throw new Error(view.message || 'video failed');
+    const v = view.data;
+    const cid = v.pages?.[0]?.cid;
+    let text = '';
+    let source = 'description';
+    if (cid) {
+      try {
+        const player = await apiJson(`https://api.bilibili.com/x/player/v2?bvid=${bvid}&cid=${cid}`);
+        const subs = player?.data?.subtitle?.subtitles ?? [];
+        const sub = subs.find((item) => /zh|ai-zh/i.test(String(item.lan || ''))) || subs[0];
+        if (sub?.subtitle_url) {
+          const url = sub.subtitle_url.startsWith('//') ? `https:${sub.subtitle_url}` : sub.subtitle_url;
+          const body = await apiJson(url);
+          const lines = (body?.body ?? []).map((line) => String(line.content ?? '').trim()).filter(Boolean);
+          if (lines.length) {
+            text = lines.join('\n');
+            source = 'subtitle';
+          }
+        }
+      } catch {}
+    }
+    if (!text) text = String(v.desc ?? '').trim();
+    return {
+      bvid,
+      title: v.title,
+      owner: v.owner?.name,
+      duration: v.duration,
+      desc: v.desc,
+      text,
+      source,
+      url: `https://www.bilibili.com/video/${bvid}`
+    };
+  }
+
+  async function dynamics() {
+    const body = await apiJson('https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/all?type=all&page=1');
+    if (body.code !== 0) throw new Error(body.message || 'dynamics failed');
+    return (body.data?.items ?? []).map((item) => {
+      const archive = item?.modules?.module_dynamic?.major?.archive;
+      const author = item?.modules?.module_author;
+      return {
+        id: item?.id_str || item?.id || '',
+        type: item?.type || '',
+        title: archive?.title || item?.modules?.module_dynamic?.desc?.text || '',
+        author: author?.name || '',
+        time: author?.pub_time || '',
+        url: archive?.jump_url ? `https:${archive.jump_url}` : ''
+      };
+    }).filter((item) => item.title);
+  }
+
+  async function favorites() {
+    const mid = data.user?.mid;
+    if (!mid) throw new Error('not logged in');
+    const folders = await apiJson(`https://api.bilibili.com/x/v3/fav/folder/created/list-all?up_mid=${mid}`);
+    if (folders.code !== 0) throw new Error(folders.message || 'favorites failed');
+    const list = folders.data?.list ?? [];
+    const out = [];
+    for (const folder of list) {
+      const body = await apiJson(`https://api.bilibili.com/x/v3/fav/resource/list?media_id=${folder.id}&pn=1&ps=20&platform=web`);
+      if (body.code !== 0) continue;
+      for (const item of body.data?.medias ?? []) {
+        out.push({
+          folder: folder.title,
+          bvid: item.bvid,
+          title: item.title,
+          owner: item.upper?.name || '',
+          url: item.bvid ? `https://www.bilibili.com/video/${item.bvid}` : ''
+        });
+      }
+    }
+    return out;
+  }
+
+  async function history() {
+    const body = await apiJson('https://api.bilibili.com/x/web-interface/history/cursor?max=0&view_at=0&business=');
+    if (body.code !== 0) throw new Error(body.message || 'history failed');
+    return (body.data?.list ?? []).map((item) => ({
+      bvid: item.history?.bvid || '',
+      title: item.title || '',
+      author: item.author_name || '',
+      time: item.view_at || 0,
+      url: item.history?.bvid ? `https://www.bilibili.com/video/${item.history.bvid}` : ''
+    })).filter((item) => item.title);
+  }
   function status() {
     return {
       enabled: true,
@@ -194,5 +296,5 @@ export function createBilibili({ file, logger = null, fetchImpl = fetch } = {}) 
     save();
   }
 
-  return { generate, poll, video, popular, search, status, logout, cookieHeader: () => cookieHeader(data.cookies) };
+  return { generate, poll, video, popular, search, content, dynamics, favorites, history, status, logout, cookieHeader: () => cookieHeader(data.cookies) };
 }

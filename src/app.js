@@ -182,6 +182,7 @@ ${task.result}`);
     metrics,
     inboundSeq,
     liveGroup,
+    bilibili,
     callModels
   });
 

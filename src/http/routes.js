@@ -315,7 +315,27 @@ export function createPanelHandler(ctx) {
       ctx.bilibili.popular(limit).then((list) => json(res, 200, { list })).catch((error) => json(res, 502, { error: String(error?.message ?? error) }));
       return;
     }
-    if (req.url.startsWith('/api/bilibili/video') && req.method === 'GET') {
+    if (req.url.startsWith('/api/bilibili/content') && req.method === 'GET') {
+    if (!ctx.bilibili) return json(res, 409, { error: 'bilibili disabled' });
+    const bvid = new URL(req.url, 'http://127.0.0.1').searchParams.get('bvid') || '';
+    ctx.bilibili.content(bvid).then((x) => json(res, 200, x)).catch((error) => json(res, 502, { error: String(error?.message ?? error) }));
+    return;
+  }
+  if (req.url.startsWith('/api/bilibili/dynamics') && req.method === 'GET') {
+    if (!ctx.bilibili) return json(res, 409, { error: 'bilibili disabled' });
+    ctx.bilibili.dynamics().then((list) => json(res, 200, { list })).catch((error) => json(res, 502, { error: String(error?.message ?? error) }));
+    return;
+  }
+  if (req.url.startsWith('/api/bilibili/favorites') && req.method === 'GET') {
+    if (!ctx.bilibili) return json(res, 409, { error: 'bilibili disabled' });
+    ctx.bilibili.favorites().then((list) => json(res, 200, { list })).catch((error) => json(res, 502, { error: String(error?.message ?? error) }));
+    return;
+  }
+  if (req.url.startsWith('/api/bilibili/history') && req.method === 'GET') {
+    if (!ctx.bilibili) return json(res, 409, { error: 'bilibili disabled' });
+    ctx.bilibili.history().then((list) => json(res, 200, { list })).catch((error) => json(res, 502, { error: String(error?.message ?? error) }));
+    return;
+  }  if (req.url.startsWith('/api/bilibili/video') && req.method === 'GET') {
       if (!ctx.bilibili) return json(res, 409, { error: 'bilibili disabled' });
       const bvid = new URL(req.url, 'http://127.0.0.1').searchParams.get('bvid') || '';
       ctx.bilibili.video(bvid).then((video) => json(res, 200, video)).catch((error) => json(res, 502, { error: String(error?.message ?? error) }));
