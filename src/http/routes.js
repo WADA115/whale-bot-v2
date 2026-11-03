@@ -25,6 +25,7 @@ export function personaFromText(raw, fallback = {}) {
   const card = {
     name: text(parsed.name, 40) || text(fallback.name, 40),
     identity: text(parsed.identity, 1200) || text(fallback.identity, 1200),
+    drive: text(parsed.drive, 1200) || text(fallback.drive, 1200),
     voice: list(parsed.voice, 12),
     values: list(parsed.values, 12),
     boundaries: list(parsed.boundaries, 12)
@@ -38,7 +39,7 @@ export function personaPrompt(brief, current = null, instruction = '') {
   const system = [
     '你是 QQ 角色卡编辑助手。',
     '根据用户描述写一张角色卡，只输出 JSON，不要 Markdown，不要解释。',
-    '字段：name 字符串，identity 字符串，voice 字符串数组，values 字符串数组，boundaries 字符串数组。',
+    '字段：name 字符串，identity 字符串，drive 字符串，voice 字符串数组，values 字符串数组，boundaries 字符串数组。',
     '不要写年龄、天数、年限、次数、分数、等级、概率、函数、固定台词、示例对话。',
     '身份要像一个人，不要写客服、助手、工具人。'
   ].join('\n');
@@ -441,6 +442,7 @@ export function createPanelHandler(ctx) {
           ...ctx.character.card,
           name: text(input.name, 40),
           identity: text(input.identity, 1200),
+          drive: text(input.drive, 1200),
           voice: list(input.voice, 12),
           values: list(input.values, 12),
           boundaries: list(input.boundaries, 12),

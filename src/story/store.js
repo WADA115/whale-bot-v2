@@ -23,6 +23,8 @@ function selfFromCard(card) {
     '',
     '## 边界',
     ...(card.boundaries || []).map((x) => `- ${x}`),
+    '',
+    ...(card.drive ? ['## 我为什么', '', String(card.drive).trim(), ''] : []),
     ''
   ].join('\n');
 }
@@ -62,7 +64,8 @@ export function createStoryStore({ root, logger = null } = {}) {
     const files = {
       'self.md': card ? selfFromCard(card) : '# 我\n\n我还不知道自己是谁。\n',
       'relationship.md': '# 我们\n\n还不熟。\n',
-      'now.md': '# 此刻\n\n没什么特别想的，先听他说。\n'
+      'now.md': '# 此刻\n\n没什么特别想的，先听他说。\n',
+      'life.md': '# 我正在\n\n'
     };
     for (const [name, content] of Object.entries(files)) {
       const file = path.join(dir, name);
@@ -164,6 +167,7 @@ export function createStoryStore({ root, logger = null } = {}) {
       self: readFile('self.md'),
       relationship: readFile('relationship.md'),
       now: readFile('now.md'),
+      life: readFile('life.md'),
       episodes,
       chapters,
       version: meta.version,
@@ -242,7 +246,7 @@ export function createStoryStore({ root, logger = null } = {}) {
     });
   }
   function writeSection(key, section, text, card = null) {
-    const allowed = new Set(['self', 'relationship', 'now']);
+    const allowed = new Set(['self', 'relationship', 'now', 'life']);
     if (!allowed.has(section)) throw new Error('invalid story section');
     return withLock(key, (dir) => {
       atomicWrite(path.join(dir, `${section}.md`), String(text ?? '').trim() + '\n');
@@ -342,7 +346,8 @@ export function createStoryStore({ root, logger = null } = {}) {
         }
       }
       if (parsed.chapter?.title) addChapterInternal(dir, parsed.chapter.title, parsed.chapter.text || '');
-      const changed = Boolean(parsed.now || parsed.relationship || parsed.event?.title || parsed.old?.title || parsed.chapter?.title);
+      if (parsed.life) atomicWrite(path.join(dir, 'life.md'), String(parsed.life).trim() + '\n');
+      const changed = Boolean(parsed.now || parsed.life || parsed.relationship || parsed.event?.title || parsed.old?.title || parsed.chapter?.title);
       if (!changed) return before;
       return bumpMeta(dir, 'editor');
     });

@@ -128,6 +128,7 @@ function renderCharacter() {
   $('#charSelf').textContent = story?.self || '还没有 self.md。';
   $('#cardName').value = card.name || '';
   $('#cardIdentity').value = card.identity || '';
+  $('#cardDrive').value = card.drive || '';
   $('#cardVoice').value = (card.voice || []).join('\n');
   $('#cardValues').value = (card.values || []).join('\n');
   $('#cardBounds').value = (card.boundaries || []).join('\n');
@@ -378,6 +379,7 @@ function readCardForm() {
   return {
     name: $('#cardName').value.trim(),
     identity: $('#cardIdentity').value.trim(),
+    drive: $('#cardDrive').value.trim(),
     voice: lines('#cardVoice'),
     values: lines('#cardValues'),
     boundaries: lines('#cardBounds')
@@ -387,6 +389,7 @@ function readCardForm() {
 function fillCardForm(card) {
   $('#cardName').value = card.name || '';
   $('#cardIdentity').value = card.identity || '';
+  $('#cardDrive').value = card.drive || '';
   $('#cardVoice').value = (card.voice || []).join('\n');
   $('#cardValues').value = (card.values || []).join('\n');
   $('#cardBounds').value = (card.boundaries || []).join('\n');
@@ -452,6 +455,7 @@ async function saveCard() {
   const body = {
     name: $('#cardName').value,
     identity: $('#cardIdentity').value,
+    drive: $('#cardDrive').value,
     voice: lines('#cardVoice'),
     values: lines('#cardValues'),
     boundaries: lines('#cardBounds')
@@ -505,6 +509,7 @@ async function loadStory(key) {
   if (!story) story = key === 'private_demo' ? demoStory : { self: '', relationship: '', now: '', episodes: [] };
   $('#storyNow').value = story.now || '';
   $('#storyRelation').value = story.relationship || '';
+  $('#storyLife').value = story.life || '';
   autoGrowAll();
   $('#charSelf').textContent = story.self || '还没有 self.md。';
   $('#storyEpisodes').innerHTML = (story.episodes || []).length
@@ -516,7 +521,7 @@ async function loadStory(key) {
 async function saveStory() {
   const key = $('#storyKey').value;
   if (!key) return;
-  for (const [section, el] of [['now', '#storyNow'], ['relationship', '#storyRelation']]) {
+  for (const [section, el] of [['now', '#storyNow'], ['relationship', '#storyRelation'], ['life', '#storyLife']]) {
     const res = await fetch('/api/story/section', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
