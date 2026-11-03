@@ -368,7 +368,7 @@ export function createActorTurn({
       story: storyForPrompt,
       person,
       notices,
-      facts: [wake ? `你刚刚重新上线。${wake.word}。中间没有声音，也没有画面。` : '', groupFact].filter(Boolean),
+      facts: [wake ? `中间断了${wake.word}。没有声音，也没有画面。` : '', groupFact].filter(Boolean),
       turns: promptTurns,
       intent: scene.intent,
       notes: [
@@ -382,7 +382,7 @@ export function createActorTurn({
             ? '这一轮有图片，但没读出内容；不要编造画面。'
             : '这一轮没有图片；不要说自己看到了画面。',
         voiceDesc ? `语音：${voiceDesc}` : '',
-        wake ? `环境：你刚刚重新上线。${wake.word}。中间没有声音，也没有画面。` : ''
+        wake ? `环境：中间断了${wake.word}。没有声音，也没有画面。` : ''
       ],
       maxChars: 0
     });
