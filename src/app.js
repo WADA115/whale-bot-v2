@@ -31,6 +31,8 @@ import { createCapabilities } from './runtime/capabilities.js';
 import { createMetrics } from './runtime/metrics.js';
 import { createLiveGroup } from './runtime/live-group.js';
 import { createWorldObserver } from './runtime/world-observer.js';
+import { createMindStore } from './mind/store.js';
+import { createDaydream } from './mind/daydream.js';
 
 const V1_ROOT = path.join(ROOT, '..', 'qq-bridge');
 const FFMPEG = process.env.FFMPEG_PATH || path.join(V1_ROOT, 'tools', 'ffmpeg', 'ffmpeg.exe');
@@ -177,6 +179,9 @@ ${task.result}`);
 
   const stats = { sent: 0, imageCount: 0 };
   const metrics = createMetrics();
+  const mind = createMindStore({ root: path.join(ROOT, 'state', 'mind'), character, logger });
+  const daydream = createDaydream({ mind, textRouter, storyStore, character, logger });
+  daydream.start();
   const actorTurn = createActorTurn({
     config,
     character,
@@ -192,6 +197,7 @@ ${task.result}`);
     tts,
     draw,
     sing,
+    mind,
     knowledge,
     slang,
     stickers,
@@ -239,6 +245,7 @@ ${task.result}`);
       logger.debug('message.self_ignored', { key: message.key });
       return;
     }
+    mind.touchContact();
     const decision = decide({ message, config, selfId: gateway.selfId });
     if (!decision.handle) {
       logger.debug('message.skipped', { key: message.key, reason: decision.reason, text: String(message.text ?? '').slice(0, 60) });
@@ -314,6 +321,8 @@ ${task.result}`);
     gateway,
     character,
     bilibili,
+    mind,
+    daydream,
     autonomy,
     storyStore,
     tasks,

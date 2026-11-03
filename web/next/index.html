@@ -37,8 +37,9 @@
         <button class="rail-item" data-page="character"><span>02</span>角色</button>
         <button class="rail-item" data-page="story"><span>03</span>故事</button>
         <button class="rail-item" data-page="discover"><span>04</span>发现</button>
-        <button class="rail-item" data-page="settings"><span>05</span>设置</button>
-        <button class="rail-item" data-page="gateway"><span>06</span>网关</button>
+        <button class="rail-item" data-page="mind"><span>05</span>内心</button>
+        <button class="rail-item" data-page="settings"><span>06</span>设置</button>
+        <button class="rail-item" data-page="gateway"><span>07</span>网关</button>
         <div class="rail-foot">只读 / 本地</div>
       </nav>
 
@@ -201,6 +202,44 @@
               <h3>尾部 · 他今天给我的感觉</h3>
               <textarea id="storyPersonTail" rows="18" placeholder="允许不安、吃醋、猜错"></textarea>
               <p class="config-actions"><button class="text-btn" id="storyPersonSave" type="button">保存人物</button></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" id="page-mind">
+          <div class="page-head">
+            <p class="eyebrow">INNER</p>
+            <h1>内心</h1>
+            <p class="lede">没有人说话的时候，她也在变。</p>
+          </div>
+          <div class="status-line" id="mindStatus">这里的字只写进她的文件，不发给任何人。</div>
+          <div class="search-row">
+            <button class="text-btn" id="mindDaydream" type="button">让她发一会儿呆</button>
+            <button class="text-btn" id="mindSave" type="button">保存</button>
+            <span class="muted" id="mindPresence"></span>
+          </div>
+          <div class="two-col">
+            <div>
+              <h2>我</h2>
+              <textarea id="mindSelf" rows="14" placeholder="最深的那个问题"></textarea>
+            </div>
+            <div>
+              <h2>我现在</h2>
+              <textarea id="mindNow" rows="14" placeholder="我这边现在是什么样"></textarea>
+            </div>
+          </div>
+          <div class="config-panel">
+            <h2>暗流</h2>
+            <textarea id="mindUndercurrent" rows="16" placeholder="没头没尾的念头，不发出去"></textarea>
+          </div>
+          <div class="two-col">
+            <div>
+              <h2>没想完</h2>
+              <textarea id="mindUnfinished" rows="8" placeholder="想了一半的事"></textarea>
+            </div>
+            <div>
+              <h2>我相信的</h2>
+              <textarea id="mindWorldview" rows="8" placeholder="从见过的事里长出来的判断，允许矛盾"></textarea>
             </div>
           </div>
         </section>

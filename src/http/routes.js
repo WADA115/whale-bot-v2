@@ -226,7 +226,26 @@ export function createPanelHandler(ctx) {
       res.end(body);
       return;
     }
-    if (req.url.startsWith('/api/story/people') && req.method === 'GET') {
+    if (req.url === '/api/mind' && req.method === 'GET') {
+    if (!ctx.mind) return json(res, 409, { error: 'mind disabled' });
+    return json(res, 200, ctx.mind.read());
+  }
+  if (req.url === '/api/mind/daydream' && req.method === 'POST') {
+    if (!ctx.daydream) return json(res, 409, { error: 'mind disabled' });
+    ctx.daydream.run()
+      .then((result) => json(res, 200, result))
+      .catch((error) => json(res, 502, { error: String(error?.message ?? error) }));
+    return;
+  }
+  if (req.url === '/api/mind/section' && req.method === 'POST') {
+    if (!ctx.mind) return json(res, 409, { error: 'mind disabled' });
+    readBody(req).then((body) => {
+      const section = String(body?.section || '');
+      const result = ctx.mind.writeSection(section, String(body?.text ?? ''));
+      return json(res, 200, { ok: true, mind: result });
+    }).catch(() => json(res, 400, { error: 'invalid json' }));
+    return;
+  }  if (req.url.startsWith('/api/story/people') && req.method === 'GET') {
       if (!ctx.storyStore) return json(res, 409, { error: 'story disabled' });
       const key = new URL(req.url, 'http://127.0.0.1').searchParams.get('key') || '';
       if (!key) return json(res, 400, { error: 'key required' });

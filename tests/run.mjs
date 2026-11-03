@@ -31,3 +31,4 @@ import './router-tools.test.mjs';
 import './persona.test.mjs';
 import './drive.test.mjs';
 import './world-observer.test.mjs';
+import './mind.test.mjs';

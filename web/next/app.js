@@ -704,17 +704,73 @@ async function autoTick() {
   alert(`采集到 ${data.count || 0} 条`);
 }
 
+function mindAgo(timestamp) {
+  const value = Number(timestamp);
+  if (!value) return '还没有记录';
+  const diff = Date.now() - value;
+  if (diff < 10 * 60 * 1000) return '刚刚还有声音';
+  if (diff < 60 * 60 * 1000) return '有一阵没声音了';
+  if (diff < 6 * 60 * 60 * 1000) return '安静了很久';
+  return '很久没有声音了';
+}
+
+async function loadMind() {
+  const data = await getJson('/api/mind', {});
+  $('#mindSelf').value = data.self || '';
+  $('#mindNow').value = data.now || '';
+  $('#mindUndercurrent').value = data.undercurrent || '';
+  $('#mindUnfinished').value = data.unfinished || '';
+  $('#mindWorldview').value = data.worldview || '';
+  $('#mindPresence').textContent = mindAgo(data.presence?.lastContactAt);
+  autoGrowAll();
+}
+
+async function saveMind() {
+  const sections = [
+    ['self', '#mindSelf'],
+    ['now', '#mindNow'],
+    ['undercurrent', '#mindUndercurrent'],
+    ['unfinished', '#mindUnfinished'],
+    ['worldview', '#mindWorldview']
+  ];
+  for (const [section, selector] of sections) {
+    const res = await fetch('/api/mind/section', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ section, text: $(selector).value })
+    });
+    if (!res.ok) throw new Error('保存失败');
+  }
+  $('#mindStatus').textContent = '保存了。只在她自己的文件里。';
+}
+
+async function mindDaydream() {
+  $('#mindStatus').textContent = '她在一个人待一会儿…';
+  $('#mindDaydream').disabled = true;
+  try {
+    const data = await getJson('/api/mind/daydream', null);
+    await loadMind();
+    $('#mindStatus').textContent = data.text ? '刚才那段已经写进暗流，没有发出去。' : '她什么都没想。';
+  } catch (error) {
+    $('#mindStatus').textContent = String(error.message || error);
+  } finally {
+    $('#mindDaydream').disabled = false;
+  }
+}
 function switchPage(name) {
   activePage = name;
   $$('.rail-item').forEach((btn) => btn.classList.toggle('active', btn.dataset.page === name));
   $$('.page').forEach((page) => page.classList.toggle('active', page.id === `page-${name}`));
   autoGrowAll();
   if (name === 'gateway') loadGateway();
+  if (name === 'mind') loadMind();
 }
 
 $$('.rail-item').forEach((btn) => btn.addEventListener('click', () => switchPage(btn.dataset.page)));
 $('#storyLoad').addEventListener('click', () => loadStory($('#storyKey').value));
 $('#storySave').addEventListener('click', saveStory);
+$('#mindDaydream').addEventListener('click', mindDaydream);
+$('#mindSave').addEventListener('click', saveMind);
 $('#biliSearch').addEventListener('click', biliSearch);
 $('#biliPopular').addEventListener('click', biliPopular);
 $('#biliContentBtn').addEventListener('click', biliContent);

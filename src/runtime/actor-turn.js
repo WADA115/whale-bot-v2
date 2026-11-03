@@ -24,6 +24,7 @@ export function createActorTurn({
   tts,
   draw,
   sing,
+  mind,
   knowledge,
   slang,
   stickers,
@@ -354,6 +355,12 @@ export function createActorTurn({
       return { ...turn, text: seen || turn.text };
     });
     const storyForPrompt = selectRelevantSlices(story, text);
+    const mindState = mind?.read?.() ?? null;
+    const mindNotes = mindState ? [
+      mindState.now ? `我这边：\n${mindState.now}` : '',
+      mindState.unfinished ? `没想完的：\n${mindState.unfinished}` : '',
+      mindState.undercurrent ? `暗流：\n${mindState.undercurrent.split('\n').slice(-12).join('\n')}` : ''
+    ] : [];
     const prompt = buildNarrativePrompt({
       card: character.card,
       story: storyForPrompt,
@@ -363,6 +370,7 @@ export function createActorTurn({
       turns: promptTurns,
       intent: scene.intent,
       notes: [
+        ...mindNotes,
         groupHistory,
         reference,
         slangBlock,
