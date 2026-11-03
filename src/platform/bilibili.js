@@ -15,6 +15,24 @@ function parseCookies(url) {
   return out;
 }
 
+function parseSetCookie(headers) {
+  const out = {};
+  const allowed = ['SESSDATA', 'bili_jct', 'DedeUserID', 'DedeUserID__ckMd5', 'sid'];
+  let list = [];
+  try {
+    list = typeof headers?.getSetCookie === 'function' ? headers.getSetCookie() : [headers?.get?.('set-cookie')].filter(Boolean);
+  } catch {}
+  for (const line of list) {
+    const pair = String(line).split(';')[0];
+    const index = pair.indexOf('=');
+    if (index < 0) continue;
+    const key = pair.slice(0, index).trim();
+    const value = pair.slice(index + 1).trim();
+    if (allowed.includes(key)) out[key] = value;
+  }
+  return out;
+}
+
 function cookieHeader(cookies) {
   return Object.entries(cookies || {}).map(([k, v]) => `${k}=${v}`).join('; ');
 }
@@ -61,13 +79,17 @@ export function createBilibili({ file, logger = null, fetchImpl = fetch } = {}) 
   }
 
   async function poll(key) {
-    const body = await json(`${BASE}/qrcode/poll?qrcode_key=${encodeURIComponent(key)}`);
+    const response = await fetchImpl(`${BASE}/qrcode/poll?qrcode_key=${encodeURIComponent(key)}`, {
+      headers: { 'user-agent': UA }
+    });
+    if (!response.ok) throw new Error(`bilibili http ${response.status}`);
+    const body = await response.json();
     const code = Number(body?.data?.code ?? body.code ?? -1);
     if (code === 86101) return { status: 'waiting' };
     if (code === 86090) return { status: 'scanned' };
     if (code === 86038) return { status: 'expired' };
-    if (body.code !== 0 || !body.data?.url) return { status: 'failed', message: body.message || 'login failed' };
-    const cookies = parseCookies(body.data.url);
+    if (body.code !== 0) return { status: 'failed', message: body.message || 'login failed' };
+    const cookies = { ...parseCookies(body.data.url), ...parseSetCookie(response.headers) };
     if (!cookies.SESSDATA) return { status: 'failed', message: 'no SESSDATA' };
     let user = null;
     try {

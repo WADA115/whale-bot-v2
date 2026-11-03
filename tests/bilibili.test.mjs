@@ -30,3 +30,27 @@ test('B站扫码登录与状态', async () => {
   assert.equal(status.user.mid, 42);
   fs.rmSync(dir, { recursive: true, force: true });
 });
+test('B站登录 Cookie 只在 Set-Cookie 头里也能收', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'v2-bili-header-'));
+  const fetchImpl = async (url) => {
+    if (url.includes('/qrcode/poll')) {
+      return {
+        ok: true,
+        headers: {
+          getSetCookie: () => ['SESSDATA=header-s; Path=/', 'bili_jct=j2; Path=/', 'DedeUserID=43; Path=/']
+        },
+        json: async () => ({ code: 0, data: { code: 0, url: '' } })
+      };
+    }
+    if (url.includes('/nav')) {
+      return { ok: true, json: async () => ({ code: 0, data: { mid: 43, uname: '头登录', face: '' } }) };
+    }
+    return { ok: false, status: 404, json: async () => ({}) };
+  };
+  const bili = createBilibili({ file: path.join(dir, 'bili.json'), fetchImpl });
+  const poll = await bili.poll('k2');
+  assert.equal(poll.status, 'ok');
+  assert.equal(bili.status().loggedIn, true);
+  assert.equal(bili.status().user.mid, 43);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
