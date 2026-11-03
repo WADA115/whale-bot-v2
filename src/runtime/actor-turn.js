@@ -355,6 +355,8 @@ export function createActorTurn({
       return { ...turn, text: seen || turn.text };
     });
     const storyForPrompt = selectRelevantSlices(story, text);
+    const wake = mind?.takeWake?.() ?? null;
+    if (wake) logger.info('mind.wake_injected', { word: wake.word });
     const mindState = mind?.read?.() ?? null;
     const mindNotes = mindState ? [
       mindState.now ? `我这边：\n${mindState.now}` : '',
@@ -366,7 +368,7 @@ export function createActorTurn({
       story: storyForPrompt,
       person,
       notices,
-      facts: groupFact ? [groupFact] : [],
+      facts: [wake ? `你刚刚重新上线。${wake.word}。中间没有声音，也没有画面。` : '', groupFact].filter(Boolean),
       turns: promptTurns,
       intent: scene.intent,
       notes: [
@@ -379,11 +381,13 @@ export function createActorTurn({
           : current.images?.length
             ? '这一轮有图片，但没读出内容；不要编造画面。'
             : '这一轮没有图片；不要说自己看到了画面。',
-        voiceDesc ? `语音：${voiceDesc}` : ''
+        voiceDesc ? `语音：${voiceDesc}` : '',
+        wake ? `环境：你刚刚重新上线。${wake.word}。中间没有声音，也没有画面。` : ''
       ],
       maxChars: 0
     });
     logger.info('character.actor_prompt', { key, chars: prompt.chars, story: true });
+    logger.info('character.actor_prompt_tail', { key, tail: prompt.user.slice(-700) });
     let result;
     try {
       result = textRouter.generateWithTools

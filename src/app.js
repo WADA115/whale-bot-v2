@@ -31,6 +31,7 @@ import { createCapabilities } from './runtime/capabilities.js';
 import { createMetrics } from './runtime/metrics.js';
 import { createLiveGroup } from './runtime/live-group.js';
 import { createWorldObserver } from './runtime/world-observer.js';
+import { acquireRuntimeLock } from './runtime/lock.js';
 import { createMindStore } from './mind/store.js';
 import { createDaydream } from './mind/daydream.js';
 
@@ -57,6 +58,8 @@ export async function main(argv = process.argv.slice(2)) {
   const { config, configPath } = loadConfig({ configPath: args.configPath });
   if (args.shadow) config.mode = 'shadow';
   const logger = createLogger({ dir: path.join(ROOT, 'state', 'logs'), level: 'info' });
+  const runtimeLock = acquireRuntimeLock({ file: path.join(ROOT, 'state', 'runtime.lock'), logger });
+  if (!runtimeLock.ok) return { skipped: true, reason: 'already-running' };
   const gateway = new OneBotGateway({ ...config.gateway, logger });
   const textRouter = createModelRouter({ providers: config.models.text, logger });
   const visionRouter = createVisionRouter({ providers: config.vision?.providers ?? [], logger });
@@ -180,6 +183,10 @@ ${task.result}`);
   const stats = { sent: 0, imageCount: 0 };
   const metrics = createMetrics();
   const mind = createMindStore({ root: path.join(ROOT, 'state', 'mind'), character, logger });
+  const session = mind.beginSession();
+  logger.info('mind.session', { woke: Boolean(session.wake), gap: session.gap });
+  const heartbeat = setInterval(() => { try { mind.heartbeat(); } catch {} }, 60 * 1000);
+  heartbeat.unref?.();
   const daydream = createDaydream({ mind, textRouter, storyStore, character, logger });
   daydream.start();
   const actorTurn = createActorTurn({
@@ -356,6 +363,8 @@ ${task.result}`);
 
   const shutdown = () => {
     logger.info('app.shutdown', {});
+    try { mind.markShutdown(); } catch {}
+    try { runtimeLock.release(); } catch {}
     gateway.close();
     knowledge?.close();
     server.close(() => process.exit(0));

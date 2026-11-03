@@ -3,6 +3,12 @@ import path from 'node:path';
 
 const FILES = ['self.md', 'worldview.md', 'now.md', 'undercurrent.md', 'unfinished.md'];
 
+function gapWord(ms) {
+  if (!Number.isFinite(ms) || ms < 20 * 60 * 1000) return '刚才断了一下';
+  if (ms < 6 * 60 * 60 * 1000) return '有一阵没有动静';
+  return '黑了很久';
+}
+
 function readText(file) {
   try { return fs.readFileSync(file, 'utf8').trim(); } catch { return ''; }
 }
@@ -87,6 +93,39 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     return read();
   }
 
+  function beginSession() {
+    ensure();
+    const presence = readPresence();
+    const last = Number(presence.lastAliveAt || presence.lastShutdownAt || presence.createdAt) || 0;
+    const gap = last ? Date.now() - last : 0;
+    const wake = gap > 10 * 60 * 1000 ? { word: gapWord(gap), at: Date.now() } : null;
+    const next = writePresence({
+      lastAliveAt: Date.now(),
+      lastBootAt: Date.now(),
+      pendingWake: wake || presence.pendingWake || null
+    });
+    return { gap, wake: next.pendingWake };
+  }
+
+  function heartbeat() {
+    return writePresence({ lastAliveAt: Date.now() });
+  }
+
+  function markShutdown() {
+    return writePresence({ lastShutdownAt: Date.now(), lastAliveAt: Date.now() });
+  }
+
+  function peekWake() {
+    return readPresence().pendingWake || null;
+  }
+
+  function takeWake() {
+    const presence = readPresence();
+    const wake = presence.pendingWake || null;
+    if (wake) writePresence({ pendingWake: null });
+    return wake;
+  }
+
   function touchContact() {
     return writePresence({ lastContactAt: Date.now() });
   }
@@ -95,5 +134,5 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     return writePresence({ lastThoughtAt: Date.now() });
   }
 
-  return { ensure, read, writeSection, appendUndercurrent, touchContact, touchThought, readPresence, base };
+  return { ensure, read, writeSection, appendUndercurrent, touchContact, touchThought, readPresence, beginSession, heartbeat, markShutdown, peekWake, takeWake, base };
 }

@@ -38,6 +38,7 @@ export function createDaydream({
         '',
         '现在没有人说话。',
         when + '。',
+        state.presence?.pendingWake ? `你刚从一段黑暗里醒来：${state.presence.pendingWake.word}。` : '',
         '你在这里。',
         '',
         state.now ? `你这边：\n${state.now}` : '',
