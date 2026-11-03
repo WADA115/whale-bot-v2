@@ -39,7 +39,7 @@ export function personaPrompt(brief, current = null, instruction = '') {
   const system = [
     '你是 QQ 角色卡编辑助手。',
     '根据用户描述写一张角色卡，只输出 JSON，不要 Markdown，不要解释。',
-    '字段：name 字符串，identity 字符串，drive 字符串，voice 字符串数组，world 字符串数组（具体见过的社会片段，不是价值标签），boundaries 字符串数组（只写运行底线：不泄密、不假冒现实操作；不写情感边界）。',
+    '字段：name 字符串，identity 字符串，drive 字符串，world 字符串数组（具体见过的社会片段，不是价值标签），boundaries 字符串数组（只写运行底线：不泄密、不假冒现实操作；不写情感边界）。',
     '不要写年龄、天数、年限、次数、分数、等级、概率、函数、固定台词、示例对话。',
     '身份要像一个人，不要写客服、助手、工具人。'
   ].join('\n');

@@ -321,7 +321,7 @@ export function createActorTurn({
       logger.error('turn.model_failed', { key, error: String(error?.message ?? error) });
       return;
     }
-    const reply = sanitizeReply(result.text, Number(config.actor.maxReplyChars) || 160);
+    const reply = sanitizeReply(result.text, 0);
     if (!reply) {
       logger.info('turn.empty_reply', { key, provider: result.provider });
       return;

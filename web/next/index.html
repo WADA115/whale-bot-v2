@@ -88,8 +88,6 @@
             <div>
               <h2 id="charName">小深</h2>
               <p class="prose" id="charIdentity"></p>
-              <h3>说话</h3>
-              <div class="list-lines" id="charVoice"></div>
               <h3>运行底线</h3>
               <div class="list-lines" id="charBounds"></div>
               <div class="actions">
@@ -105,7 +103,6 @@
               <label class="wide-field">身份<textarea id="cardIdentity" rows="3"></textarea></label>
             </div>
             <label>为什么<textarea id="cardDrive" rows="4" placeholder="她为什么愿意动"></textarea></label>
-            <label>说话（每行一条）<textarea id="cardVoice" rows="5"></textarea></label>
             <label>我见过的（具体的事，每行一条）<textarea id="cardWorld" rows="5"></textarea></label>
             <label>运行底线（不泄密 / 不假冒现实操作）<textarea id="cardBounds" rows="4"></textarea></label>
             <div class="config-actions">
@@ -274,9 +271,6 @@
                   <option value="shadow">shadow</option>
                   <option value="live">live</option>
                 </select>
-              </label>
-              <label>回复上限
-                <input id="cfgMaxReply" type="number" min="1" max="2000">
               </label>
               <label>角色上下文上限
                 <input id="cfgMaxChars" type="number" min="300" max="20000">

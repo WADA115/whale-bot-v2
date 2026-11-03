@@ -18,8 +18,7 @@ export function buildNarrativePrompt({ card, story, person = null, notices = [],
     '',
     card?.identity || '',
     '',
-    '## 说话',
-    ...(card?.voice || []).map((x) => `- ${x}`)
+    ...(card?.world?.length ? ['## 我见过的', ...(card.world || []).map((x) => `- ${x}`)] : [])
   ].join('\n');
   const relationship = story?.relationship || '# 我们\n\n还不熟。';
   const now = story?.now || '# 此刻\n\n没什么特别想的，先接住他这句话。';
