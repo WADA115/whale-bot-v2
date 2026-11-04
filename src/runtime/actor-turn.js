@@ -376,11 +376,13 @@ export function createActorTurn({
     const wake = mind?.takeWake?.() ?? null;
     if (wake) logger.info('mind.wake_injected', { word: wake.word });
     const mindState = mind?.read?.() ?? null;
+    const pendingRead = mind?.peekPendingRead?.() ?? null;
     const mindNotes = mindState ? [
       mindState.now ? `我这边：\n${mindState.now}` : '',
       mindState.unfinished ? `没想完的：\n${mindState.unfinished}` : '',
       mindState.undercurrent ? `暗流：\n${mindState.undercurrent.split('\n').slice(-12).join('\n')}` : '',
-      mindState.seen ? `他给我看过的：\n${mindState.seen.slice(-3000)}` : ''
+      mindState.seen ? `他给我看过的：\n${mindState.seen.slice(-3000)}` : '',
+      pendingRead ? `他给你看了一个视频：${pendingRead.title}。你还没读全文。要读就用 bili_video_content，BV 是 ${pendingRead.bvid}。读完后自然带出来。` : ''
     ] : [];
     const prompt = buildNarrativePrompt({
       card: character.card,

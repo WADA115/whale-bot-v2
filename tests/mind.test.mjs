@@ -65,3 +65,11 @@ test('给她看过的视频会进入 seen', () => {
   mind.appendSeen('一个视频｜BV1abc123456｜UP');
   assert.match(mind.read().seen, /BV1abc123456/);
 });
+test('读全文后清掉待读标记', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mind-pending-'));
+  const mind = createMindStore({ root, character: { card } });
+  mind.setPendingRead({ bvid: 'BV1abc123456', title: '视频' });
+  assert.equal(mind.peekPendingRead().bvid, 'BV1abc123456');
+  mind.noteRead({ bvid: 'BV1abc123456', title: '视频', chars: 10 });
+  assert.equal(mind.peekPendingRead(), null);
+});

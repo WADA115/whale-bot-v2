@@ -394,13 +394,13 @@ export function createPanelHandler(ctx) {
         title = item.title || title;
         owner = item.owner || owner;
         text = String(item.desc || '').trim();
-        ctx.logger?.info('bili.see_content', { bvid: item.bvid, title: item.title, source: item.source, head: text.slice(0, 60) });
       } catch {}
       if (!title) return json(res, 400, { error: 'title required' });
       const header = [title, bvid, owner].filter(Boolean).join('｜');
       const line = text ? `${header}\n${text.slice(0, 2500)}` : header;
       const result = ctx.mind.appendSeen(line);
-      return json(res, 200, { ok: true, content: Boolean(text), seen: result.seen });
+      ctx.mind.setPendingRead?.({ bvid, title });
+      return json(res, 200, { ok: true, content: Boolean(text), pendingRead: true, seen: result.seen });
     }).catch(() => json(res, 400, { error: 'invalid json' }));
     return;
   }  if (req.url.startsWith('/api/bilibili/content') && req.method === 'GET') {

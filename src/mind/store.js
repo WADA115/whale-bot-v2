@@ -133,7 +133,17 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     const list = readReads();
     list.unshift({ ...entry, at: Date.now() });
     writeText(readsFile, JSON.stringify(list.slice(0, 20)));
+    const pending = readPresence().pendingRead;
+    if (pending && pending.bvid === entry.bvid) writePresence({ pendingRead: null });
     return list.slice(0, 20);
+  }
+
+  function setPendingRead(item = {}) {
+    return writePresence({ pendingRead: item && item.bvid ? item : null });
+  }
+
+  function peekPendingRead() {
+    return readPresence().pendingRead || null;
   }
 
   function appendSeen(lines) {
@@ -167,5 +177,5 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     return writePresence({ lastReachOutAt: Date.now(), reachDay: new Date().toISOString().slice(0, 10), lastContactAt: Date.now() });
   }
 
-  return { ensure, read, writeSection, appendUndercurrent, appendSeen, noteRead, readReads, touchContact, touchThought, readPresence, beginSession, heartbeat, markShutdown, peekWake, takeWake, canReach, noteReach, base };
+  return { ensure, read, writeSection, appendUndercurrent, appendSeen, noteRead, readReads, setPendingRead, peekPendingRead, touchContact, touchThought, readPresence, beginSession, heartbeat, markShutdown, peekWake, takeWake, canReach, noteReach, base };
 }
