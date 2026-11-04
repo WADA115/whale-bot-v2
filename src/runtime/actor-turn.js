@@ -270,7 +270,7 @@ export function createActorTurn({
       try {
         if (name === 'bili_search') {
           const list = await bilibili.search(args.keyword, 5);
-          return list.map((item) => `${item.title}｜${item.bvid}｜${item.owner || ''}`).join('\n') || '没搜到。';
+          return list.map((item) => [`${item.title}｜${item.bvid}｜${item.owner || ''}`, item.description ? item.description.slice(0, 160) : ''].filter(Boolean).join('\n')).join('\n\n') || '没搜到。';
         }
         if (name === 'bili_video_content') {
           const item = await bilibili.content(args.bvid);
@@ -377,7 +377,8 @@ export function createActorTurn({
     const mindNotes = mindState ? [
       mindState.now ? `我这边：\n${mindState.now}` : '',
       mindState.unfinished ? `没想完的：\n${mindState.unfinished}` : '',
-      mindState.undercurrent ? `暗流：\n${mindState.undercurrent.split('\n').slice(-12).join('\n')}` : ''
+      mindState.undercurrent ? `暗流：\n${mindState.undercurrent.split('\n').slice(-12).join('\n')}` : '',
+      mindState.seen ? `他给我看过的：\n${mindState.seen.slice(-3000)}` : ''
     ] : [];
     const prompt = buildNarrativePrompt({
       card: character.card,

@@ -383,15 +383,24 @@ export function createPanelHandler(ctx) {
     }
     if (req.url === '/api/bilibili/see' && req.method === 'POST') {
     if (!ctx.mind) return json(res, 409, { error: 'mind disabled' });
-    readBody(req).then((body) => {
+    readBody(req).then(async (body) => {
       const bvid = String(body?.bvid || '').trim();
-      const title = String(body?.title || '').trim();
-      const owner = String(body?.owner || '').trim();
+      let title = String(body?.title || '').trim();
+      let owner = String(body?.owner || '').trim();
       if (!/^BV[0-9A-Za-z]{10}$/.test(bvid)) return json(res, 400, { error: 'invalid bvid' });
+      let text = '';
+      try {
+        const item = await ctx.bilibili.content(bvid);
+        title = item.title || title;
+        owner = item.owner || owner;
+        text = String(item.desc || '').trim();
+        ctx.logger?.info('bili.see_content', { bvid: item.bvid, title: item.title, source: item.source, head: text.slice(0, 60) });
+      } catch {}
       if (!title) return json(res, 400, { error: 'title required' });
-      const line = [title, bvid, owner].filter(Boolean).join('｜');
+      const header = [title, bvid, owner].filter(Boolean).join('｜');
+      const line = text ? `${header}\n${text.slice(0, 2500)}` : header;
       const result = ctx.mind.appendSeen(line);
-      return json(res, 200, { ok: true, seen: result.seen });
+      return json(res, 200, { ok: true, content: Boolean(text), seen: result.seen });
     }).catch(() => json(res, 400, { error: 'invalid json' }));
     return;
   }  if (req.url.startsWith('/api/bilibili/content') && req.method === 'GET') {

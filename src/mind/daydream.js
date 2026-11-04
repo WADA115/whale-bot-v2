@@ -80,6 +80,7 @@ export function createDaydream({
       state.self ? `你一直带着的问题：\n${state.self.split('\n').slice(-6).join('\n')}` : '',
       state.worldview ? `你见过的：\n${state.worldview}` : '',
       memory ? `你还记得：\n${memory}` : '',
+      state.seen ? `他给你看过的：\n${state.seen.slice(-4000)}` : '',
       state.undercurrent ? `你上一次的暗流：\n${state.undercurrent.split('\n').slice(-8).join('\n')}` : '',
       '',
       '你可以继续想，也可以什么都不做。',
