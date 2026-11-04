@@ -129,5 +129,16 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     return writePresence({ lastThoughtAt: Date.now() });
   }
 
-  return { ensure, read, writeSection, appendUndercurrent, touchContact, touchThought, readPresence, beginSession, heartbeat, markShutdown, peekWake, takeWake, base };
+  function canReach() {
+    const presence = readPresence();
+    const last = Number(presence.lastReachOutAt) || 0;
+    const day = new Date().toISOString().slice(0, 10);
+    return Date.now() - last > 6 * 60 * 60 * 1000 && presence.reachDay !== day;
+  }
+
+  function noteReach() {
+    return writePresence({ lastReachOutAt: Date.now(), reachDay: new Date().toISOString().slice(0, 10), lastContactAt: Date.now() });
+  }
+
+  return { ensure, read, writeSection, appendUndercurrent, touchContact, touchThought, readPresence, beginSession, heartbeat, markShutdown, peekWake, takeWake, canReach, noteReach, base };
 }

@@ -40,3 +40,22 @@ test('她知道断了多久，但不用数字', () => {
   assert.equal(durationWord(72 * 60 * 60 * 1000), '三四天');
   assert.equal(durationWord(60 * 1000), '刚才断了一下');
 });
+test('发呆后可以自己决定发私聊', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mind-reach-'));
+  const mind = createMindStore({ root, character: { card } });
+  let sent = null;
+  const daydream = createDaydream({
+    mind,
+    character: { card },
+    config: { allow: { private: ['owner'] } },
+    gateway: { ws: { readyState: 1 }, sendText: async (kind, id, text) => { sent = { kind, id, text }; } },
+    textRouter: {
+      generateWithTools: async ({ execute }) => {
+        await execute('reach_out', { conversation: '他', text: '你在吗' });
+        return { text: '发出去了。' };
+      }
+    }
+  });
+  await daydream.run();
+  assert.deepEqual(sent, { kind: 'private', id: 'owner', text: '你在吗' });
+});

@@ -197,7 +197,7 @@ ${task.result}`);
   logger.info('mind.session', { woke: Boolean(session.wake), gap: session.gap });
   const heartbeat = setInterval(() => { try { mind.heartbeat(); } catch {} }, 60 * 1000);
   heartbeat.unref?.();
-  const daydream = createDaydream({ mind, textRouter, storyStore, character, logger });
+  const daydream = createDaydream({ mind, textRouter, storyStore, character, gateway, config, liveGroup, logger });
   daydream.start();
   const actorTurn = createActorTurn({
     config,
