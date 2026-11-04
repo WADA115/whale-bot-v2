@@ -2,22 +2,23 @@
 $v2 = Split-Path -Parent $PSScriptRoot
 $desktop = [Environment]::GetFolderPath('Desktop')
 $icon = Join-Path $v2 'web\assets\xiaoshen\xiaoshen.ico'
-$startScript = Join-Path $PSScriptRoot 'start-runtime.ps1'
-$stopScript = Join-Path $PSScriptRoot 'stop-all.ps1'
+$openScript = Join-Path $PSScriptRoot 'open-panel.ps1'
 
-function New-Shortcut($path, $arguments, $hotkey, $name) {
-  $shell = New-Object -ComObject WScript.Shell
-  $shortcut = $shell.CreateShortcut($path)
-  $shortcut.TargetPath = 'powershell.exe'
-  $shortcut.Arguments = $arguments
-  $shortcut.WorkingDirectory = $v2
-  $shortcut.WindowStyle = 7
-  if (Test-Path $icon) { $shortcut.IconLocation = "$icon,0" }
-  $shortcut.Description = $name
-  $shortcut.Hotkey = $hotkey
-  $shortcut.Save()
-  Write-Host "已创建：$path（$hotkey）"
+$old = @('启动小深.lnk', '正常关闭小深.lnk', '小深 · DeepSeek Runtime.lnk', '小深.lnk')
+foreach ($name in $old) {
+  $path = Join-Path $desktop $name
+  if (Test-Path $path) { Remove-Item $path -Force -ErrorAction SilentlyContinue }
 }
 
-New-Shortcut (Join-Path $desktop '启动小深.lnk') "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$startScript`"" 'Ctrl+Alt+S' '小深：启动并恢复正常运行'
-New-Shortcut (Join-Path $desktop '正常关闭小深.lnk') "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$stopScript`"" 'Ctrl+Alt+Q' '小深：正常关闭并进入维护状态'
+$shell = New-Object -ComObject WScript.Shell
+$shortcut = $shell.CreateShortcut((Join-Path $desktop '小深.lnk'))
+$shortcut.TargetPath = 'powershell.exe'
+$shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$openScript`""
+$shortcut.WorkingDirectory = $v2
+$shortcut.WindowStyle = 7
+if (Test-Path $icon) { $shortcut.IconLocation = "$icon,0" }
+$shortcut.Description = '打开小深控制面板'
+$shortcut.Hotkey = 'Ctrl+Alt+S'
+$shortcut.Save()
+
+Write-Host '已整合为一个小深图标：打开控制面板（Ctrl+Alt+S）'

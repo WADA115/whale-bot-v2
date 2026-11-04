@@ -207,14 +207,40 @@ async function restartV2() {
   }
 }
 
-async function startAllServices() {
-  $('#gwLog').textContent = '正在提交启动脚本…';
+async function startGateway() {
+  $('#gwLog').textContent = '正在启动网关…';
   try {
-    const res = await fetch('/api/gateway/start-all', { method: 'POST' });
+    const res = await fetch('/api/gateway/start', { method: 'POST' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '启动失败');
     $('#gwLog').textContent = data.message || '已提交';
     setTimeout(loadGateway, 3000);
+  } catch (error) {
+    $('#gwLog').textContent = String(error.message || error);
+  }
+}
+
+async function stopGateway() {
+  $('#gwLog').textContent = '正在停止网关…';
+  try {
+    const res = await fetch('/api/gateway/stop', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '停止失败');
+    $('#gwLog').textContent = data.message || '已提交';
+    setTimeout(loadGateway, 2500);
+  } catch (error) {
+    $('#gwLog').textContent = String(error.message || error);
+  }
+}
+
+async function stopAllRuntime() {
+  if (!confirm('正常关闭全部服务？QQ 不会被关。')) return;
+  $('#gwLog').textContent = '正在正常关闭…';
+  try {
+    const res = await fetch('/api/runtime/stop-all', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '关闭失败');
+    $('#gwLog').textContent = '已提交，页面马上会断开。';
   } catch (error) {
     $('#gwLog').textContent = String(error.message || error);
   }
@@ -797,7 +823,9 @@ $('#gwLogType').addEventListener('change', loadGatewayLog);
 $('#gwCapRefresh').addEventListener('click', loadCapabilities);
 $('#gwTestSend').addEventListener('click', testSend);
 $('#gwRestart').addEventListener('click', restartV2);
-$('#gwStartAll').addEventListener('click', startAllServices);
+$('#gwStartGateway').addEventListener('click', startGateway);
+$('#gwStopGateway').addEventListener('click', stopGateway);
+$('#gwStopAll').addEventListener('click', stopAllRuntime);
 $('#clearTasks').addEventListener('click', clearTasks);
 $('#runTasks').addEventListener('click', runTasks);
 $('#taskList').addEventListener('click', (event) => {

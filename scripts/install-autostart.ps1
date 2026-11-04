@@ -1,6 +1,6 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$start = Join-Path $scriptDir 'start-all.ps1'
+$start = Join-Path $scriptDir 'start-core.ps1'
 $taskName = 'XiaoshenRuntime'
 
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$start`""

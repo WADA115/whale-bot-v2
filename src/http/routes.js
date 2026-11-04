@@ -3,6 +3,8 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { json, text, sendFile, readBody, readLogTail, v1Get, publicConfig, applyConfigPatch } from './helpers.js';
 
+const POWERSHELL = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+
 const TYPES = {
   '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -82,7 +84,7 @@ export function createPanelHandler(ctx) {
     }
     if (req.url === '/api/gateway/start-all' && req.method === 'POST') {
       try {
-        const child = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(ctx.root, 'scripts', 'start-all.ps1')], {
+        const child = spawn(POWERSHELL, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(ctx.root, 'scripts', 'start-all.ps1')], {
           cwd: ctx.root,
           detached: true,
           stdio: 'ignore',
@@ -95,7 +97,44 @@ export function createPanelHandler(ctx) {
       }
       return;
     }
-    if (req.url.startsWith('/api/gateway/logs') && req.method === 'GET') {
+    if (req.url === '/api/gateway/start' && req.method === 'POST') {
+      try {
+        const child = spawn(POWERSHELL, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(ctx.root, 'scripts', 'start-gateway.ps1')], {
+          cwd: ctx.root, stdio: 'ignore', windowsHide: true
+        });
+        child.unref();
+        setTimeout(() => { try { ctx.gateway.connect(); } catch {} }, 2500);
+        json(res, 200, { ok: true, message: '网关启动已提交' });
+      } catch (error) {
+        json(res, 502, { error: String(error?.message ?? error) });
+      }
+      return;
+    }
+    if (req.url === '/api/gateway/stop' && req.method === 'POST') {
+      try {
+        const child = spawn(POWERSHELL, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(ctx.root, 'scripts', 'stop-gateway.ps1')], {
+          cwd: ctx.root, stdio: 'ignore', windowsHide: true
+        });
+        child.unref();
+        try { ctx.gateway.close(); } catch {}
+        json(res, 200, { ok: true, message: '网关关闭已提交' });
+      } catch (error) {
+        json(res, 502, { error: String(error?.message ?? error) });
+      }
+      return;
+    }
+    if (req.url === '/api/runtime/stop-all' && req.method === 'POST') {
+      try {
+        const child = spawn(POWERSHELL, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(ctx.root, 'scripts', 'stop-all.ps1')], {
+          cwd: ctx.root, stdio: 'ignore', windowsHide: true
+        });
+        child.unref();
+        json(res, 200, { ok: true, message: '关闭已提交' });
+      } catch (error) {
+        json(res, 502, { error: String(error?.message ?? error) });
+      }
+      return;
+    }    if (req.url.startsWith('/api/gateway/logs') && req.method === 'GET') {
       const type = new URL(req.url, 'http://127.0.0.1').searchParams.get('type') || 'v2';
       const files = {
         v2: path.join(ctx.root, 'state', 'logs', 'v2.jsonl'),
@@ -125,7 +164,7 @@ export function createPanelHandler(ctx) {
     }
     if (req.url === '/api/gateway/restart' && req.method === 'POST') {
       try {
-        const child = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(ctx.root, 'scripts', 'restart-v2.ps1')], {
+        const child = spawn(POWERSHELL, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(ctx.root, 'scripts', 'restart-v2.ps1')], {
           cwd: ctx.root,
           detached: true,
           stdio: 'ignore',

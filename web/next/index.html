@@ -401,7 +401,9 @@
             <p class="muted">群白名单、私聊白名单、管理员和权限都在设置页维护。</p>
             <div class="config-actions">
               <a class="text-btn" href="http://127.0.0.1:5099/" target="_blank" rel="noreferrer">打开 SnowLuma 控制台</a>
-              <button class="text-btn" id="gwStartAll" type="button">启动全部</button>
+              <button class="text-btn" id="gwStartGateway" type="button">启动网关</button>
+              <button class="text-btn" id="gwStopGateway" type="button">停止网关</button>
+              <button class="text-btn" id="gwStopAll" type="button">正常关闭全部</button>
               <button class="text-btn" type="button" onclick="switchPage('settings')">打开设置</button>
               <a class="text-btn" href="/api/gateway/overview" target="_blank" rel="noreferrer">原始网关 JSON</a>
             </div>

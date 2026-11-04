@@ -55,7 +55,7 @@ let lastSnowStart = 0;
 let lastAsrStart = 0;
 async function ensureServices() {
   const now = Date.now();
-  if ((!await portOpen(3000)) || (!await portOpen(3001))) {
+  if (process.env.GATEWAY_AUTOSTART === '1' && ((!await portOpen(3000)) || (!await portOpen(3001)))) {
     if (now - lastSnowStart > 20000) {
       lastSnowStart = now;
       log('starting SnowLuma');
