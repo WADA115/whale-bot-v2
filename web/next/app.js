@@ -300,8 +300,6 @@ async function loadConfig() {
   $('#cfgMode').value = cfg.mode || 'shadow';
   $('#cfgGroups').value = (cfg.allow?.groups || []).join('\n');
   $('#cfgPrivate').value = (cfg.allow?.private || []).join('\n');
-  $('#cfgMaxReply').value = cfg.actor?.maxReplyChars ?? 300;
-  $('#cfgMaxChars').value = cfg.character?.maxChars ?? 6000;
   $('#cfgCooldown').value = cfg.character?.groupCooldownMs ?? 60000;
   $('#cfgTaskAck').value = cfg.character?.taskAck || '';
   autoGrowAll();
@@ -326,10 +324,9 @@ async function saveConfig() {
       groups: split($('#cfgGroups').value),
       private: split($('#cfgPrivate').value)
     },
-    actor: { maxReplyChars: Number($('#cfgMaxReply').value) },
+    actor: {},
     character: {
       privateOnly: $('#cfgPrivateOnly').checked,
-      maxChars: Number($('#cfgMaxChars').value),
       groupCooldownMs: Number($('#cfgCooldown').value),
       taskAck: $('#cfgTaskAck').value,
       taskAutoRun: $('#cfgTaskAuto').checked
