@@ -33,6 +33,7 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
   const base = root || path.resolve(process.cwd(), 'state', 'mind');
   fs.mkdirSync(base, { recursive: true });
   const presenceFile = path.join(base, 'presence.json');
+  const readsFile = path.join(base, 'reads.json');
   const card = character?.card ?? null;
 
   function ensure() {
@@ -70,6 +71,7 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
       undercurrent: readText(path.join(base, 'undercurrent.md')),
       unfinished: readText(path.join(base, 'unfinished.md')),
       seen: readText(path.join(base, 'seen.md')),
+      reads: readReads(),
       presence: readPresence()
     };
   }
@@ -123,6 +125,17 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     return wake;
   }
 
+  function readReads() {
+    try { return JSON.parse(fs.readFileSync(readsFile, 'utf8')); } catch { return []; }
+  }
+
+  function noteRead(entry = {}) {
+    const list = readReads();
+    list.unshift({ ...entry, at: Date.now() });
+    writeText(readsFile, JSON.stringify(list.slice(0, 20)));
+    return list.slice(0, 20);
+  }
+
   function appendSeen(lines) {
     const list = (Array.isArray(lines) ? lines : [lines])
       .map((line) => String(line ?? '').trim())
@@ -154,5 +167,5 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     return writePresence({ lastReachOutAt: Date.now(), reachDay: new Date().toISOString().slice(0, 10), lastContactAt: Date.now() });
   }
 
-  return { ensure, read, writeSection, appendUndercurrent, appendSeen, touchContact, touchThought, readPresence, beginSession, heartbeat, markShutdown, peekWake, takeWake, canReach, noteReach, base };
+  return { ensure, read, writeSection, appendUndercurrent, appendSeen, noteRead, readReads, touchContact, touchThought, readPresence, beginSession, heartbeat, markShutdown, peekWake, takeWake, canReach, noteReach, base };
 }

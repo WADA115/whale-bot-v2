@@ -274,6 +274,8 @@ export function createActorTurn({
         }
         if (name === 'bili_video_content') {
           const item = await bilibili.content(args.bvid);
+          mind?.noteRead?.({ bvid: item.bvid, title: item.title, source: item.source, chars: String(item.text || '').length });
+          logger.info('bili.content_read', { bvid: item.bvid, chars: String(item.text || '').length });
           return [item.title, item.owner ? `UP：${item.owner}` : '', item.text || '没有字幕或简介。'].filter(Boolean).join('\n');
         }
         if (name === 'bili_dynamics') {

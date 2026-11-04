@@ -747,6 +747,15 @@ function mindAgo(timestamp) {
   return '很久没有声音了';
 }
 
+function renderMindReads(reads) {
+  const html = (reads || []).slice(0, 8).map((item) => {
+    const title = esc(item.title || item.bvid || '一个视频');
+    const meta = [item.source === 'subtitle' ? '字幕' : '简介', mindAgo(item.at)].filter(Boolean).join(' · ');
+    return `<div class="result-item">${title}<small>${meta}</small></div>`;
+  }).join('');
+  $('#mindReads').innerHTML = html || '<p class="muted">还没有。</p>';
+}
+
 async function loadMind() {
   const data = await getJson('/api/mind', {});
   $('#mindSelf').value = data.self || '';
