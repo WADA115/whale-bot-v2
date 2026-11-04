@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { durationWord } from './time.js';
 
-const FILES = ['self.md', 'worldview.md', 'now.md', 'undercurrent.md', 'unfinished.md'];
+const FILES = ['self.md', 'worldview.md', 'now.md', 'undercurrent.md', 'unfinished.md', 'seen.md'];
 
 function readText(file) {
   try { return fs.readFileSync(file, 'utf8').trim(); } catch { return ''; }
@@ -41,7 +41,8 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
       'worldview.md': seedWorld(card),
       'now.md': '',
       'undercurrent.md': '',
-      'unfinished.md': ''
+      'unfinished.md': '',
+      'seen.md': ''
     };
     for (const [name, content] of Object.entries(seeds)) {
       const file = path.join(base, name);
@@ -68,6 +69,7 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
       now: readText(path.join(base, 'now.md')),
       undercurrent: readText(path.join(base, 'undercurrent.md')),
       unfinished: readText(path.join(base, 'unfinished.md')),
+      seen: readText(path.join(base, 'seen.md')),
       presence: readPresence()
     };
   }
@@ -121,6 +123,18 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     return wake;
   }
 
+  function appendSeen(lines) {
+    const list = (Array.isArray(lines) ? lines : [lines])
+      .map((line) => String(line ?? '').trim())
+      .filter(Boolean);
+    if (!list.length) return read();
+    const file = path.join(base, 'seen.md');
+    const before = readText(file);
+    const added = [...new Set(list)].filter((line) => !before.includes(line));
+    if (added.length) writeText(file, [before, ...added.map((line) => `- ${line}`)].filter(Boolean).join('\n'));
+    return read();
+  }
+
   function touchContact() {
     return writePresence({ lastContactAt: Date.now() });
   }
@@ -140,5 +154,5 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     return writePresence({ lastReachOutAt: Date.now(), reachDay: new Date().toISOString().slice(0, 10), lastContactAt: Date.now() });
   }
 
-  return { ensure, read, writeSection, appendUndercurrent, touchContact, touchThought, readPresence, beginSession, heartbeat, markShutdown, peekWake, takeWake, canReach, noteReach, base };
+  return { ensure, read, writeSection, appendUndercurrent, appendSeen, touchContact, touchThought, readPresence, beginSession, heartbeat, markShutdown, peekWake, takeWake, canReach, noteReach, base };
 }

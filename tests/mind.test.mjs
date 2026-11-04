@@ -59,3 +59,9 @@ test('发呆后可以自己决定发私聊', async () => {
   await daydream.run();
   assert.deepEqual(sent, { kind: 'private', id: 'owner', text: '你在吗' });
 });
+test('给她看过的视频会进入 seen', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mind-seen-'));
+  const mind = createMindStore({ root, character: { card } });
+  mind.appendSeen('一个视频｜BV1abc123456｜UP');
+  assert.match(mind.read().seen, /BV1abc123456/);
+});

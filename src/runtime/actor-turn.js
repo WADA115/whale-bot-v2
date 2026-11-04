@@ -239,6 +239,18 @@ export function createActorTurn({
       {
         type: 'function',
         function: {
+          name: 'bili_search',
+          description: '好奇时搜一下 B站，看看有什么视频。参数是关键词。',
+          parameters: {
+            type: 'object',
+            properties: { keyword: { type: 'string', description: '要搜什么' } },
+            required: ['keyword']
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
           name: 'bili_video_content',
           description: '看一个 B站视频的字幕或简介。参数是 BV 号。',
           parameters: {
@@ -256,6 +268,10 @@ export function createActorTurn({
     ] : [];
     const runBili = async (name, args = {}) => {
       try {
+        if (name === 'bili_search') {
+          const list = await bilibili.search(args.keyword, 5);
+          return list.map((item) => `${item.title}｜${item.bvid}｜${item.owner || ''}`).join('\n') || '没搜到。';
+        }
         if (name === 'bili_video_content') {
           const item = await bilibili.content(args.bvid);
           return [item.title, item.owner ? `UP：${item.owner}` : '', item.text || '没有字幕或简介。'].filter(Boolean).join('\n');

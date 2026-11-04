@@ -381,7 +381,20 @@ export function createPanelHandler(ctx) {
       ctx.bilibili.popular(limit).then((list) => json(res, 200, { list })).catch((error) => json(res, 502, { error: String(error?.message ?? error) }));
       return;
     }
-    if (req.url.startsWith('/api/bilibili/content') && req.method === 'GET') {
+    if (req.url === '/api/bilibili/see' && req.method === 'POST') {
+    if (!ctx.mind) return json(res, 409, { error: 'mind disabled' });
+    readBody(req).then((body) => {
+      const bvid = String(body?.bvid || '').trim();
+      const title = String(body?.title || '').trim();
+      const owner = String(body?.owner || '').trim();
+      if (!/^BV[0-9A-Za-z]{10}$/.test(bvid)) return json(res, 400, { error: 'invalid bvid' });
+      if (!title) return json(res, 400, { error: 'title required' });
+      const line = [title, bvid, owner].filter(Boolean).join('｜');
+      const result = ctx.mind.appendSeen(line);
+      return json(res, 200, { ok: true, seen: result.seen });
+    }).catch(() => json(res, 400, { error: 'invalid json' }));
+    return;
+  }  if (req.url.startsWith('/api/bilibili/content') && req.method === 'GET') {
     if (!ctx.bilibili) return json(res, 409, { error: 'bilibili disabled' });
     const bvid = new URL(req.url, 'http://127.0.0.1').searchParams.get('bvid') || '';
     ctx.bilibili.content(bvid).then((x) => json(res, 200, x)).catch((error) => json(res, 502, { error: String(error?.message ?? error) }));

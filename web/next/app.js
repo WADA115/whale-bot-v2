@@ -595,16 +595,26 @@ async function forgetPerson() {
   $('#storyPersonTail').value = '';
 }
 
+function renderBiliResults(list) {
+  $('#biliResults').innerHTML = (list || []).map((x) => {
+    const title = esc(x.title || '');
+    const meta = [x.owner || '', x.tname || ''].filter(Boolean).map(esc).join(' · ');
+    const bvid = String(x.bvid || '').trim();
+    const see = bvid ? `<button class="text-btn see-btn" type="button" data-see-bvid="${esc(bvid)}" data-see-title="${esc(x.title || '')}" data-see-owner="${esc(x.owner || '')}">给她看</button>` : '';
+    return `<div class="result-item">${title}${see}<small>${meta}</small></div>`;
+  }).join('') || '<p class="muted">没有结果。</p>';
+}
+
 async function biliSearch() {
   const q = $('#biliQuery').value.trim();
   if (!q) return;
   const data = await getJson('/api/bilibili/search?q=' + encodeURIComponent(q) + '&limit=5', { list: [] });
-  $('#biliResults').innerHTML = (data.list || []).map((x) => `<div class="result-item">${esc(x.title)}<small>${esc(x.owner || '')} · ${esc(x.tname || '')}</small></div>`).join('') || '<p class="muted">没有结果。</p>';
+  renderBiliResults(data.list);
 }
 
 async function biliPopular() {
   const data = await getJson('/api/bilibili/popular?limit=5', { list: [] });
-  $('#biliResults').innerHTML = (data.list || []).map((x) => `<div class="result-item">${esc(x.title)}<small>${esc(x.owner || '')}</small></div>`).join('') || '<p class="muted">没有结果。</p>';
+  renderBiliResults(data.list);
 }
 
 async function biliContent() {
@@ -744,6 +754,7 @@ async function loadMind() {
   $('#mindUndercurrent').value = data.undercurrent || '';
   $('#mindUnfinished').value = data.unfinished || '';
   $('#mindWorldview').value = data.worldview || '';
+  $('#mindSeen').value = data.seen || '';
   $('#mindPresence').textContent = mindAgo(data.presence?.lastContactAt);
   autoGrowAll();
 }
@@ -754,7 +765,8 @@ async function saveMind() {
     ['now', '#mindNow'],
     ['undercurrent', '#mindUndercurrent'],
     ['unfinished', '#mindUnfinished'],
-    ['worldview', '#mindWorldview']
+    ['worldview', '#mindWorldview'],
+    ['seen', '#mindSeen']
   ];
   for (const [section, selector] of sections) {
     const res = await fetch('/api/mind/section', {
@@ -795,6 +807,27 @@ $('#storySave').addEventListener('click', saveStory);
 $('#mindDaydream').addEventListener('click', mindDaydream);
 $('#mindSave').addEventListener('click', saveMind);
 $('#biliSearch').addEventListener('click', biliSearch);
+$('#biliResults').addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-see-bvid]');
+  if (!button) return;
+  button.disabled = true;
+  try {
+    const res = await fetch('/api/bilibili/see', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        bvid: button.dataset.seeBvid,
+        title: button.dataset.seeTitle,
+        owner: button.dataset.seeOwner
+      })
+    });
+    if (!res.ok) throw new Error('保存失败');
+    button.textContent = '已给她';
+  } catch {
+    button.disabled = false;
+    button.textContent = '没存上';
+  }
+});
 $('#biliPopular').addEventListener('click', biliPopular);
 $('#biliContentBtn').addEventListener('click', biliContent);
 $('#biliDynamics').addEventListener('click', biliDynamics);
