@@ -384,6 +384,26 @@ export function createActorTurn({
       mindState.seen ? `他给我看过的：\n${mindState.seen.slice(-3000)}` : '',
       pendingRead ? `他给你看了一个视频：${pendingRead.title}。你还没读全文。要读就用 bili_video_content，BV 是 ${pendingRead.bvid}。读完后自然带出来。` : ''
     ] : [];
+    let impulse = '';
+    try {
+      const feelSystem = [
+        `你是${character.card.name}。`,
+        groupFact || '',
+        imageDesc ? `你看到他发来的图片：${imageDesc}` : '',
+        voiceDesc ? `你听到他的语音：${voiceDesc}` : '',
+        person?.tail ? `你现在对他的感觉：${person.tail}` : '',
+        `他刚才说：${text}`,
+        '',
+        '先不要考虑后果。',
+        '如果不过脑子，你第一句会回什么？只写那一句。',
+        '不要写动作，不要写画面，不要解释，不要分析，不要总结。'
+      ].filter(Boolean).join('\n');
+      const felt = await textRouter.generate({ system: feelSystem, user: '' });
+      impulse = String(felt?.text || '').trim().slice(0, 300);
+      logger.info('character.impulse', { key, chars: impulse.length, text: impulse });
+    } catch (error) {
+      logger.warn('character.impulse_failed', { key, error: String(error?.message ?? error) });
+    }
     const prompt = buildNarrativePrompt({
       card: character.card,
       story: storyForPrompt,
@@ -393,6 +413,7 @@ export function createActorTurn({
       turns: promptTurns,
       intent: scene.intent,
       notes: [
+        impulse ? `刚才心里那一下：${impulse}` : '',
         ...mindNotes,
         groupHistory,
         reference,
