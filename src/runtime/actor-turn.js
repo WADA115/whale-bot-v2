@@ -449,7 +449,11 @@ export function createActorTurn({
       logger.error('turn.model_failed', { key, error: String(error?.message ?? error) });
       return;
     }
-    const reply = sanitizeReply(result.text, 0);
+    const generated = sanitizeReply(result.text, 0);
+    const first = String(impulse || '').split('\\n')[0].trim();
+    const useFirst = first && !/^[（(]/.test(first) && !generated.startsWith(first.slice(0, 12));
+    const reply = useFirst ? [first, generated].filter(Boolean).join('\\n') : generated;
+    if (useFirst) logger.info('character.impulse_sent', { key });
     if (!reply) {
       logger.info('turn.empty_reply', { key, provider: result.provider });
       return;
