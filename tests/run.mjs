@@ -32,3 +32,4 @@ import './persona.test.mjs';
 import './drive.test.mjs';
 import './world-observer.test.mjs';
 import './mind.test.mjs';
+import './slang-observer.test.mjs';

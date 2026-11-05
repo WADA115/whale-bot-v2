@@ -22,6 +22,7 @@ import { createTaskInbox } from './character/tasks.js';
 import { createTaskExecutor } from './character/executor.js';
 import { loadStickers } from './character/expression.js';
 import { loadSlang } from './character/slang.js';
+import { createSlangObserver } from './character/slang-observer.js';
 import { createBilibili } from './platform/bilibili.js';
 import { createAutonomy } from './autonomy/engine.js';
 import { createStoryStore } from './story/store.js';
@@ -130,6 +131,15 @@ ${task.result}`);
   const stickers = loadStickers(config.character?.expression?.stickersFile);
   const expressionCooldowns = new Map();
   const slang = loadSlang(config.character?.slangFile, config.knowledge?.dbPath);
+  const slangObserver = createSlangObserver({
+    file: config.character?.slangFile,
+    dbPath: config.knowledge?.dbPath,
+    entries: slang,
+    textRouter,
+    config: { ...(config.slangObserver || {}), allowedGroups: config.allow?.groups || [] },
+    logger
+  });
+  slangObserver.start();
   const bilibili = config.bilibili?.enabled ? createBilibili({ file: config.bilibili.cookieFile, logger }) : null;
   const autonomy = createAutonomy({
     config: { ...(config.autonomy ?? {}), owner: config.autonomy?.owner || config.allow.private?.[0] || '' },
@@ -257,7 +267,10 @@ ${task.result}`);
   });
 
   function dispatchMessage(message) {
-    if (message.kind === 'group') liveGroup.observe(message);
+    if (message.kind === 'group') {
+      liveGroup.observe(message);
+      slangObserver.observe(message);
+    }
     if (gateway.isSelf(message)) {
       logger.debug('message.self_ignored', { key: message.key });
       return;
@@ -379,6 +392,7 @@ ${task.result}`);
     try { mind.markShutdown(); } catch {}
     try { runtimeLock.release(); } catch {}
     gateway.close();
+    slangObserver.stop();
     knowledge?.close();
     server.close(() => process.exit(0));
     setTimeout(() => process.exit(0), 1000).unref();
