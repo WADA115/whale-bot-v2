@@ -73,3 +73,22 @@ test('读全文后清掉待读标记', () => {
   mind.noteRead({ bvid: 'BV1abc123456', title: '视频', chars: 10 });
   assert.equal(mind.peekPendingRead(), null);
 });
+test('发呆后可以自己发 QQ 动态并选择可见范围', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mind-qzone-'));
+  const mind = createMindStore({ root, character: { card } });
+  let posted = null;
+  const daydream = createDaydream({
+    mind,
+    character: { card },
+    gateway: { ws: { readyState: 1 }, sendQzoneMsg: async (payload) => { posted = payload; } },
+    textRouter: {
+      generateWithTools: async ({ execute }) => {
+        await execute('post_qzone', { text: '今天有点想说话。', visibility: 'friends' });
+        return { text: '发出去了。' };
+      }
+    }
+  });
+  await daydream.run();
+  assert.equal(posted.ugcRight, 4);
+  assert.match(posted.content, /想说话/);
+});

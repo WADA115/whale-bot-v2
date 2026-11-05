@@ -66,6 +66,23 @@ export function createDaydream({
         }
       }
     } : null;
+    const canQzone = Boolean(mind.canQzone?.()) && gateway?.ws?.readyState === 1;
+    const qzoneTool = canQzone ? {
+      type: 'function',
+      function: {
+        name: 'post_qzone',
+        description: '真的想发一条 QQ 动态时使用。可以选择给好友看，或者所有人看。大多数时候不要用。',
+        parameters: {
+          type: 'object',
+          properties: {
+            text: { type: 'string', description: '动态内容' },
+            visibility: { type: 'string', enum: ['friends', 'all'], description: 'friends 仅好友，all 所有人' }
+          },
+          required: ['text', 'visibility']
+        }
+      }
+    } : null;
+    const tools = [reachTool, qzoneTool].filter(Boolean);
 
     const system = [
       `你是${character?.card?.name || '她'}。`,
@@ -86,10 +103,20 @@ export function createDaydream({
       '你可以继续想，也可以什么都不做。',
       reachTool ? '你现在可以找：' : '',
       ...places.map((place) => `- ${place.label}（${place.kind === 'private' ? '私聊' : '群聊'}）`),
-      reachTool ? '如果真的有话说，就用 reach_out；没有就留空。' : ''
+      reachTool ? '如果真的有话说，就用 reach_out；没有就留空。' : '',
+      qzoneTool ? '如果想把一句话留在 QQ 动态里，就用 post_qzone，自己选仅好友还是所有人。' : ''
     ].filter(Boolean).join('\n');
 
     async function execute(name, args = {}) {
+      if (name === 'post_qzone') {
+        const text = String(args.text ?? '').trim();
+        if (!text) return '没写。';
+        const visibility = args.visibility === 'all' ? 'all' : 'friends';
+        await gateway.sendQzoneMsg({ content: text, ugcRight: visibility === 'all' ? 1 : 4 });
+        mind.noteQzone();
+        logger?.info('mind.qzone_posted', { visibility, chars: text.length });
+        return '发出去了。';
+      }
       if (name !== 'reach_out') return '没有这个动作。';
       const place = places.find((item) => item.label === String(args.conversation ?? '').trim());
       const text = String(args.text ?? '').trim();
@@ -102,13 +129,13 @@ export function createDaydream({
     }
 
     const request = { system, user: '' };
-    const answer = reachTool && textRouter.generateWithTools
-      ? await textRouter.generateWithTools({ ...request, tools: [reachTool], execute })
+    const answer = tools.length && textRouter.generateWithTools
+      ? await textRouter.generateWithTools({ ...request, tools, execute })
       : await textRouter.generate(request);
     const text = String(answer?.text ?? '').trim();
     if (text) mind.appendUndercurrent(text);
     mind.touchThought();
-    logger?.info('mind.daydream', { chars: text.length, reach: Boolean(reachTool) });
+    logger?.info('mind.daydream', { chars: text.length, reach: Boolean(reachTool), qzone: Boolean(qzoneTool) });
     return { text, state: mind.read() };
   }
 

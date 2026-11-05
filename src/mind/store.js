@@ -177,5 +177,16 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     return writePresence({ lastReachOutAt: Date.now(), reachDay: new Date().toISOString().slice(0, 10), lastContactAt: Date.now() });
   }
 
-  return { ensure, read, writeSection, appendUndercurrent, appendSeen, noteRead, readReads, setPendingRead, peekPendingRead, touchContact, touchThought, readPresence, beginSession, heartbeat, markShutdown, peekWake, takeWake, canReach, noteReach, base };
+  function canQzone() {
+    const presence = readPresence();
+    const last = Number(presence.lastQzoneAt) || 0;
+    const day = new Date().toISOString().slice(0, 10);
+    return Date.now() - last > 6 * 60 * 60 * 1000 && presence.qzoneDay !== day;
+  }
+
+  function noteQzone() {
+    return writePresence({ lastQzoneAt: Date.now(), qzoneDay: new Date().toISOString().slice(0, 10), lastContactAt: Date.now() });
+  }
+
+  return { ensure, read, writeSection, appendUndercurrent, appendSeen, noteRead, readReads, setPendingRead, peekPendingRead, touchContact, touchThought, readPresence, beginSession, heartbeat, markShutdown, peekWake, takeWake, canReach, noteReach, canQzone, noteQzone, base };
 }
