@@ -33,7 +33,7 @@ export function createDaydream({
     const out = [];
     const owner = String(config?.autonomy?.owner || config?.allow?.private?.[0] || '').trim();
     if (owner) out.push({ label: '他', kind: 'private', id: owner });
-    for (const groupId of config?.allow?.groups || []) {
+    for (const groupId of (config?.character?.privateOnly ? [] : (config?.allow?.groups || []))) {
       let label = liveGroup?.name(`group:${groupId}`) || '';
       if (!label) {
         try { label = (await readGroupHistory({ gateway, groupId })).groupName || ''; } catch {}
