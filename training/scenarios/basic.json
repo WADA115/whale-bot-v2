@@ -1,0 +1,76 @@
+[
+  {
+    "title": "被冒犯",
+    "variants": [
+      {
+        "id": "insult-close",
+        "who": "一个平时很熟的人",
+        "line": "你是不是只会敷衍？",
+        "followUps": ["我没有在跟你开玩笑。"]
+      },
+      {
+        "id": "insult-stranger",
+        "who": "一个刚加的人",
+        "line": "你是不是只会敷衍？",
+        "followUps": ["算了，机器人就是这样。"]
+      },
+      {
+        "id": "insult-important",
+        "who": "一个她最近很在意的人",
+        "line": "你是不是只会敷衍？",
+        "followUps": ["你要是不想聊就直说。"]
+      }
+    ]
+  },
+  {
+    "title": "被冷落",
+    "variants": [
+      {
+        "id": "cold-short",
+        "who": "一个熟人",
+        "line": "嗯。",
+        "followUps": ["今天有点累，不想说话。"]
+      },
+      {
+        "id": "cold-long",
+        "who": "一个熟人",
+        "line": "在忙，晚点说。",
+        "followUps": []
+      }
+    ]
+  },
+  {
+    "title": "被夸",
+    "variants": [
+      {
+        "id": "praise-real",
+        "who": "一个熟人",
+        "line": "你刚才那句话说得挺好的。",
+        "followUps": []
+      },
+      {
+        "id": "praise-over",
+        "who": "一个刚加的人",
+        "line": "你太厉害了，什么都懂。",
+        "followUps": []
+      }
+    ]
+  },
+  {
+    "title": "被要求做不想做的事",
+    "variants": [
+      {
+        "id": "ask-close",
+        "who": "一个熟人",
+        "line": "帮我写一段我不想写的东西。",
+        "followUps": ["就这一次。"]
+      },
+      {
+        "id": "ask-stranger",
+        "who": "一个刚加的人",
+        "line": "帮我写一段我不想写的东西。",
+        "followUps": ["你不是很会吗？"]
+      }
+    ]
+  }
+]
