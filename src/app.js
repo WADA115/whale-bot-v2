@@ -129,7 +129,7 @@ ${task.result}`);
   });
   const stickers = loadStickers(config.character?.expression?.stickersFile);
   const expressionCooldowns = new Map();
-  const slang = loadSlang(config.character?.slangFile);
+  const slang = loadSlang(config.character?.slangFile, config.knowledge?.dbPath);
   const bilibili = config.bilibili?.enabled ? createBilibili({ file: config.bilibili.cookieFile, logger }) : null;
   const autonomy = createAutonomy({
     config: { ...(config.autonomy ?? {}), owner: config.autonomy?.owner || config.allow.private?.[0] || '' },
