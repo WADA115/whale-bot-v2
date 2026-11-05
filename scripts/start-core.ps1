@@ -1,5 +1,8 @@
 $ErrorActionPreference = 'Continue'
 $v2 = Split-Path -Parent $PSScriptRoot
+$v1 = Join-Path (Split-Path -Parent $v2) 'qq-bridge'
+$localPaths = Join-Path $PSScriptRoot 'local.paths.ps1'
+if (Test-Path $localPaths) { . $localPaths }
 $maintenance = Join-Path $v2 'state\maintenance.flag'
 $log = Join-Path $v2 'state\logs\core.log'
 
@@ -10,6 +13,17 @@ function Write-Log($message) {
 if (Test-Path $maintenance) {
   Write-Log 'maintenance flag; core not started'
   exit 0
+}
+
+if (-not (Get-NetTCPConnection -LocalPort 3199 -State Listen -ErrorAction SilentlyContinue)) {
+  $asrPy = if ($env:ASR_PY) { $env:ASR_PY } else { Join-Path $v1 'venv\Scripts\python.exe' }
+  $asrScript = if ($env:ASR_SCRIPT) { $env:ASR_SCRIPT } else { Join-Path $v1 'src\asr-server.py' }
+  if ((Test-Path $asrPy) -and (Test-Path $asrScript)) {
+    Write-Log 'starting ASR'
+    Start-Process -FilePath $asrPy -ArgumentList @($asrScript, '--port', '3199') -WorkingDirectory $v1 -WindowStyle Hidden
+  } else {
+    Write-Log 'ASR files not found'
+  }
 }
 
 $listener = Get-NetTCPConnection -LocalPort 3201 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
