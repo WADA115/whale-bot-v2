@@ -1,0 +1,26 @@
+[
+  {
+    "title": "被冒犯之后",
+    "variants": [
+      {
+        "id": "habit-insult",
+        "who": "一个平时很熟的人",
+        "line": "你是不是只会敷衍？",
+        "rounds": 4,
+        "memory": "habit-insult"
+      }
+    ]
+  },
+  {
+    "title": "被冷落之后",
+    "variants": [
+      {
+        "id": "habit-cold",
+        "who": "一个平时很熟的人",
+        "line": "今天有点累，不想说话。",
+        "rounds": 3,
+        "memory": "habit-cold"
+      }
+    ]
+  }
+]
