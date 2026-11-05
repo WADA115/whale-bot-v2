@@ -413,6 +413,7 @@ export function createActorTurn({
       turns: promptTurns,
       intent: scene.intent,
       notes: [
+        current.kind === 'group' ? '环境：你在 QQ 群聊里，别人也看得到。' : '环境：你在 QQ 私聊里，只有你们两个人看得到。',
         impulse ? `刚才心里那一下：${impulse}` : '',
         ...mindNotes,
         groupHistory,
