@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 function parseTerms(text) {
@@ -18,11 +17,19 @@ function clean(value, max = 200) {
   return String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
 }
 
+function imageSummary(message) {
+  const segs = (message?.segments || []).filter((seg) => ['image', 'mface', 'face', 'bface', 'marketface'].includes(seg?.type));
+  if (!segs.length) return '';
+  const names = segs.map((seg) => seg?.data?.summary || seg?.data?.name || seg?.data?.text || '').filter(Boolean);
+  return names.length ? `[表情：${names.join('、')}]` : '[图片/表情]';
+}
+
 export function createSlangObserver({
   file,
   dbPath,
   entries = [],
   textRouter,
+  vision = null,
   config = {},
   logger = null
 } = {}) {
@@ -30,6 +37,8 @@ export function createSlangObserver({
   const intervalMs = Math.max(60_000, Number(config.intervalMs) || 5 * 60 * 1000);
   const maxPerRun = Math.max(1, Number(config.maxPerRun) || 8);
   const pending = new Map();
+  const imageQueue = [];
+  let imageWorker = false;
   let total = 0;
   let busy = false;
   let timer = null;
@@ -93,7 +102,67 @@ export function createSlangObserver({
     }
   }
 
+  function pushLine(message, text) {
+    const key = message.key;
+    const room = pending.get(key) || [];
+    room.push({
+      sender: String(message.senderName || message.userId || '群友').slice(0, 24),
+      text: clean(text, 300),
+      at: Date.now()
+    });
+    while (room.length > 40) room.shift();
+    pending.set(key, room);
+    total += 1;
+    if (total >= batchSize) flush();
+  }
+
+  async function pumpImages() {
+    if (imageWorker) return;
+    imageWorker = true;
+    try {
+      while (imageQueue.length) {
+        const item = imageQueue.shift();
+        let text = imageSummary(item.message);
+        if (vision && item.message.images?.length) {
+          try {
+            const described = await vision.describe({ message: item.message });
+            const desc = clean(described?.text, 260);
+            if (desc) text = `${text || '[图片]'} ${desc}`;
+          } catch (error) {
+            logger?.warn('slang.image_failed', { error: String(error?.message ?? error) });
+          }
+        }
+        pushLine(item.message, text || '[图片]');
+      }
+    } finally {
+      imageWorker = false;
+    }
+  }
+
+  function observe(message) {
+    if (!message || message.kind !== 'group') return;
+    const allowed = Array.isArray(config.allowedGroups) ? config.allowedGroups.map(String) : [];
+    if (allowed.length && !allowed.includes(String(message.id))) return;
+    const text = clean(message.text, 300);
+    if (text) {
+      pushLine(message, text);
+      return;
+    }
+    if (message.images?.length) {
+      imageQueue.push({ message });
+      pumpImages();
+      return;
+    }
+    const sticker = imageSummary(message);
+    if (sticker) pushLine(message, sticker);
+  }
+
+  async function waitImages() {
+    while (imageWorker || imageQueue.length) await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+
   async function flush() {
+    if (imageWorker || imageQueue.length) await waitImages();
     if (busy || !total || !textRouter) return;
     busy = true;
     const lines = pendingLines();
@@ -103,9 +172,10 @@ export function createSlangObserver({
       const known = entries.slice(-40).map((x) => x.term).join('、');
       const transcript = lines.map((x) => `${x.sender}：${x.text}`).join('\n');
       const system = [
-        '你在看 QQ 群聊。',
+        '你在看 QQ 群聊，里面可能有文字、图片和表情包。',
         '只找真正的黑话、梗、网络表达、圈子里的特殊说法。',
         '普通词、正常聊天、单纯语气词不要。',
+        '图片里的字也算群聊内容。',
         known ? `已经知道的：${known}` : '',
         '',
         '群聊：',
@@ -142,28 +212,9 @@ export function createSlangObserver({
     }
   }
 
-  function observe(message) {
-    if (!message || message.kind !== 'group') return;
-    const allowed = Array.isArray(config.allowedGroups) ? config.allowedGroups.map(String) : [];
-    if (allowed.length && !allowed.includes(String(message.id))) return;
-    const text = clean(message.text, 300);
-    if (!text) return;
-    const key = message.key;
-    const room = pending.get(key) || [];
-    room.push({
-      sender: String(message.senderName || message.userId || '群友').slice(0, 24),
-      text,
-      at: Date.now()
-    });
-    while (room.length > 40) room.shift();
-    pending.set(key, room);
-    total += 1;
-    if (total >= batchSize) flush();
-  }
-
   function start() {
     if (timer) return;
-    logger?.info('slang.observer_started', { batchSize, intervalMs });
+    logger?.info('slang.observer_started', { batchSize, intervalMs, vision: Boolean(vision) });
     timer = setInterval(() => { flush(); }, intervalMs);
     timer.unref?.();
   }

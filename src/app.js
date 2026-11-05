@@ -136,6 +136,7 @@ ${task.result}`);
     dbPath: config.knowledge?.dbPath,
     entries: slang,
     textRouter,
+    vision: visionRouter,
     config: { ...(config.slangObserver || {}), allowedGroups: config.allow?.groups || [] },
     logger
   });

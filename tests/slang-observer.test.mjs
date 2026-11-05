@@ -31,3 +31,27 @@ test('群聊黑话观察器会从群消息里提取候选', async () => {
   assert.equal(entries[0].term, '绷不住了');
   assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).length, 1);
 });
+test('图片和表情包会先过视觉再进黑话提取', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'slang-image-'));
+  const entries = [];
+  const observer = createSlangObserver({
+    file: path.join(dir, 'slang.json'),
+    entries,
+    vision: { describe: async () => ({ text: '文字：大肥鱼' }) },
+    textRouter: {
+      generate: async () => ({ text: '[{"term":"大肥鱼","meaning":"蓝色鲸鱼娘","usage":"叫小鲸鱼时"}]' })
+    },
+    config: { batchSize: 5, intervalMs: 60_000 }
+  });
+  observer.observe({
+    kind: 'group',
+    key: 'group:1',
+    id: '1',
+    senderName: '群友',
+    text: '',
+    segments: [{ type: 'image', data: { url: 'https://example.com/a.gif' } }],
+    images: [{ url: 'https://example.com/a.gif' }]
+  });
+  await observer.flush();
+  assert.equal(entries[0]?.term, '大肥鱼');
+});
