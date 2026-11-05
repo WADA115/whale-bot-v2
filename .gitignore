@@ -11,3 +11,4 @@ web/next/snowluma-ui.png
 scripts/local.paths.ps1
 training/runs/
 training/memory/
+training/blind/
