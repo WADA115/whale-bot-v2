@@ -272,6 +272,8 @@ export function createPanelHandler(ctx) {
     json(res, 202, { ok: true });
     setTimeout(() => ctx.shutdown?.(), 100);
     return;
+  }  if (req.url === '/api/slang' && req.method === 'GET') {
+    return json(res, 200, { list: (ctx.slang || []).slice(-100) });
   }  if (req.url === '/api/mind' && req.method === 'GET') {
     if (!ctx.mind) return json(res, 409, { error: 'mind disabled' });
     return json(res, 200, ctx.mind.read());

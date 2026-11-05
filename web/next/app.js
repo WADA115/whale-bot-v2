@@ -747,6 +747,17 @@ function mindAgo(timestamp) {
   return '很久没有声音了';
 }
 
+function renderSlang(list) {
+  const html = (list || []).slice(-30).reverse().map((item) => {
+    const term = esc(item.term || '');
+    const meaning = esc(item.meaning || '');
+    const usage = item.usage ? `用法：${esc(item.usage)}` : '';
+    const source = item.source === 'group-observer' ? '群里刚收的' : '已有的';
+    return `<div class="result-item">${term}<small>${meaning}${usage ? ' · ' + usage : ''} · ${source}</small></div>`;
+  }).join('');
+  $('#mindSlang').innerHTML = html || '<p class="muted">还没有。</p>';
+}
+
 function renderMindReads(reads) {
   const html = (reads || []).slice(0, 8).map((item) => {
     const title = esc(item.title || item.bvid || '一个视频');

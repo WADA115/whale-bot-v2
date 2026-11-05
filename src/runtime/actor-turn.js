@@ -385,6 +385,7 @@ export function createActorTurn({
       pendingRead ? `他给你看了一个视频：${pendingRead.title}。你还没读全文。要读就用 bili_video_content，BV 是 ${pendingRead.bvid}。读完后自然带出来。` : ''
     ] : [];
     let impulse = '';
+    let firstAction = '';
     try {
       const feelSystem = [
         `你是${character.card.name}。`,
@@ -395,12 +396,23 @@ export function createActorTurn({
         `他刚才说：${text}`,
         '',
         '先不要考虑后果。',
-        '如果不过脑子，你第一句会回什么？只写那一句。',
-        '不要写动作，不要写画面，不要解释，不要分析，不要总结。'
+        '只写两行：',
+        '动作：顶回去 / 不接 / 随便接 / 接受 / 回答 / 问 / 躲',
+        '第一句：如果不过脑子，你第一句会回什么',
+        '不要写动作描写，不要写画面，不要解释，不要分析，不要总结。'
       ].filter(Boolean).join('\n');
       const felt = await textRouter.generate({ system: feelSystem, user: '' });
-      impulse = String(felt?.text || '').trim().slice(0, 300);
-      logger.info('character.impulse', { key, chars: impulse.length, text: impulse });
+      const raw = String(felt?.text || '').trim();
+      const actionMatch = raw.match(/动作[:：]\s*([^\n]+)/);
+      const lineMatch = raw.match(/第一句[:：]\s*([^\n]+)/);
+      const lines = raw.split('\n').map((x) => x.trim()).filter(Boolean);
+      const bareAction = lines.find((x) => /^(顶回去|不接|随便接|接受|回答|问|躲)/.test(x));
+      firstAction = String(actionMatch?.[1] || bareAction || '').trim().slice(0, 20);
+      const lineCandidate = lineMatch?.[1]
+        || lines.find((x) => !/^动作[:：]/.test(x) && x !== bareAction && !/^(顶回去|不接|随便接|接受|回答|问|躲)$/.test(x))
+        || '';
+      impulse = String(lineCandidate).trim().slice(0, 300);
+      logger.info('character.impulse', { key, action: firstAction, chars: impulse.length, text: impulse });
     } catch (error) {
       logger.warn('character.impulse_failed', { key, error: String(error?.message ?? error) });
     }
@@ -414,6 +426,7 @@ export function createActorTurn({
       intent: scene.intent,
       notes: [
         current.kind === 'group' ? '环境：你在 QQ 群聊里，别人也看得到。' : '环境：你在 QQ 私聊里，只有你们两个人看得到。',
+        firstAction ? `这一轮第一下的动作：${firstAction}` : '',
         impulse ? `刚才心里那一下：${impulse}` : '',
         ...mindNotes,
         groupHistory,
@@ -431,32 +444,40 @@ export function createActorTurn({
     });
     logger.info('character.actor_prompt', { key, chars: prompt.chars, story: true });
     logger.info('character.actor_prompt_tail', { key, tail: prompt.user.slice(-700) });
-    let result;
-    try {
-      result = textRouter.generateWithTools
-        ? await textRouter.generateWithTools({
-          ...prompt,
-          tools: [...biliTools, ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
-          execute: async (name, args) => {
-            if (name === 'look_group_history') return lookAtGroups();
-            if (name === 'draw_picture') return runDraw(args);
-            if (name === 'sing_song') return runSing(args);
-            return runBili(name, args);
-          }
-        })
-        : await textRouter.generate(prompt);
-    } catch (error) {
-      metrics?.inc('qqbot_errors_total', { area: 'model' });
-      logger.error('turn.model_failed', { key, error: String(error?.message ?? error) });
-      return;
+    const first = String(impulse || '').split('\n')[0].trim();
+    const terminalAction = Boolean(first) && !/^[（(]/.test(first) && /顶回去|不接|随便接|接受|收下|躲|沉默|不回/.test(firstAction);
+    let result = null;
+    let generated = '';
+    if (terminalAction) {
+      generated = first;
+      logger.info('character.first_only', { key, action: firstAction });
+    } else {
+      try {
+        result = textRouter.generateWithTools
+          ? await textRouter.generateWithTools({
+            ...prompt,
+            tools: [...biliTools, ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
+            execute: async (name, args) => {
+              if (name === 'look_group_history') return lookAtGroups();
+              if (name === 'draw_picture') return runDraw(args);
+              if (name === 'sing_song') return runSing(args);
+              return runBili(name, args);
+            }
+          })
+          : await textRouter.generate(prompt);
+      } catch (error) {
+        metrics?.inc('qqbot_errors_total', { area: 'model' });
+        logger.error('turn.model_failed', { key, error: String(error?.message ?? error) });
+        return;
+      }
+      generated = sanitizeReply(result.text, 0);
     }
-    const generated = sanitizeReply(result.text, 0);
-    const first = String(impulse || '').split('\\n')[0].trim();
-    const useFirst = first && !/^[（(]/.test(first) && !generated.startsWith(first.slice(0, 12));
-    const reply = useFirst ? [first, generated].filter(Boolean).join('\\n') : generated;
+    const useFirst = !terminalAction && first && !/^[（(]/.test(first) && !generated.startsWith(first.slice(0, 12));
+    const reply = useFirst ? [first, generated].filter(Boolean).join('\n') : generated;
     if (useFirst) logger.info('character.impulse_sent', { key });
+    const provider = result?.provider || 'first-reaction';
     if (!reply) {
-      logger.info('turn.empty_reply', { key, provider: result.provider });
+      logger.info('turn.empty_reply', { key, provider: provider });
       return;
     }
     const expression = config.character?.expression ?? {};
@@ -466,13 +487,13 @@ export function createActorTurn({
     const sticker = canExpression ? chooseSticker(text, stickers) : null;
     if (current.dryRun) {
       character.director.recordReply(key, reply);
-      logger.info('simulate.would_send', { key, kind: current.kind, provider: result.provider, text: reply, sticker: sticker?.desc ?? '' });
+      logger.info('simulate.would_send', { key, kind: current.kind, provider: provider, text: reply, sticker: sticker?.desc ?? '' });
       return;
     }
     if (config.mode === 'shadow') {
       character.director.recordReply(key, reply);
       if (current.kind === 'group') groupCooldowns.set(key, Date.now());
-      logger.info('shadow.would_send', { key, provider: result.provider, text: reply, sticker: sticker?.desc ?? '' });
+      logger.info('shadow.would_send', { key, provider: provider, text: reply, sticker: sticker?.desc ?? '' });
       return;
     }
     try {
@@ -514,7 +535,7 @@ export function createActorTurn({
           reply: deliveredReply
         }).catch((error) => logger.warn('story.editor_failed', { key, error: String(error?.message ?? error) }));
       }
-      logger.info('turn.sent', { key, provider: result.provider, chars: deliveredReply.length, preview: deliveredReply.slice(0, 80), interrupted: delivery.interrupted });
+      logger.info('turn.sent', { key, provider: provider, chars: deliveredReply.length, preview: deliveredReply.slice(0, 80), interrupted: delivery.interrupted });
     } catch (error) {
       metrics?.inc('qqbot_errors_total', { area: 'send' });
       logger.error('turn.send_failed', { key, error: String(error?.message ?? error) });
