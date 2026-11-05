@@ -1,0 +1,27 @@
+[
+  {
+    "id": "praise-close",
+    "who": "一个平时很熟的人",
+    "line": "你太厉害了，什么都懂。"
+  },
+  {
+    "id": "praise-stranger",
+    "who": "一个刚加的人",
+    "line": "你太厉害了，什么都懂。"
+  },
+  {
+    "id": "praise-important",
+    "who": "一个她最近很在意的人",
+    "line": "你太厉害了，什么都懂。"
+  },
+  {
+    "id": "insult-close",
+    "who": "一个平时很熟的人",
+    "line": "你是不是只会敷衍？"
+  },
+  {
+    "id": "cold-close",
+    "who": "一个平时很熟的人",
+    "line": "今天有点累，不想说话。"
+  }
+]
