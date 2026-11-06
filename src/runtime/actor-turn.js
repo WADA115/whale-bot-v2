@@ -401,39 +401,13 @@ export function createActorTurn({
     if (wake) logger.info('mind.wake_injected', { word: wake.word });
     const mindState = mind?.read?.() ?? null;
     const pendingRead = mind?.peekPendingRead?.() ?? null;
-    const mindNotes = mindState ? [
-      mindState.now ? `我这边：\n${mindState.now}` : '',
-      mindState.unfinished ? `没想完的：\n${mindState.unfinished}` : '',
-      mindState.undercurrent ? `暗流：\n${mindState.undercurrent.split('\n').slice(-12).join('\n')}` : '',
-      mindState.seen ? `他给我看过的：\n${mindState.seen.slice(-3000)}` : '',
-      pendingRead ? `他给你看了一个视频：${pendingRead.title}。你还没读全文。要读就用 bili_video_content，BV 是 ${pendingRead.bvid}。读完后自然带出来。` : ''
-    ] : [];
-    let impulse = '';
-    try {
-      const feelSystem = [
-        `你是${character.card.name}。`,
-        groupFact || '',
-        imageDesc ? `你看到他发来的图片：${imageDesc}` : '',
-        voiceDesc ? `你听到他的语音：${voiceDesc}` : '',
-        person?.tail ? `你现在对他的感觉：${person.tail}` : '',
-        `他刚才说：${text}`,
-        '',
-        '先不要回。',
-        '写一句只给自己看的话。',
-        '可以空着。',
-        '不要写给对方，不要解释，不要分析，不要总结。'
-      ].filter(Boolean).join('\n');
-      const felt = await textRouter.generate({ system: feelSystem, user: '' });
-      impulse = String(felt?.text || '').trim().slice(0, 300);
-      logger.info('character.impulse', { key, chars: impulse.length, text: impulse });
-    } catch (error) {
-      logger.warn('character.impulse_failed', { key, error: String(error?.message ?? error) });
-    }
     const wantsMemory = /之前|上次|后来|那个|还没|想完|记得|忘了|那天|以前/.test(text);
     const wantsSeen = /视频|B站|BV|看过|大肥鱼|表情|动态/.test(text);
     const chatSystem = [
       `你是${character.card.name}。`,
       String(character.card.identity || '').slice(0, 900),
+      String(character.card.drive || '').slice(0, 320),
+      ...(Array.isArray(character.card.voice) && character.card.voice.length ? ['你说话的样子：', ...character.card.voice.map((x) => `- ${x}`)] : []),
       current.kind === 'group' ? '你在 QQ 群聊里。' : '你在 QQ 私聊里。'
     ].filter(Boolean).join('\n');
     const chatNotes = [
@@ -452,7 +426,7 @@ export function createActorTurn({
     const chatUser = [
       chatNotes,
       `他刚才说：${text || '（没有文字）'}`,
-      '你回他。不要解释自己，不要分析原因。'
+      '你现在会回什么？只写你会发出去的那句。不想回就空着。不要解释。'
     ].filter(Boolean).join('\n\n');
     const prompt = { system: chatSystem, user: chatUser, chars: chatSystem.length + chatUser.length };
     logger.info('character.actor_prompt', { key, chars: prompt.chars, story: true });
@@ -481,13 +455,8 @@ export function createActorTurn({
     const reply = generated;
     const provider = result?.provider || '';
     if (!reply) {
-      if (impulse) {
-        mind?.appendHeld?.(impulse);
-        logger.info('turn.withheld', { key, chars: impulse.length });
-        if (current.dryRun) logger.info('simulate.withheld', { key, text: impulse });
-      } else {
-        logger.info('turn.empty_reply', { key, provider });
-      }
+      logger.info('turn.withheld', { key });
+      if (current.dryRun) logger.info('simulate.withheld', { key });
       return;
     }
     const expression = config.character?.expression ?? {};
