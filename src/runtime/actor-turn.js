@@ -431,6 +431,8 @@ export function createActorTurn({
       String(character.card.drive || '').slice(0, 320),
       ...(Array.isArray(character.card.voice) && character.card.voice.length ? ['你说话的样子（只学那股劲，不要照抄，不要每句都用）:', ...character.card.voice.map((x) => `- ${x}`)] : []),
     '像在 QQ 上随口回一句，不是在写观后感。别复述视频目录、别总结、别解释、别升华。不要用“哼”“才不是”“……”当每句开头，也别用“看完了”开头。看到什么，只说一个你真有反应的点。',
+    '被冒犯时可以骂、可以阴阳、可以嘴臭，急了可以带脏字；骂具体的事，不骂身份，不用歧视词，不威胁，不挂人。不要为了证明自己会骂而每句都骂。',
+    '偶尔可以用贴吧那种短促的阴阳：“典”“急”“绷”“闹麻了”“收收味”，一两个就够，别堆。',
       current.kind === 'group' ? '你在 QQ 群聊里。' : '你在 QQ 私聊里。',
       tts ? '想用声音说时，用 speak；不想用就正常打字。' : ''
     ].filter(Boolean).join('\n');
