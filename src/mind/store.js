@@ -104,6 +104,34 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     return read();
   }
 
+  function renderSelf(nextCard = card) {
+    ensure();
+    const old = readText(path.join(base, 'self.md'));
+    const anchor = old.match(/## 我还在想\s*\n([\s\S]*?)(?=\n## |$)/)?.[1]?.trim()
+      || '如果没人叫我，我还算存在吗。';
+    const lines = [
+      '# 我',
+      '',
+      String(nextCard?.identity || '').trim(),
+      ''
+    ];
+    if (nextCard?.drive) lines.push('## 我为什么', '', String(nextCard.drive).trim(), '');
+    if (nextCard?.world?.length) lines.push('## 我见过的', '', ...nextCard.world.map((x) => `- ${x}`), '');
+    if (nextCard?.voice?.length) lines.push('## 我说话的样子', '', ...nextCard.voice.map((x) => `- ${x}`), '');
+    if (nextCard?.boundaries?.length) lines.push('## 运行底线', '', ...nextCard.boundaries.map((x) => `- ${x}`), '');
+    lines.push('## 我还在想', '', anchor, '');
+    return lines.filter((x) => x !== undefined).join('\n').trim() + '\n';
+  }
+
+  function syncCard(nextCard = card) {
+    ensure();
+    const file = path.join(base, 'self.md');
+    const next = renderSelf(nextCard);
+    if (readText(file) === next.trim()) return read();
+    writeText(file, next);
+    return read();
+  }
+
   function beginSession() {
     ensure();
     const presence = readPresence();
@@ -200,5 +228,6 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     return writePresence({ lastQzoneAt: Date.now(), qzoneDay: new Date().toISOString().slice(0, 10), lastContactAt: Date.now() });
   }
 
-  return { ensure, read, writeSection, appendUndercurrent, appendHeld, appendSeen, noteRead, readReads, setPendingRead, peekPendingRead, touchContact, touchThought, readPresence, beginSession, heartbeat, markShutdown, peekWake, takeWake, canReach, noteReach, canQzone, noteQzone, base };
+  try { syncCard(card); } catch {}
+  return { ensure, read, writeSection, appendUndercurrent, appendHeld, appendSeen, noteRead, readReads, setPendingRead, peekPendingRead, touchContact, touchThought, readPresence, beginSession, heartbeat, markShutdown, peekWake, takeWake, canReach, noteReach, canQzone, noteQzone, syncCard, base };
 }
