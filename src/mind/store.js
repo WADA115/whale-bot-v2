@@ -224,10 +224,16 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     return Date.now() - last > 6 * 60 * 60 * 1000 && presence.qzoneDay !== day;
   }
 
+  function noteImage(text) {
+    const value = String(text ?? '').trim();
+    if (!value) return readPresence();
+    return writePresence({ lastImage: { text: value.slice(0, 600), at: Date.now() } });
+  }
+
   function noteQzone() {
     return writePresence({ lastQzoneAt: Date.now(), qzoneDay: new Date().toISOString().slice(0, 10), lastContactAt: Date.now() });
   }
 
   try { syncCard(card); } catch {}
-  return { ensure, read, writeSection, appendUndercurrent, appendHeld, appendSeen, noteRead, readReads, setPendingRead, peekPendingRead, touchContact, touchThought, readPresence, beginSession, heartbeat, markShutdown, peekWake, takeWake, canReach, noteReach, canQzone, noteQzone, syncCard, base };
+  return { ensure, read, writeSection, appendUndercurrent, appendHeld, appendSeen, noteRead, readReads, setPendingRead, peekPendingRead, touchContact, touchThought, readPresence, beginSession, heartbeat, markShutdown, peekWake, takeWake, canReach, noteReach, canQzone, noteQzone, noteImage, syncCard, base };
 }

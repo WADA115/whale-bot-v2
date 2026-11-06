@@ -314,7 +314,7 @@ ${task.result}`);
     }
     mind.touchContact();
     const decision = decide({ message, config, selfId: gateway.selfId });
-    if (!decision.handle) {
+    if (!decision.handle && !message.dryRun) {
       logger.debug('message.skipped', { key: message.key, reason: decision.reason, text: String(message.text ?? '').slice(0, 60) });
       return;
     }

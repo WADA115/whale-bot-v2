@@ -140,6 +140,7 @@ export function createActorTurn({
       try {
         const described = await visionRouter.describe({ message: current });
         imageDesc = described.text;
+        if (imageDesc) mind?.noteImage?.(imageDesc);
         stats.imageCount += 1;
         metrics?.inc('qqbot_vision_requests_total', { provider: described.provider, outcome: 'ok' });
         logger.info('vision.described', { key, provider: described.provider, chars: imageDesc.length });
@@ -427,6 +428,7 @@ export function createActorTurn({
       groupHistory,
       reference,
       slangBlock,
+      !imageDesc && mindState?.presence?.lastImage && Date.now() - Number(mindState.presence.lastImage.at || 0) < 15 * 60 * 1000 ? `他刚才发过一张图：${mindState.presence.lastImage.text}` : '',
       imageDesc ? `图片：${imageDesc}` : '',
       voiceDesc ? `语音：${voiceDesc}` : '',
       wake ? `中间断了${wake.word}。没有声音，也没有画面。` : ''
