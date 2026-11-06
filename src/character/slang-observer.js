@@ -165,7 +165,7 @@ export function createSlangObserver({
     if (imageWorker || imageQueue.length) await waitImages();
     if (busy || !total || !textRouter) return;
     busy = true;
-    const lines = pendingLines();
+    const lines = pendingLines().slice(-24);
     pending.clear();
     total = 0;
     try {
@@ -206,6 +206,12 @@ export function createSlangObserver({
         logger?.info('slang.observed', { added, terms: terms.slice(0, added).map((x) => x.term) });
       }
     } catch (error) {
+      for (const line of lines) {
+        const room = pending.get(line.key) || [];
+        room.push({ sender: line.sender, text: line.text, at: line.at });
+        pending.set(line.key, room);
+        total += 1;
+      }
       logger?.warn('slang.extract_failed', { error: String(error?.message ?? error) });
     } finally {
       busy = false;
