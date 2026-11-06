@@ -328,7 +328,18 @@ export function createActorTurn({
       }
       return '没有这个动作。';
     };
-    const drawTool = draw ? {
+    const speakTool = tts ? {
+      type: 'function',
+      function: {
+        name: 'speak',
+        description: '偶尔想用声音说时使用。写口语，不要念书面回复；可以只发语音，也可以发完再说一句文字。',
+        parameters: {
+          type: 'object',
+          properties: { text: { type: 'string', description: '要说出口的话' } },
+          required: ['text']
+        }
+      }
+    } : null;    const drawTool = draw ? {
       type: 'function',
       function: {
         name: 'draw_picture',
@@ -418,7 +429,8 @@ export function createActorTurn({
       String(character.card.identity || '').slice(0, 900),
       String(character.card.drive || '').slice(0, 320),
       ...(Array.isArray(character.card.voice) && character.card.voice.length ? ['你说话的样子：', ...character.card.voice.map((x) => `- ${x}`)] : []),
-      current.kind === 'group' ? '你在 QQ 群聊里。' : '你在 QQ 私聊里。'
+      current.kind === 'group' ? '你在 QQ 群聊里。' : '你在 QQ 私聊里。',
+      tts ? '想用声音说时，用 speak；不想用就正常打字。' : ''
     ].filter(Boolean).join('\n');
     const historyTurns = scene.turns.slice(-7, -1);
     const historyText = historyTurns.map((turn) => {
@@ -456,10 +468,20 @@ export function createActorTurn({
       result = textRouter.generateWithTools
         ? await textRouter.generateWithTools({
           ...prompt,
-          tools: [...biliTools, ...(knowledgeTool ? [knowledgeTool] : []), ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
+          tools: [...biliTools, ...(knowledgeTool ? [knowledgeTool] : []), ...(speakTool ? [speakTool] : []), ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
           execute: async (name, args) => {
             if (name === 'look_group_history') return lookAtGroups();
             if (name === 'search_local') return runKnowledge(args);
+            if (name === 'speak') {
+              const spoken = String(args?.text ?? '').trim();
+              if (!spoken) return '没说话。';
+              if (current.dryRun) { logger.info('voice.would_send', { key, chars: spoken.length }); return '语音会发出去。'; }
+              const file = await tts.synthesize(spoken);
+              if (!file) return '没合成出来。';
+              await gateway.sendMessage(current.kind, current.id, [{ type: 'record', data: { file } }]);
+              logger.info('voice.sent', { key, chars: spoken.length });
+              return '语音发出去了。';
+            }
             if (name === 'draw_picture') return runDraw(args);
             if (name === 'sing_song') return runSing(args);
             return runBili(name, args);
