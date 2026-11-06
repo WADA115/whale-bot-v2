@@ -260,10 +260,25 @@ export function createActorTurn({
           }
         }
       },
-      ...(bilibili.status?.().loggedIn ? [
+      {
+        type: 'function',
+        function: {
+          name: 'bili_comments',
+          description: '看一个 B站视频下面的评论。参数是 BV 号和可选条数。',
+          parameters: {
+            type: 'object',
+            properties: {
+              bvid: { type: 'string', description: 'BV 号或视频链接' },
+              limit: { type: 'number', description: '最多几条' }
+            },
+            required: ['bvid']
+          }
+        }
+      },      ...(bilibili.status?.().loggedIn ? [
         { type: 'function', function: { name: 'bili_dynamics', description: '看 B站关注动态。', parameters: { type: 'object', properties: {} } } },
         { type: 'function', function: { name: 'bili_favorites', description: '看 B站收藏夹。', parameters: { type: 'object', properties: {} } } },
-        { type: 'function', function: { name: 'bili_history', description: '看 B站观看历史。', parameters: { type: 'object', properties: {} } } }
+        { type: 'function', function: { name: 'bili_history', description: '看 B站观看历史。', parameters: { type: 'object', properties: {} } } },
+        { type: 'function', function: { name: 'bili_reply_comment', description: '回复 B站视频下面的一条评论。只有在对方明确让你回哪条时才用。', parameters: { type: 'object', properties: { bvid: { type: 'string', description: 'BV 号' }, rpid: { type: 'string', description: '要回复的评论 rpid' }, message: { type: 'string', description: '回复内容' } }, required: ['bvid', 'rpid', 'message'] } } },
       ] : [])
     ] : [];
     const runBili = async (name, args = {}) => {
@@ -278,7 +293,15 @@ export function createActorTurn({
           logger.info('bili.content_read', { bvid: item.bvid, chars: String(item.text || '').length });
           return [item.title, item.owner ? `UP：${item.owner}` : '', item.text || '没有字幕或简介。'].filter(Boolean).join('\n');
         }
-        if (name === 'bili_dynamics') {
+        if (name === 'bili_comments') {
+          const result = await bilibili.comments(args.bvid, args.limit);
+          return [result.title, ...result.list.map((item) => `${item.rpid}｜${item.user}：${item.text.slice(0, 180)}`)].join('\n') || '没有评论。';
+        }
+        if (name === 'bili_reply_comment') {
+          const result = await bilibili.replyComment({ bvid: args.bvid, rpid: args.rpid }, args.message);
+          logger.info('bili.comment_replied', { bvid: result.bvid, rpid: result.rpid });
+          return '回复发出去了。';
+        }        if (name === 'bili_dynamics') {
           const list = await bilibili.dynamics();
           return list.slice(0, 12).map((item) => `${item.author}：${item.title}`).join('\n') || '没有关注动态。';
         }

@@ -231,6 +231,56 @@ export function createBilibili({ file, logger = null, fetchImpl = fetch } = {}) 
     };
   }
 
+  async function comments(input, limit = 10) {
+    const bvid = bvidOf(input);
+    if (!bvid) throw new Error('invalid bvid');
+    const view = await apiJson(`https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`);
+    if (view.code !== 0) throw new Error(view.message || 'video failed');
+    const aid = view.data?.aid;
+    if (!aid) throw new Error('video aid missing');
+    const ps = Math.min(20, Math.max(1, Number(limit) || 10));
+    const body = await apiJson(`https://api.bilibili.com/x/v2/reply?type=1&oid=${aid}&pn=1&ps=${ps}&sort=2`);
+    if (body.code !== 0) throw new Error(body.message || 'comments failed');
+    return {
+      bvid,
+      title: view.data?.title || '',
+      aid,
+      list: (body.data?.replies ?? []).map((item) => ({
+        rpid: String(item.rpid ?? ''),
+        user: item.member?.uname || '',
+        text: String(item.content?.message ?? '').trim(),
+        like: item.like ?? 0,
+        time: item.ctime ?? 0,
+        replies: item.rcount ?? 0
+      })).filter((item) => item.rpid && item.text)
+    };
+  }
+
+  async function replyComment(input, message) {
+    const bvid = bvidOf(typeof input === 'string' ? input : input?.bvid);
+    const text = String(message ?? '').trim();
+    if (!bvid) throw new Error('invalid bvid');
+    if (!text) throw new Error('empty message');
+    const csrf = data.cookies?.bili_jct;
+    if (!csrf) throw new Error('not logged in');
+    const view = await apiJson(`https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`);
+    if (view.code !== 0) throw new Error(view.message || 'video failed');
+    const oid = view.data?.aid;
+    if (!oid) throw new Error('video aid missing');
+    const target = String(typeof input === 'object' ? (input?.rpid ?? input?.root ?? '') : '').trim();
+    const params = new URLSearchParams({ oid: String(oid), type: '1', message: text, csrf });
+    if (target) {
+      params.set('root', target);
+      params.set('parent', target);
+    }
+    const body = await apiJson('https://api.bilibili.com/x/v2/reply/add', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    });
+    if (body.code !== 0) throw new Error(body.message || 'reply failed');
+    return { ok: true, rpid: String(body.data?.rpid ?? ''), bvid, oid };
+  }
   async function dynamics() {
     const body = await apiJson('https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/all?type=all&page=1');
     if (body.code !== 0) throw new Error(body.message || 'dynamics failed');
@@ -296,5 +346,5 @@ export function createBilibili({ file, logger = null, fetchImpl = fetch } = {}) 
     save();
   }
 
-  return { generate, poll, video, popular, search, content, dynamics, favorites, history, status, logout, cookieHeader: () => cookieHeader(data.cookies) };
+  return { generate, poll, video, popular, search, content, comments, replyComment, dynamics, favorites, history, status, logout, cookieHeader: () => cookieHeader(data.cookies) };
 }
