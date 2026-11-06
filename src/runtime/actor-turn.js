@@ -163,13 +163,6 @@ export function createActorTurn({
         logger.warn('asr.failed', { key, error: String(error?.message ?? error) });
       }
     }
-    if (knowledge) {
-      const kb = knowledge.search(text, { limit: 2 });
-      if (kb.lines.length) {
-        reference = '资料：' + kb.lines.join('；').slice(0, 300);
-        logger.info('character.knowledge', { key, count: kb.lines.length });
-      }
-    }
     const slangLines = matchSlang(text, slang);
     const slangBlock = slangLines.length ? `黑话：${slangLines.join('；')}` : '';
     let groupHistory = '';
@@ -282,7 +275,23 @@ export function createActorTurn({
         { type: 'function', function: { name: 'bili_reply_comment', description: '回复 B站视频下面的一条评论。只有在对方明确让你回哪条时才用。', parameters: { type: 'object', properties: { bvid: { type: 'string', description: 'BV 号' }, rpid: { type: 'string', description: '要回复的评论 rpid' }, message: { type: 'string', description: '回复内容' } }, required: ['bvid', 'rpid', 'message'] } } },
       ] : [])
     ] : [];
-    const runBili = async (name, args = {}) => {
+    const knowledgeTool = knowledge ? {
+      type: 'function',
+      function: {
+        name: 'search_local',
+        description: '你突然想知道一个词、梗、视频、事的背景时，查本地资料。不是每句话都查；先判断他是不是在问这个，不确定就先问一句。',
+        parameters: {
+          type: 'object',
+          properties: { query: { type: 'string', description: '要查什么' } },
+          required: ['query']
+        }
+      }
+    } : null;
+    const runKnowledge = async (args = {}) => {
+      const kb = knowledge.search(args.query, { limit: 3 });
+      logger.info('knowledge.looked_up', { key, count: kb.lines.length });
+      return kb.lines.join('\n') || '资料里没有。';
+    };    const runBili = async (name, args = {}) => {
       try {
         if (name === 'bili_search') {
           const list = await bilibili.search(args.keyword, 5);
@@ -447,9 +456,10 @@ export function createActorTurn({
       result = textRouter.generateWithTools
         ? await textRouter.generateWithTools({
           ...prompt,
-          tools: [...biliTools, ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
+          tools: [...biliTools, ...(knowledgeTool ? [knowledgeTool] : []), ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
           execute: async (name, args) => {
             if (name === 'look_group_history') return lookAtGroups();
+            if (name === 'search_local') return runKnowledge(args);
             if (name === 'draw_picture') return runDraw(args);
             if (name === 'sing_song') return runSing(args);
             return runBili(name, args);
