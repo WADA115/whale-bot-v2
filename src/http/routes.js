@@ -28,7 +28,7 @@ export function personaFromText(raw, fallback = {}) {
     name: text(parsed.name, 40) || text(fallback.name, 40),
     identity: text(parsed.identity, 1200) || text(fallback.identity, 1200),
     drive: text(parsed.drive, 1200) || text(fallback.drive, 1200),
-    voice: list(parsed.voice, 12),
+    voice: list(parsed.voice, 12).length ? list(parsed.voice, 12) : list(fallback.voice, 12),
     world: list(parsed.world, 12),
     boundaries: list(parsed.boundaries, 12)
   };
