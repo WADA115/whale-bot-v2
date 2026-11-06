@@ -22,6 +22,7 @@ export function createActorTurn({
   visionRouter,
   asr,
   tts,
+  rvc,
   draw,
   sing,
   mind,
@@ -476,8 +477,9 @@ export function createActorTurn({
               const spoken = String(args?.text ?? '').trim();
               if (!spoken) return '没说话。';
               if (current.dryRun) { logger.info('voice.would_send', { key, chars: spoken.length }); return '语音会发出去。'; }
-              const file = await tts.synthesize(spoken);
+              let file = await tts.synthesize(spoken);
               if (!file) return '没合成出来。';
+              if (rvc) file = await rvc.convert(file);
               await gateway.sendMessage(current.kind, current.id, [{ type: 'record', data: { file } }]);
               logger.info('voice.sent', { key, chars: spoken.length });
               return '语音发出去了。';
