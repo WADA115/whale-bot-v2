@@ -410,7 +410,15 @@ export function createActorTurn({
       ...(Array.isArray(character.card.voice) && character.card.voice.length ? ['你说话的样子：', ...character.card.voice.map((x) => `- ${x}`)] : []),
       current.kind === 'group' ? '你在 QQ 群聊里。' : '你在 QQ 私聊里。'
     ].filter(Boolean).join('\n');
+    const historyTurns = scene.turns.slice(-7, -1);
+    const historyText = historyTurns.map((turn) => {
+      const label = turn.role === 'assistant' ? '我' : '对方';
+      const raw = String(turn.text || '').replace(/\s+/g, ' ').trim();
+      const text = turn.role === 'assistant' ? raw.split(/(?<=[。！？!?])/)[0].slice(0, 80) : raw.slice(0, 180);
+      return `${label}：${text}`;
+    }).filter((line) => line.length > 3).join('\n');
     const chatNotes = [
+      historyText ? `刚才聊的：\n${historyText}` : '',
       groupFact || '',
       pendingRead ? `他给你看了一个视频：${pendingRead.title}。要读就用 bili_video_content，BV 是 ${pendingRead.bvid}。` : '',
       wantsSeen && mindState?.seen ? `他给你看过的：\n${mindState.seen.slice(-1200)}` : '',
