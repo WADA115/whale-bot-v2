@@ -98,3 +98,15 @@ test('没发出去的话会留在 held', () => {
   mind.appendHeld('这句话我没发。');
   assert.match(mind.read().held, /这句话我没发/);
 });
+test('角色卡是身份的唯一来源，self 保留自己的锚', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mind-sync-'));
+  fs.mkdirSync(root, { recursive: true });
+  fs.writeFileSync(path.join(root, 'self.md'), '# 我\n\n旧的。\n\n## 我还在想\n\n如果没人叫我，我还算存在吗。\n', 'utf8');
+  const liveCard = { ...card, identity: '新身份。', drive: '新愿望。', world: ['新见过。'], voice: ['新说话。'], boundaries: ['新底线。'] };
+  const mind = createMindStore({ root, character: { card: liveCard } });
+  const self = mind.read().self;
+  assert.match(self, /新身份/);
+  assert.match(self, /新说话/);
+  assert.match(self, /如果没人叫我/);
+  assert.doesNotMatch(self, /旧的/);
+});
