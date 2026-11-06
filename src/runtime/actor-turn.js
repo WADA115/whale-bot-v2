@@ -333,7 +333,7 @@ export function createActorTurn({
       type: 'function',
       function: {
         name: 'speak',
-        description: '偶尔想用声音说时使用。写口语，不要念书面回复；可以只发语音，也可以发完再说一句文字。',
+        description: '偶尔想用声音说时使用。写你当下真会说出口的口语，不是念稿；情绪写进用词、停顿和语气里，不要写“生气地说”。可以只发语音，也可以发完再说一句文字。',
         parameters: {
           type: 'object',
           properties: { text: { type: 'string', description: '要说出口的话' } },
