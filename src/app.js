@@ -13,6 +13,7 @@ import { createVisionRouter } from './core/vision.js';
 import { createAsr } from './core/asr.js';
 import { createTts } from './core/tts.js';
 import { createRvc } from './core/rvc.js';
+import { createMansui } from './core/mansui.js';
 import { createDraw } from './core/draw.js';
 import { createSing } from './core/sing.js';
 import { createKnowledge } from './core/knowledge.js';
@@ -91,6 +92,16 @@ export async function main(argv = process.argv.slice(2)) {
       timeoutMs: Number(config.tts.timeoutMs) || 30000,
       logger
     })
+    : null;
+  const mansui = config.mansui?.enabled
+    ? createMansui({
+        url: config.mansui.url,
+        refAudio: config.mansui.refAudio,
+        promptText: config.mansui.promptText,
+        promptLang: config.mansui.promptLang,
+        outDir: config.mansui.outDir || path.join(ROOT, 'state', 'voice'),
+        logger
+      })
     : null;
   const rvc = config.rvc?.enabled
     ? createRvc({
@@ -234,6 +245,7 @@ ${task.result}`);
     asr,
     tts,
     rvc,
+    mansui,
     draw,
     sing,
     mind,

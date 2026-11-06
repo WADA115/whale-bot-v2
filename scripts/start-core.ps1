@@ -36,6 +36,13 @@ if (-not (Get-NetTCPConnection -LocalPort 11434 -State Listen -ErrorAction Silen
   }
 }
 
+if (-not (Get-NetTCPConnection -LocalPort 9880 -State Listen -ErrorAction SilentlyContinue)) {
+  $mansui = 'E:\AI\GPT-SoVITS\serve_mansui_clean.bat'
+  if (Test-Path $mansui) {
+    Write-Log 'starting Mansui TTS'
+    Start-Process -FilePath 'cmd.exe' -ArgumentList @('/c', $mansui) -WindowStyle Hidden
+  }
+}
 $listener = Get-NetTCPConnection -LocalPort 3201 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($listener) {
   Write-Log 'v2 already listening'
