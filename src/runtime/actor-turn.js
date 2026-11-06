@@ -247,7 +247,7 @@ export function createActorTurn({
         type: 'function',
         function: {
           name: 'bili_video_content',
-          description: '看一个 B站视频的字幕或简介。参数是 BV 号。',
+          description: '看一个 B站视频的字幕或简介。参数是 BV 号。只记你真有反应的一个点，不要复述目录或做总结。',
           parameters: {
             type: 'object',
             properties: { bvid: { type: 'string', description: 'BV 号或视频链接' } },
@@ -429,7 +429,8 @@ export function createActorTurn({
       `你是${character.card.name}。`,
       String(character.card.identity || '').slice(0, 900),
       String(character.card.drive || '').slice(0, 320),
-      ...(Array.isArray(character.card.voice) && character.card.voice.length ? ['你说话的样子：', ...character.card.voice.map((x) => `- ${x}`)] : []),
+      ...(Array.isArray(character.card.voice) && character.card.voice.length ? ['你说话的样子（只学那股劲，不要照抄，不要每句都用）:', ...character.card.voice.map((x) => `- ${x}`)] : []),
+    '像在 QQ 上随口回一句，不是在写观后感。别复述视频目录、别总结、别解释、别升华。不要用“哼”“才不是”“……”当每句开头，也别用“看完了”开头。看到什么，只说一个你真有反应的点。',
       current.kind === 'group' ? '你在 QQ 群聊里。' : '你在 QQ 私聊里。',
       tts ? '想用声音说时，用 speak；不想用就正常打字。' : ''
     ].filter(Boolean).join('\n');
@@ -520,18 +521,12 @@ export function createActorTurn({
       return;
     }
     try {
-      const wantsVoice = Boolean(current.voices?.length) || /语音|声音|念一下|读一下|唱/.test(text);
-      const ttsAllowed = tts
-        && !(config.tts.privateOnly !== false && current.kind !== 'private')
-        && wantsVoice;
       const delivery = await sendHumanReply({
         gateway,
         kind: current.kind,
         id: current.id,
         text: reply,
         sticker,
-        tts,
-        ttsAllowed,
         interrupted,
         logger
       });
