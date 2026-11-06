@@ -431,43 +431,30 @@ export function createActorTurn({
     }
     const wantsMemory = /之前|上次|后来|那个|还没|想完|记得|忘了|那天|以前/.test(text);
     const wantsSeen = /视频|B站|BV|看过|大肥鱼|表情|动态/.test(text);
-    const chatStory = {
-      self: String(character.card.identity || '').slice(0, 900),
-      relationship: '',
-      now: '',
-      life: '',
-      world: '',
-      episodes: [],
-      chapters: []
-    };
-    const prompt = buildNarrativePrompt({
-      card: character.card,
-      story: chatStory,
-      person: null,
-      notices,
-      facts: [wake ? `中间断了${wake.word}。没有声音，也没有画面。` : '', groupFact].filter(Boolean),
-      turns: promptTurns,
-      intent: scene.intent,
-      notes: [
-        current.kind === 'group' ? '环境：你在 QQ 群聊里，别人也看得到。' : '环境：你在 QQ 私聊里，只有你们两个人看得到。',
-        pendingRead ? `他给你看了一个视频：${pendingRead.title}。你还没读全文。要读就用 bili_video_content，BV 是 ${pendingRead.bvid}。读完后自然带出来。` : '',
-        wantsSeen && mindState?.seen ? `他给你看过的：\n${mindState.seen.slice(-1200)}` : '',
-        wantsMemory && mindState?.unfinished ? `没想完的：\n${mindState.unfinished.slice(-500)}` : '',
-        wantsMemory && mindState?.undercurrent ? `暗流：\n${mindState.undercurrent.split('\n').slice(-5).join('\n')}` : '',
-        groupHistory,
-        reference,
-        slangBlock,
-        imageDesc
-          ? `图片：${imageDesc}\n（这一轮有图，回应里自然带出你看到的内容，不要装作没看到）`
-          : current.images?.length
-            ? '这一轮有图片，但没读出内容；不要编造画面。'
-            : '这一轮没有图片；不要说自己看到了画面。',
-        voiceDesc ? `语音：${voiceDesc}` : '',
-        '说到这里，你想说就说，不想说也可以。',
-        wake ? `环境：中间断了${wake.word}。没有声音，也没有画面。` : ''
-      ],
-      maxChars: 0
-    });
+    const chatSystem = [
+      `你是${character.card.name}。`,
+      String(character.card.identity || '').slice(0, 900),
+      current.kind === 'group' ? '你在 QQ 群聊里。' : '你在 QQ 私聊里。'
+    ].filter(Boolean).join('\n');
+    const chatNotes = [
+      groupFact || '',
+      pendingRead ? `他给你看了一个视频：${pendingRead.title}。要读就用 bili_video_content，BV 是 ${pendingRead.bvid}。` : '',
+      wantsSeen && mindState?.seen ? `他给你看过的：\n${mindState.seen.slice(-1200)}` : '',
+      wantsMemory && mindState?.unfinished ? `没想完的：\n${mindState.unfinished.slice(-500)}` : '',
+      wantsMemory && mindState?.undercurrent ? `暗流：\n${mindState.undercurrent.split('\n').slice(-5).join('\n')}` : '',
+      groupHistory,
+      reference,
+      slangBlock,
+      imageDesc ? `图片：${imageDesc}` : '',
+      voiceDesc ? `语音：${voiceDesc}` : '',
+      wake ? `中间断了${wake.word}。没有声音，也没有画面。` : ''
+    ].filter(Boolean).join('\n\n');
+    const chatUser = [
+      chatNotes,
+      `他刚才说：${text || '（没有文字）'}`,
+      '你回他。不要解释自己，不要分析原因。'
+    ].filter(Boolean).join('\n\n');
+    const prompt = { system: chatSystem, user: chatUser, chars: chatSystem.length + chatUser.length };
     logger.info('character.actor_prompt', { key, chars: prompt.chars, story: true });
     logger.info('character.actor_prompt_tail', { key, tail: prompt.user.slice(-700) });
     let result = null;
