@@ -92,3 +92,9 @@ test('发呆后可以自己发 QQ 动态并选择可见范围', async () => {
   assert.equal(posted.ugcRight, 4);
   assert.match(posted.content, /想说话/);
 });
+test('没发出去的话会留在 held', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mind-held-'));
+  const mind = createMindStore({ root, character: { card } });
+  mind.appendHeld('这句话我没发。');
+  assert.match(mind.read().held, /这句话我没发/);
+});

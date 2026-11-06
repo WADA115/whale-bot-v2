@@ -408,7 +408,6 @@ export function createActorTurn({
       pendingRead ? `他给你看了一个视频：${pendingRead.title}。你还没读全文。要读就用 bili_video_content，BV 是 ${pendingRead.bvid}。读完后自然带出来。` : ''
     ] : [];
     let impulse = '';
-    let firstAction = '';
     try {
       const feelSystem = [
         `你是${character.card.name}。`,
@@ -418,24 +417,14 @@ export function createActorTurn({
         person?.tail ? `你现在对他的感觉：${person.tail}` : '',
         `他刚才说：${text}`,
         '',
-        '先不要考虑后果。',
-        '只写两行：',
-        '动作：顶回去 / 不接 / 随便接 / 接受 / 回答 / 问 / 躲',
-        '第一句：如果不过脑子，你第一句会回什么',
-        '不要写动作描写，不要写画面，不要解释，不要分析，不要总结。'
+        '先不要回。',
+        '写一句只给自己看的话。',
+        '可以空着。',
+        '不要写给对方，不要解释，不要分析，不要总结。'
       ].filter(Boolean).join('\n');
       const felt = await textRouter.generate({ system: feelSystem, user: '' });
-      const raw = String(felt?.text || '').trim();
-      const actionMatch = raw.match(/动作[:：]\s*([^\n]+)/);
-      const lineMatch = raw.match(/第一句[:：]\s*([^\n]+)/);
-      const lines = raw.split('\n').map((x) => x.trim()).filter(Boolean);
-      const bareAction = lines.find((x) => /^(顶回去|不接|随便接|接受|回答|问|躲)/.test(x));
-      firstAction = String(actionMatch?.[1] || bareAction || '').trim().slice(0, 20);
-      const lineCandidate = lineMatch?.[1]
-        || lines.find((x) => !/^动作[:：]/.test(x) && x !== bareAction && !/^(顶回去|不接|随便接|接受|回答|问|躲)$/.test(x))
-        || '';
-      impulse = String(lineCandidate).trim().slice(0, 300);
-      logger.info('character.impulse', { key, action: firstAction, chars: impulse.length, text: impulse });
+      impulse = String(felt?.text || '').trim().slice(0, 300);
+      logger.info('character.impulse', { key, chars: impulse.length, text: impulse });
     } catch (error) {
       logger.warn('character.impulse_failed', { key, error: String(error?.message ?? error) });
     }
@@ -449,8 +438,7 @@ export function createActorTurn({
       intent: scene.intent,
       notes: [
         current.kind === 'group' ? '环境：你在 QQ 群聊里，别人也看得到。' : '环境：你在 QQ 私聊里，只有你们两个人看得到。',
-        firstAction ? `这一轮第一下的动作：${firstAction}` : '',
-        impulse ? `刚才心里那一下：${impulse}` : '',
+        impulse ? `你刚才只对自己说的一句：${impulse}` : '',
         ...mindNotes,
         groupHistory,
         reference,
@@ -461,46 +449,44 @@ export function createActorTurn({
             ? '这一轮有图片，但没读出内容；不要编造画面。'
             : '这一轮没有图片；不要说自己看到了画面。',
         voiceDesc ? `语音：${voiceDesc}` : '',
+        '说到这里，你想说就说，不想说也可以。',
         wake ? `环境：中间断了${wake.word}。没有声音，也没有画面。` : ''
       ],
       maxChars: 0
     });
     logger.info('character.actor_prompt', { key, chars: prompt.chars, story: true });
     logger.info('character.actor_prompt_tail', { key, tail: prompt.user.slice(-700) });
-    const first = String(impulse || '').split('\n')[0].trim();
-    const terminalAction = Boolean(first) && !/^[（(]/.test(first) && /顶回去|不接|随便接|接受|收下|躲|沉默|不回/.test(firstAction);
     let result = null;
     let generated = '';
-    if (terminalAction) {
-      generated = first;
-      logger.info('character.first_only', { key, action: firstAction });
-    } else {
-      try {
-        result = textRouter.generateWithTools
-          ? await textRouter.generateWithTools({
-            ...prompt,
-            tools: [...biliTools, ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
-            execute: async (name, args) => {
-              if (name === 'look_group_history') return lookAtGroups();
-              if (name === 'draw_picture') return runDraw(args);
-              if (name === 'sing_song') return runSing(args);
-              return runBili(name, args);
-            }
-          })
-          : await textRouter.generate(prompt);
-      } catch (error) {
-        metrics?.inc('qqbot_errors_total', { area: 'model' });
-        logger.error('turn.model_failed', { key, error: String(error?.message ?? error) });
-        return;
-      }
-      generated = sanitizeReply(result.text, 0);
+    try {
+      result = textRouter.generateWithTools
+        ? await textRouter.generateWithTools({
+          ...prompt,
+          tools: [...biliTools, ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
+          execute: async (name, args) => {
+            if (name === 'look_group_history') return lookAtGroups();
+            if (name === 'draw_picture') return runDraw(args);
+            if (name === 'sing_song') return runSing(args);
+            return runBili(name, args);
+          }
+        })
+        : await textRouter.generate(prompt);
+    } catch (error) {
+      metrics?.inc('qqbot_errors_total', { area: 'model' });
+      logger.error('turn.model_failed', { key, error: String(error?.message ?? error) });
+      return;
     }
-    const useFirst = !terminalAction && first && !/^[（(]/.test(first) && !generated.startsWith(first.slice(0, 12));
-    const reply = useFirst ? [first, generated].filter(Boolean).join('\n') : generated;
-    if (useFirst) logger.info('character.impulse_sent', { key });
-    const provider = result?.provider || 'first-reaction';
+    generated = sanitizeReply(result.text, 0);
+    const reply = generated;
+    const provider = result?.provider || '';
     if (!reply) {
-      logger.info('turn.empty_reply', { key, provider: provider });
+      if (impulse) {
+        mind?.appendHeld?.(impulse);
+        logger.info('turn.withheld', { key, chars: impulse.length });
+        if (current.dryRun) logger.info('simulate.withheld', { key, text: impulse });
+      } else {
+        logger.info('turn.empty_reply', { key, provider });
+      }
       return;
     }
     const expression = config.character?.expression ?? {};

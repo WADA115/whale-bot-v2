@@ -775,6 +775,7 @@ async function loadMind() {
   $('#mindUnfinished').value = data.unfinished || '';
   $('#mindWorldview').value = data.worldview || '';
   $('#mindSeen').value = data.seen || '';
+  $('#mindHeld').value = data.held || '';
   $('#mindPresence').textContent = mindAgo(data.presence?.lastContactAt);
   autoGrowAll();
 }
