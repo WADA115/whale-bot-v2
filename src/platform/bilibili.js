@@ -219,6 +219,13 @@ export function createBilibili({ file, logger = null, fetchImpl = fetch } = {}) 
       } catch {}
     }
     if (!text) text = String(v.desc ?? '').trim();
+    const description = String(v.desc ?? '').trim();
+    const titleTerms = String(v.title ?? '').replace(/[^\p{L}\p{N}]+/gu, ' ').split(' ').map((x) => x.trim()).filter((x) => x.length >= 2);
+    const related = !text || titleTerms.length === 0 || titleTerms.some((term) => text.includes(term));
+    if (!text || !related) {
+      text = description;
+      source = 'description';
+    }
     return {
       bvid,
       title: v.title,

@@ -262,7 +262,13 @@ ${task.result}`);
   let slangBackfillStarted = false;
   async function backfillSlang() {
     const groups = (config.allow?.groups || []).map(String);
+    const markerFile = path.join(ROOT, 'state', 'slang-backfill.json');
+    let marks = {};
+    try { marks = JSON.parse(fs.readFileSync(markerFile, 'utf8')); } catch {}
+    const now = Date.now();
+    let changed = false;
     for (const groupId of groups) {
+      if (now - Number(marks[groupId] || 0) < 6 * 60 * 60 * 1000) continue;
       try {
         const result = await gateway.getGroupHistory({ groupId, count: 30 });
         const messages = result?.data?.messages || result?.messages || [];
@@ -271,10 +277,18 @@ ${task.result}`);
             slangObserver.observe(gateway.normalize(raw));
           } catch {}
         }
+        marks[groupId] = now;
+        changed = true;
         logger.info('slang.backfilled', { groupId, count: messages.length });
       } catch (error) {
         logger.warn('slang.backfill_failed', { groupId, error: String(error?.message ?? error) });
       }
+    }
+    if (changed) {
+      try {
+        fs.mkdirSync(path.dirname(markerFile), { recursive: true });
+        fs.writeFileSync(markerFile, JSON.stringify(marks, null, 2), 'utf8');
+      } catch {}
     }
   }
   gateway.on('ready', (login) => {

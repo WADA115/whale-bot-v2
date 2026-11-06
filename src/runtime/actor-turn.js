@@ -389,8 +389,9 @@ export function createActorTurn({
       logger.warn('story.missing', { key });
       return;
     }
-    const lastUserIndex = scene.turns.map((t) => t.role).lastIndexOf('user');
-    const promptTurns = scene.turns.map((turn, index) => {
+    const recentTurns = scene.turns.slice(-1);
+    const lastUserIndex = recentTurns.map((t) => t.role).lastIndexOf('user');
+    const promptTurns = recentTurns.map((turn, index) => {
       if (index !== lastUserIndex || (!imageDesc && !voiceDesc)) return turn;
       const seen = [imageDesc ? `[图片：${imageDesc}]` : '', voiceDesc ? `[语音：${voiceDesc}]` : ''].filter(Boolean).join(' ');
       return { ...turn, text: seen || turn.text };
@@ -428,18 +429,31 @@ export function createActorTurn({
     } catch (error) {
       logger.warn('character.impulse_failed', { key, error: String(error?.message ?? error) });
     }
+    const wantsMemory = /之前|上次|后来|那个|还没|想完|记得|忘了|那天|以前/.test(text);
+    const wantsSeen = /视频|B站|BV|看过|大肥鱼|表情|动态/.test(text);
+    const chatStory = {
+      self: String(character.card.identity || '').slice(0, 900),
+      relationship: '',
+      now: '',
+      life: '',
+      world: '',
+      episodes: [],
+      chapters: []
+    };
     const prompt = buildNarrativePrompt({
       card: character.card,
-      story: storyForPrompt,
-      person,
+      story: chatStory,
+      person: null,
       notices,
       facts: [wake ? `中间断了${wake.word}。没有声音，也没有画面。` : '', groupFact].filter(Boolean),
       turns: promptTurns,
       intent: scene.intent,
       notes: [
         current.kind === 'group' ? '环境：你在 QQ 群聊里，别人也看得到。' : '环境：你在 QQ 私聊里，只有你们两个人看得到。',
-        impulse ? `你刚才只对自己说的一句：${impulse}` : '',
-        ...mindNotes,
+        pendingRead ? `他给你看了一个视频：${pendingRead.title}。你还没读全文。要读就用 bili_video_content，BV 是 ${pendingRead.bvid}。读完后自然带出来。` : '',
+        wantsSeen && mindState?.seen ? `他给你看过的：\n${mindState.seen.slice(-1200)}` : '',
+        wantsMemory && mindState?.unfinished ? `没想完的：\n${mindState.unfinished.slice(-500)}` : '',
+        wantsMemory && mindState?.undercurrent ? `暗流：\n${mindState.undercurrent.split('\n').slice(-5).join('\n')}` : '',
         groupHistory,
         reference,
         slangBlock,
