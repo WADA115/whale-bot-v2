@@ -259,9 +259,31 @@ ${task.result}`);
     logger,
     onTurn: actorTurn
   });
+  let slangBackfillStarted = false;
+  async function backfillSlang() {
+    const groups = (config.allow?.groups || []).map(String);
+    for (const groupId of groups) {
+      try {
+        const result = await gateway.getGroupHistory({ groupId, count: 30 });
+        const messages = result?.data?.messages || result?.messages || [];
+        for (const raw of messages) {
+          try {
+            slangObserver.observe(gateway.normalize(raw));
+          } catch {}
+        }
+        logger.info('slang.backfilled', { groupId, count: messages.length });
+      } catch (error) {
+        logger.warn('slang.backfill_failed', { groupId, error: String(error?.message ?? error) });
+      }
+    }
+  }
   gateway.on('ready', (login) => {
     connected = true;
     logger.info('gateway.ready', { id: login.id, nickname: login.nickname, selfId: gateway.selfId });
+    if (!slangBackfillStarted) {
+      slangBackfillStarted = true;
+      setTimeout(() => { backfillSlang().catch(() => {}); }, 1500);
+    }
   });
   gateway.on('status', ({ connected: up }) => {
     connected = Boolean(up);

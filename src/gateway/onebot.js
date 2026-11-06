@@ -140,6 +140,10 @@ export class OneBotGateway extends EventEmitter {
     return Boolean(message.selfId && message.userId === message.selfId);
   }
 
+  async getGroupHistory({ groupId, count = 20 } = {}) {
+    return this.call('get_group_msg_history', { group_id: String(groupId), count: Math.min(50, Math.max(1, Number(count) || 20)) }, { timeoutMs: 30000 });
+  }
+
   async sendText(kind, id, text) {
     return this.sendMessage(kind, id, [{ type: 'text', data: { text: String(text) } }]);
   }
