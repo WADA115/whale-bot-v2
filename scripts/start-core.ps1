@@ -26,6 +26,16 @@ if (-not (Get-NetTCPConnection -LocalPort 3199 -State Listen -ErrorAction Silent
   }
 }
 
+if (-not (Get-NetTCPConnection -LocalPort 11434 -State Listen -ErrorAction SilentlyContinue)) {
+  $ollama = 'E:\ollama\app\ollama.exe'
+  if (Test-Path $ollama) {
+    Write-Log 'starting Ollama'
+    Start-Process -FilePath $ollama -ArgumentList 'serve' -WindowStyle Hidden
+  } else {
+    Write-Log 'Ollama not found'
+  }
+}
+
 $listener = Get-NetTCPConnection -LocalPort 3201 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($listener) {
   Write-Log 'v2 already listening'
