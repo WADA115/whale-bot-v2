@@ -165,7 +165,8 @@ export function createSlangObserver({
 
   async function flush() {
     if (imageWorker || imageQueue.length) await waitImages();
-    if (busy || !total || !textRouter) return;
+    if (busy) { while (busy) await new Promise((r) => setTimeout(r, 20)); return; }
+    if (!total || !textRouter) return;
     busy = true;
     const lines = pendingLines().slice(-24);
     logger?.info('slang.flush_start', { lines: lines.length });
