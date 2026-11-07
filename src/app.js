@@ -100,6 +100,7 @@ export async function main(argv = process.argv.slice(2)) {
         promptText: config.mansui.promptText,
         promptLang: config.mansui.promptLang,
         outDir: config.mansui.outDir || path.join(ROOT, 'state', 'voice'),
+        idleMs: Number(config.mansui.idleMs) || 1800000,
         logger
       })
     : null;
