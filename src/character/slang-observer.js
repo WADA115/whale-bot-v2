@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
+import { searchBing } from '../core/web-search.js';
 
 function parseTerms(text) {
   const raw = String(text ?? '').trim();
@@ -26,6 +27,7 @@ function imageSummary(message) {
 
 export function createSlangObserver({
   file,
+  search = searchBing,
   dbPath,
   entries = [],
   textRouter,
@@ -51,7 +53,7 @@ export function createSlangObserver({
     return lines.sort((a, b) => a.at - b.at).slice(-80);
   }
 
-  function remember(term, meaning, usage, evidence) {
+  function remember(term, meaning, usage, evidence, source = '') {
     const old = entries.find((x) => x.term === term);
     if (old) {
       old.meaning = old.meaning || meaning;
@@ -59,7 +61,7 @@ export function createSlangObserver({
       old.evidence = [...(old.evidence || []), evidence].slice(-5);
       return false;
     }
-    entries.push({ term, meaning, usage, evidence: [evidence], status: 'candidate', source: 'group-observer' });
+    entries.push({ term, meaning, usage, evidence: [evidence], status: 'candidate', source: source || 'group-observer' });
     return true;
   }
 
@@ -189,8 +191,36 @@ export function createSlangObserver({
       const answer = await textRouter.generate({ system, user: '', maxTokens: 4000, temperature: 0.4 });
       logger?.info('slang.flushed', { lines: lines.length, chars: String(answer?.text || '').length });
       const terms = parseTerms(answer?.text).slice(0, maxPerRun);
-      let added = 0;
+      const researched = [];
       for (const item of terms) {
+        const term = clean(item?.term, 20);
+        if (!term) continue;
+        let enriched = { ...item };
+        let source = '';
+        try {
+          const hits = await search(`${term} 梗 意思 用法`, { limit: 4 });
+          if (hits.length) {
+            source = hits.map((x) => x.url).filter(Boolean).join(' ');
+            const snippets = hits.map((x) => `- ${x.title}：${x.snippet}`).join('\n');
+            const check = await textRouter.generate({
+              system: '你在核对 QQ 群黑话。根据群聊原句和网络搜索，判断这个词在群里的真实意思和用法。只输出 JSON：{"meaning":"...","usage":"..."}，不要 Markdown，不要解释。',
+              user: `词：${term}\n群里的原句：${lines.filter((x) => x.text.includes(term)).slice(0, 2).map((x) => x.text).join('\n')}\n网络搜索：\n${snippets}`,
+              maxTokens: 1200,
+              temperature: 0.3
+            });
+            const match = String(check?.text || '').match(/\{[\s\S]*\}/);
+            if (match) {
+              const parsed = JSON.parse(match[0]);
+              if (parsed.meaning) enriched.meaning = clean(parsed.meaning, 160);
+              if (parsed.usage) enriched.usage = clean(parsed.usage, 120);
+            }
+          }
+        } catch {}
+        logger?.info('slang.researched', { term, meaning: clean(enriched.meaning, 80), source: Boolean(source) });
+        researched.push({ ...enriched, source });
+      }
+      let added = 0;
+      for (const item of researched) {
         const term = clean(item?.term, 20);
         const meaning = clean(item?.meaning, 160);
         const usage = clean(item?.usage, 120);
@@ -202,7 +232,7 @@ export function createSlangObserver({
           .filter((x) => x.text.includes(term))
           .slice(0, 3)
           .map((x) => ({ key: x.key, sender: x.sender, text: x.text, time: x.at }));
-        if (remember(term, meaning, usage, evidence[0] || {})) added += 1;
+        if (remember(term, meaning, usage, evidence[0] || {}, item.source || '')) added += 1;
       }
       if (added) {
         persist();
