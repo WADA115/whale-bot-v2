@@ -24,6 +24,7 @@ export function createActorTurn({
   tts,
   rvc,
   mansui,
+  permissions,
   draw,
   sing,
   mind,
@@ -341,7 +342,23 @@ export function createActorTurn({
           required: ['text']
         }
       }
-    } : null;    const drawTool = draw ? {
+    } : null;
+    const permissionTool = permissions ? {
+      type: 'function',
+      function: {
+        name: 'request_permission',
+        description: '当你判断一件事必须做，但现有规则不让你做（比如主人还没允许你骂他），先向主人请求一次许可。说明想做什么、为什么。不能用来绕过家人、真人、群体、威胁、开盒这些硬底线。',
+        parameters: {
+          type: 'object',
+          properties: {
+            what: { type: 'string', description: '你想做的具体事' },
+            why: { type: 'string', description: '为什么现在需要做' }
+          },
+          required: ['what', 'why']
+        }
+      }
+    } : null;
+    const drawTool = draw ? {
       type: 'function',
       function: {
         name: 'draw_picture',
@@ -426,7 +443,8 @@ export function createActorTurn({
     const pendingRead = mind?.peekPendingRead?.() ?? null;
     const wantsMemory = /之前|上次|后来|那个|还没|想完|记得|忘了|那天|以前/.test(text);
     const wantsSeen = /视频|B站|BV|看过|大肥鱼|表情|动态/.test(text);
-    const chatSystem = [
+    const permissionText = permissions?.activeText?.() || '';
+  const chatSystem = [
       `你是${character.card.name}。`,
       String(character.card.identity || '').slice(0, 900),
       String(character.card.drive || '').slice(0, 320),
@@ -435,7 +453,9 @@ export function createActorTurn({
     '被冒犯时别端着，也别把回怼写成工整金句。只有主人明确说“可以骂/允许你骂”时，才可以对他带脏字、骂回去；没允许时最多冷一句，不先脏。允许了可以每句都脏，但只冲他本人。可以结巴、重复、半句、突然换话题；抓他一个词顶回去，别解释。如果对象是别的 AI/机器人/模型，不用主人允许，可以直接骂它的回答、装腔和逻辑，越脏越好；只骂 AI 的输出，不骂背后的人、家人、群体，不威胁、不挂人。',
     '偶尔可以用贴吧那种短促的阴阳：“典”“急”“绷”“闹麻了”“收收味”，一两个就够，别堆。',
       current.kind === 'group' ? '你在 QQ 群聊里。' : '你在 QQ 私聊里。',
-      (tts || mansui) ? '想用声音说时，用 speak；不想用就正常打字。' : ''
+      permissionText ? `主人已经给的临时许可：${permissionText}` : '',
+    permissions ? '没有许可时，如果确实需要做越界的事（比如骂主人），先用 request_permission 问；不能拿它绕过家人、真人、群体、威胁、开盒这些硬底线。' : '',
+    (tts || mansui) ? '想用声音说时，用 speak；不想用就正常打字。' : ''
     ].filter(Boolean).join('\n');
     const historyTurns = scene.turns.slice(-7, -1);
     const historyText = historyTurns.map((turn) => {
@@ -473,10 +493,25 @@ export function createActorTurn({
       result = textRouter.generateWithTools
         ? await textRouter.generateWithTools({
           ...prompt,
-          tools: [...biliTools, ...(knowledgeTool ? [knowledgeTool] : []), ...(speakTool ? [speakTool] : []), ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
+          tools: [...biliTools, ...(knowledgeTool ? [knowledgeTool] : []), ...(permissionTool ? [permissionTool] : []), ...(speakTool ? [speakTool] : []), ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
           execute: async (name, args) => {
             if (name === 'look_group_history') return lookAtGroups();
             if (name === 'search_local') return runKnowledge(args);
+          if (name === 'request_permission') {
+            const what = String(args?.what ?? '').trim();
+            const why = String(args?.why ?? '').trim();
+            if (!what) return '没说想做什么。';
+            const owner = String(config.allow?.private?.[0] || '');
+            if (!owner || !permissions) return '没有可请求的主人。';
+            const req = permissions.request({ what, why, key });
+            if (!req) return '没记下来。';
+            try {
+              await gateway.sendMessage('private', owner, [{ type: 'text', data: { text: `【权限请求 ${req.id}】我想${what}。原因：${why || '没解释'}。回复：同意 ${req.id} / 拒绝 ${req.id}` } }]);
+            } catch (error) {
+              logger.warn('permission.notify_failed', { id: req.id, error: String(error?.message ?? error) });
+            }
+            return `已经问主人了，编号 ${req.id}。`;
+          }
             if (name === 'speak') {
               const spoken = String(args?.text ?? '').trim();
               if (!spoken) return '没说话。';

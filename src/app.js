@@ -14,6 +14,7 @@ import { createAsr } from './core/asr.js';
 import { createTts } from './core/tts.js';
 import { createRvc } from './core/rvc.js';
 import { createMansui } from './core/mansui.js';
+import { createPermissions } from './core/permissions.js';
 import { createDraw } from './core/draw.js';
 import { createSing } from './core/sing.js';
 import { createKnowledge } from './core/knowledge.js';
@@ -232,6 +233,10 @@ ${task.result}`);
   heartbeat.unref?.();
   const daydream = createDaydream({ mind, textRouter, storyStore, character, gateway, config, liveGroup, logger });
   daydream.start();
+  const permissions = createPermissions({
+    file: path.join(ROOT, 'state', 'permissions.json'),
+    logger
+  });
   const actorTurn = createActorTurn({
     config,
     character,
@@ -247,6 +252,7 @@ ${task.result}`);
     tts,
     rvc,
     mansui,
+    permissions,
     draw,
     sing,
     mind,
@@ -337,6 +343,19 @@ ${task.result}`);
     if (gateway.isSelf(message)) {
       logger.debug('message.self_ignored', { key: message.key });
       return;
+    }
+    const ownerId = String(config.allow?.private?.[0] || '');
+    if (message.kind === 'private' && String(message.id) === ownerId) {
+      const cmd = String(message.text || '').trim().match(/^(同意|允许|可以|拒绝|不行|不给)\s*([A-Za-z0-9]{4,8})?$/);
+      if (cmd) {
+        const yes = ['同意', '允许', '可以'].includes(cmd[1]);
+        const req = permissions.decide(cmd[2], yes);
+        const reply = req
+          ? (yes ? `给了。${req.what}，${Math.round((req.expiresAt - Date.now()) / 60000)} 分钟内有效。` : `没给。${req.what}。`)
+          : '没有待批的请求。';
+        gateway.sendMessage('private', ownerId, [{ type: 'text', data: { text: reply } }]).catch(() => {});
+        return;
+      }
     }
     mind.touchContact();
     const decision = decide({ message, config, selfId: gateway.selfId });
