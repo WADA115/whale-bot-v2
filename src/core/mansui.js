@@ -5,14 +5,14 @@ import net from 'node:net';
 
 export function createMansui({
   url = 'http://127.0.0.1:9880/tts',
-  refAudio = 'E:/AI/GPT-SoVITS/dataset/mansui-ref.wav',
+  refAudio = '',
   promptText = '我怕他问的多了会起疑心便干脆装成鸭吧',
   promptLang = 'zh',
   outDir = 'state/voice',
   timeoutMs = 90000,
-  pythonPath = 'E:/AI/GPT-SoVITS/.venv/Scripts/python.exe',
-  scriptPath = 'E:/AI/GPT-SoVITS/api_v2.py',
-  cwd = 'E:/AI/GPT-SoVITS',
+  pythonPath = '',
+  scriptPath = '',
+  cwd = '',
   configPath = 'GPT_SoVITS/configs/tts_infer_mansui_clean.yaml',
   idleMs = 300000,
   startTimeoutMs = 30000,
@@ -48,7 +48,7 @@ export function createMansui({
         stdio: 'ignore',
         env: {
           ...process.env,
-          PYTHONPATH: 'E:/AI/GPT-SoVITS;E:/AI/GPT-SoVITS/GPT_SoVITS',
+          PYTHONPATH: cwd ? `${cwd};${path.join(cwd, 'GPT_SoVITS')}` : '',
           PYTHONIOENCODING: 'utf-8',
           PYTHONUTF8: '1'
         }

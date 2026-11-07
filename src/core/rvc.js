@@ -1,10 +1,10 @@
-﻿import fs from 'node:fs';
+import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 
 export function createRvc({
-  scriptPath = 'E:/AI/RVC/rvc_convert_cli.py',
-  pythonPath = 'E:/AI/RVC/.venv/Scripts/python.exe',
+  scriptPath = '',
+  pythonPath = '',
   model = 'atri_e5.pth',
   outDir = 'state/voice',
   timeoutMs = 60000,

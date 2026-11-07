@@ -27,7 +27,7 @@ if (-not (Get-NetTCPConnection -LocalPort 3199 -State Listen -ErrorAction Silent
 }
 
 if (-not (Get-NetTCPConnection -LocalPort 11434 -State Listen -ErrorAction SilentlyContinue)) {
-  $ollama = 'E:\ollama\app\ollama.exe'
+  $ollama = if ($env:OLLAMA_EXE) { $env:OLLAMA_EXE } else { Join-Path (Split-Path -Parent $v2) 'ollama\app\ollama.exe' }
   if (Test-Path $ollama) {
     Write-Log 'starting Ollama'
     Start-Process -FilePath $ollama -ArgumentList 'serve' -WindowStyle Hidden

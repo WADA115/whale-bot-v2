@@ -93,7 +93,7 @@ export async function main(argv = process.argv.slice(2)) {
       logger
     })
     : null;
-  const mansui = config.mansui?.enabled
+  const mansui = config.mansui?.enabled && config.mansui.pythonPath && config.mansui.scriptPath
     ? createMansui({
         url: config.mansui.url,
         refAudio: config.mansui.refAudio,
@@ -104,7 +104,7 @@ export async function main(argv = process.argv.slice(2)) {
         logger
       })
     : null;
-  const rvc = config.rvc?.enabled
+  const rvc = config.rvc?.enabled && config.rvc.scriptPath && config.rvc.pythonPath
     ? createRvc({
         scriptPath: config.rvc.scriptPath,
         pythonPath: config.rvc.pythonPath,
