@@ -480,6 +480,7 @@ export function createActorTurn({
             if (name === 'speak') {
               const spoken = String(args?.text ?? '').trim();
               if (!spoken) return '没说话。';
+              if (current.kind === 'group' && config.mansui?.privateOnly !== false) return '这里不发语音。';
               if (current.dryRun) { logger.info('voice.would_send', { key, chars: spoken.length }); return '语音会发出去。'; }
               let file;
               if (mansui) {

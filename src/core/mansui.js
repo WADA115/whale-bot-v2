@@ -15,6 +15,7 @@ export function createMansui({
   cwd = 'E:/AI/GPT-SoVITS',
   configPath = 'GPT_SoVITS/configs/tts_infer_mansui_clean.yaml',
   idleMs = 300000,
+  startTimeoutMs = 30000,
   autoStart = true,
   logger = null
 } = {}) {
@@ -53,9 +54,12 @@ export function createMansui({
         }
       });
       server.unref?.();
-      await new Promise((r) => setTimeout(r, 18000));
-      if (!(await isUp())) throw new Error('mansui start timeout');
-      logger?.info('mansui.started', { pid: server.pid });
+      const deadline = Date.now() + startTimeoutMs;
+      while (Date.now() < deadline) {
+        if (await isUp()) { logger?.info('mansui.started', { pid: server.pid }); return; }
+        await new Promise((r) => setTimeout(r, 1200));
+      }
+      throw new Error('mansui start timeout');
     })().finally(() => { starting = null; });
     return starting;
   }
