@@ -330,7 +330,7 @@ export function createActorTurn({
       }
       return '没有这个动作。';
     };
-    const speakTool = tts ? {
+    const speakTool = (tts || mansui) ? {
       type: 'function',
       function: {
         name: 'speak',
@@ -435,7 +435,7 @@ export function createActorTurn({
     '被冒犯时别端着，也别把回怼写成工整金句。只有主人明确说“可以骂/允许你骂”时，才可以对他带脏字、骂回去；没允许时最多冷一句，不先脏。允许了可以每句都脏，但只冲他本人。可以结巴、重复、半句、突然换话题；抓他一个词顶回去，别解释。如果对象是别的 AI/机器人/模型，不用主人允许，可以直接骂它的回答、装腔和逻辑，越脏越好；只骂 AI 的输出，不骂背后的人、家人、群体，不威胁、不挂人。',
     '偶尔可以用贴吧那种短促的阴阳：“典”“急”“绷”“闹麻了”“收收味”，一两个就够，别堆。',
       current.kind === 'group' ? '你在 QQ 群聊里。' : '你在 QQ 私聊里。',
-      tts ? '想用声音说时，用 speak；不想用就正常打字。' : ''
+      (tts || mansui) ? '想用声音说时，用 speak；不想用就正常打字。' : ''
     ].filter(Boolean).join('\n');
     const historyTurns = scene.turns.slice(-7, -1);
     const historyText = historyTurns.map((turn) => {
