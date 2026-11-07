@@ -9,11 +9,17 @@ test('群聊黑话观察器会从群消息里提取候选', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'slang-observer-'));
   const file = path.join(dir, 'slang.json');
   const entries = [];
+  let calls = 0;
   const observer = createSlangObserver({
     file,
     entries,
+    search: async () => [{ title: '绷不住了是什么梗', snippet: '绷不住了，网络用语，指忍不住笑或崩溃。', url: 'https://example.com/beng' }],
     textRouter: {
-      generate: async () => ({ text: '[{"term":"绷不住了","meaning":"忍不住笑或崩溃","usage":"看到离谱的东西时说"}]' })
+      generate: async () => {
+        calls += 1;
+        if (calls === 1) return { text: '[{"term":"绷不住了","meaning":"忍不住笑或崩溃","usage":"看到离谱的东西时说"}]' };
+        return { text: '{"meaning":"忍不住笑或崩溃","usage":"看到离谱的东西时说","worth":true}' };
+      }
     },
     config: { batchSize: 5, intervalMs: 60_000 }
   });
@@ -34,12 +40,18 @@ test('群聊黑话观察器会从群消息里提取候选', async () => {
 test('图片和表情包会先过视觉再进黑话提取', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'slang-image-'));
   const entries = [];
+  let calls = 0;
   const observer = createSlangObserver({
     file: path.join(dir, 'slang.json'),
     entries,
+    search: async () => [{ title: '大肥鱼是什么梗', snippet: '大肥鱼，指蓝色鲸鱼娘。', url: 'https://example.com/fish' }],
     vision: { describe: async () => ({ text: '文字：大肥鱼' }) },
     textRouter: {
-      generate: async () => ({ text: '[{"term":"大肥鱼","meaning":"蓝色鲸鱼娘","usage":"叫小鲸鱼时"}]' })
+      generate: async () => {
+        calls += 1;
+        if (calls === 1) return { text: '[{"term":"大肥鱼","meaning":"蓝色鲸鱼娘","usage":"叫小鲸鱼时"}]' };
+        return { text: '{"meaning":"蓝色鲸鱼娘","usage":"叫小鲸鱼时","worth":true}' };
+      }
     },
     config: { batchSize: 5, intervalMs: 60_000 }
   });

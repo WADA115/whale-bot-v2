@@ -178,8 +178,7 @@ export function createSlangObserver({
       const system = [
         '你在看 QQ 群聊，里面可能有文字、图片和表情包。',
         '只找真正的黑话、梗、网络表达、圈子里的特殊说法。',
-        '普通词、正常聊天、单纯语气词、群友昵称、报错/英文技术词、节日通用语、单个汉字不要。',
-        '像“霸”这种只是发图时顺口的字，不算黑话。',
+        '只找需要结合网络语境才能解释的群内表达。',
         '图片里的字也算群聊内容。',
         known ? `已经知道的：${known}` : '',
         '',
@@ -198,7 +197,6 @@ export function createSlangObserver({
       for (const item of terms) {
         const term = clean(item?.term, 20);
         if (!term || item?.worth === false) continue;
-        if (term.length < 2 && !/^[a-zA-Z]{2,}$/.test(term)) continue;
         let enriched = { ...item };
         let source = '';
         try {
@@ -207,7 +205,7 @@ export function createSlangObserver({
             source = hits.map((x) => x.url).filter(Boolean).join(' ');
             const snippets = hits.map((x) => `- ${x.title}：${x.snippet}`).join('\n');
             const check = await textRouter.generate({
-              system: '你在核对 QQ 群黑话。根据群聊原句和网络搜索，判断这个词在群里的真实意思和用法。普通词、昵称、报错、节日通用语、无意义口癖不要存。只输出 JSON：{"meaning":"...","usage":"...","worth":true}，不要 Markdown，不要解释。',
+              system: '你在核对 QQ 群黑话。根据群聊原句和网络搜索，判断这个词在群里的真实意思和用法。只有网络能解释、确实值得记的才 worth=true。只输出 JSON：{"meaning":"...","usage":"...","worth":true}，不要 Markdown，不要解释。',
               user: `词：${term}\n群里的原句：${lines.filter((x) => x.text.includes(term)).slice(0, 2).map((x) => x.text).join('\n')}\n网络搜索：\n${snippets}`,
               maxTokens: 1200,
               temperature: 0.3
@@ -219,6 +217,8 @@ export function createSlangObserver({
               if (parsed.usage) enriched.usage = clean(parsed.usage, 120);
               if (parsed.worth === false) enriched.worth = false;
             }
+          } else {
+            enriched.worth = false;
           }
         } catch {}
         logger?.info('slang.researched', { term, meaning: clean(enriched.meaning, 80), source: Boolean(source) });
@@ -231,7 +231,7 @@ export function createSlangObserver({
         const usage = clean(item?.usage, 120);
         if (!term || !meaning) continue;
         if (item?.worth === false) continue;
-        if (term.length < 2 && !/^[a-zA-Z]{2,}$/.test(term)) continue;
+        if (!item.source) continue;
         if (!transcript.includes(term)) continue;
         if (lines.some((x) => x.sender === term)) continue;
         if (entries.some((x) => x.term === term)) continue;
