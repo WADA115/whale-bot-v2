@@ -347,12 +347,13 @@ export function createActorTurn({
       type: 'function',
       function: {
         name: 'request_permission',
-        description: '当你判断一件事必须做，但现有规则不让你做（比如主人还没允许你骂他），先向主人请求一次许可。说明想做什么、为什么。不能用来绕过家人、真人、群体、威胁、开盒这些硬底线。',
+        description: '当你判断一件事必须做，但现有规则不让你做（比如主人还没允许你骂他），先向主人开口请求一次许可。像在 QQ 上求人，不要写成工单或系统提示；ask 里写你真正会发出去的那句话。不能用来绕过家人、真人、群体、威胁、开盒这些硬底线。',
         parameters: {
           type: 'object',
           properties: {
-            what: { type: 'string', description: '你想做的具体事' },
-            why: { type: 'string', description: '为什么现在需要做' }
+            what: { type: 'string', description: '你想做的具体事，给系统看' },
+            why: { type: 'string', description: '为什么现在需要做，给系统看' },
+            ask: { type: 'string', description: '你真正发给主人的话，用平时的语气，别写权限请求或编号' }
           },
           required: ['what', 'why']
         }
@@ -454,7 +455,7 @@ export function createActorTurn({
     '偶尔可以用贴吧那种短促的阴阳：“典”“急”“绷”“闹麻了”“收收味”，一两个就够，别堆。',
       current.kind === 'group' ? '你在 QQ 群聊里。' : '你在 QQ 私聊里。',
       permissionText ? `主人已经给的临时许可：${permissionText}` : '',
-    permissions ? '没有许可时，如果确实需要做越界的事（比如骂主人），先用 request_permission 问；不能拿它绕过家人、真人、群体、威胁、开盒这些硬底线。' : '',
+    permissions ? '没有许可时，如果确实需要做越界的事（比如骂主人），先用 request_permission 开口问；ask 写你真正会发出去的话，像在 QQ 上求人，不要工单腔。不能拿它绕过家人、真人、群体、威胁、开盒这些硬底线。' : '',
     (tts || mansui) ? '想用声音说时，用 speak；不想用就正常打字。' : ''
     ].filter(Boolean).join('\n');
     const historyTurns = scene.turns.slice(-7, -1);
@@ -500,17 +501,19 @@ export function createActorTurn({
           if (name === 'request_permission') {
             const what = String(args?.what ?? '').trim();
             const why = String(args?.why ?? '').trim();
+            const ask = String(args?.ask ?? '').trim();
             if (!what) return '没说想做什么。';
             const owner = String(config.allow?.private?.[0] || '');
             if (!owner || !permissions) return '没有可请求的主人。';
             const req = permissions.request({ what, why, key });
             if (!req) return '没记下来。';
             try {
-              await gateway.sendMessage('private', owner, [{ type: 'text', data: { text: `【权限请求 ${req.id}】我想${what}。原因：${why || '没解释'}。回复：同意 ${req.id} / 拒绝 ${req.id}` } }]);
+              const line = ask || `我想${what}。${why ? `因为${why}。` : ''}`;
+              await gateway.sendMessage('private', owner, [{ type: 'text', data: { text: `${line}\n同意就回：同意 ${req.id}` } }]);
             } catch (error) {
               logger.warn('permission.notify_failed', { id: req.id, error: String(error?.message ?? error) });
             }
-            return `已经问主人了，编号 ${req.id}。`;
+            return '已经问了，等他点头。';
           }
             if (name === 'speak') {
               const spoken = String(args?.text ?? '').trim();

@@ -351,7 +351,7 @@ ${task.result}`);
         const yes = ['同意', '允许', '可以'].includes(cmd[1]);
         const req = permissions.decide(cmd[2], yes);
         const reply = req
-          ? (yes ? `给了。${req.what}，${Math.round((req.expiresAt - Date.now()) / 60000)} 分钟内有效。` : `没给。${req.what}。`)
+          ? (yes ? '行，给你了。30 分钟内算数。' : '算了，不给。')
           : '没有待批的请求。';
         gateway.sendMessage('private', ownerId, [{ type: 'text', data: { text: reply } }]).catch(() => {});
         return;
