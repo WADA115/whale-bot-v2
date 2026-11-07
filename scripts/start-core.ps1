@@ -36,6 +36,13 @@ if (-not (Get-NetTCPConnection -LocalPort 11434 -State Listen -ErrorAction Silen
   }
 }
 
+if (-not (Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue)) {
+  $gateway = Join-Path $PSScriptRoot 'start-gateway.ps1'
+  if (Test-Path $gateway) {
+    Write-Log 'starting gateway'
+    Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $gateway) -WindowStyle Hidden
+  }
+}
 $listener = Get-NetTCPConnection -LocalPort 3201 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($listener) {
   Write-Log 'v2 already listening'
