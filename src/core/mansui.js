@@ -53,12 +53,9 @@ export function createMansui({
         }
       });
       server.unref?.();
-      const deadline = Date.now() + 90000;
-      while (Date.now() < deadline) {
-        if (await isUp()) { logger?.info('mansui.started', { pid: server.pid }); return; }
-        await new Promise((r) => setTimeout(r, 1500));
-      }
-      throw new Error('mansui start timeout');
+      await new Promise((r) => setTimeout(r, 18000));
+      if (!(await isUp())) throw new Error('mansui start timeout');
+      logger?.info('mansui.started', { pid: server.pid });
     })().finally(() => { starting = null; });
     return starting;
   }

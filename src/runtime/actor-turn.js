@@ -482,7 +482,10 @@ export function createActorTurn({
               if (!spoken) return '没说话。';
               if (current.dryRun) { logger.info('voice.would_send', { key, chars: spoken.length }); return '语音会发出去。'; }
               let file;
-              if (mansui) file = await mansui.speak(spoken);
+              if (mansui) {
+                try { file = await mansui.speak(spoken); }
+                catch (error) { logger.warn('voice.mansui_failed', { key, error: String(error?.message ?? error) }); return '语音没合成出来。'; }
+              }
               else {
                 file = await tts.synthesize(spoken);
                 if (file && rvc) file = await rvc.convert(file);
