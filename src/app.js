@@ -342,7 +342,7 @@ ${task.result}`);
       const list = pending.map((x) => `${x.id}｜${x.what}｜${x.why || '没解释'}`).join('\n');
       const who = key.startsWith('group:') ? '群友' : '主人';
       const answer = await textRouter.generate({
-        system: `你在判断${who}对一条权限请求的回复。口语可能很随意：行、给、可以、批了、拿去、随你、没问题都算同意；不行、算了、不给、想得美、滚都算拒绝；闲聊、追问、普通聊天、没明确表态算 none；不要因为随口一句就拒绝。只输出 JSON：{"decision":"approve|deny|none","id":"编号"}。不确定就 none。`,
+        system: `你在判断${who}对一条权限请求的回复。口语可能很随意：行、给、可以、批了、拿去、随你、没问题都算同意；不行、算了、不给、想得美、滚都算拒绝；闲聊、追问、普通聊天、没明确表态算 none。还要听范围和时间：再加20分钟 addMinutes=20；减少/缩短20分钟 addMinutes=-20；改成10分钟 setMinutes=10；不要私聊/私聊不行 exclude=["private"]；不要群聊/群里不行 exclude=["group"]；默认都开 exclude=[]。只输出 JSON：{"decision":"approve|deny|none","id":"编号","addMinutes":0,"setMinutes":0,"exclude":[]}。不确定就 none。`,
         user: `待批/已给：\n${list}\n\n${who}说：${text}`,
         maxTokens: 600,
         temperature: 0
@@ -350,9 +350,16 @@ ${task.result}`);
       const match = String(answer?.text || '').match(/\{[\s\S]*\}/);
       if (!match) return;
       const parsed = JSON.parse(match[0]);
-      if (parsed.decision !== 'approve' && parsed.decision !== 'deny') return;
-      const req = permissions.decide(parsed.id, parsed.decision === 'approve', key);
-      if (req) logger.info('permission.answered', { id: req.id, decision: parsed.decision, text: String(text).slice(0, 80) });
+      if (parsed.decision === 'approve' || parsed.decision === 'deny') {
+        const req = permissions.decide(parsed.id, parsed.decision === 'approve', key);
+        if (req) logger.info('permission.answered', { id: req.id, decision: parsed.decision, text: String(text).slice(0, 80) });
+      }
+      const addMinutes = Number(parsed.addMinutes) || 0;
+      const setMinutes = Number(parsed.setMinutes) || 0;
+      const exclude = Array.isArray(parsed.exclude) ? parsed.exclude : [];
+      if (addMinutes || setMinutes || exclude.length) {
+        permissions.adjust(parsed.id, { addMinutes, setMinutes, exclude }, key);
+      }
     } catch (error) {
       logger.warn('permission.interpret_failed', { error: String(error?.message ?? error) });
     }

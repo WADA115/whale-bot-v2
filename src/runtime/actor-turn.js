@@ -511,7 +511,7 @@ export function createActorTurn({
             if (!req) return '没记下来。';
             try {
               const line = ask || `我想${what}。${why ? `因为${why}。` : ''}`;
-              const text = `${line}\n行不行直接说；拿不准就带上 ${req.id}`;
+              const text = `${line}\n默认都开；想加/减时间或关掉私聊/群聊，直接说。\n行不行直接说；拿不准就带上 ${req.id}`;
               if (current.kind === 'group') {
                 await gateway.sendMessage('group', current.id, [{ type: 'text', data: { text } }]);
                 if (owner) await gateway.sendMessage('private', owner, [{ type: 'text', data: { text } }]);

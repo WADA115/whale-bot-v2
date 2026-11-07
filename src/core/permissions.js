@@ -33,7 +33,8 @@ export function createPermissions({ file = 'state/permissions.json', ttlMs = 30 
     const item = {
       id, what: text, why: String(why ?? '').trim().slice(0, 240),
       keys: allKeys, key: allKeys[0] || '',
-      status: 'pending', at: Date.now(), decidedAt: 0, expiresAt: 0, deniedBy: []
+      status: 'pending', at: Date.now(), decidedAt: 0, expiresAt: 0, deniedBy: [],
+      durationMs: ttlMs
     };
     list.push(item);
     list = list.slice(-50);
@@ -73,7 +74,7 @@ export function createPermissions({ file = 'state/permissions.json', ttlMs = 30 
       item.status = 'granted';
       item.approvedBy = key;
       item.decidedAt = Date.now();
-      item.expiresAt = Date.now() + ttlMs;
+      item.expiresAt = Date.now() + (Number(item.durationMs) || ttlMs);
     } else {
       item.deniedBy = [...new Set([...(item.deniedBy || []), key].filter(Boolean))];
       const allKeys = keysOf(item);
@@ -82,6 +83,38 @@ export function createPermissions({ file = 'state/permissions.json', ttlMs = 30 
     }
     persist();
     logger?.info('permission.decided', { id: item.id, ok, key, status: item.status, what: item.what });
+    return item;
+  }
+
+  function adjust(id = null, { addMinutes = 0, setMinutes = 0, exclude = [] } = {}, key = '') {
+    const scoped = list.filter((x) => inScope(x, key) && ['pending', 'granted'].includes(x.status));
+    let item = id ? scoped.find((x) => x.id === String(id).toUpperCase()) : null;
+    if (!item) item = scoped.slice(-1)[0] || null;
+    if (!item) return null;
+
+    const drop = new Set((Array.isArray(exclude) ? exclude : []).map(String));
+    if (drop.has('private')) item.keys = keysOf(item).filter((k) => !k.startsWith('private:'));
+    if (drop.has('group')) item.keys = keysOf(item).filter((k) => !k.startsWith('group:'));
+    item.key = item.keys[0] || '';
+
+    const delta = Number(addMinutes) || 0;
+    const absolute = Number(setMinutes) || 0;
+    if (delta || absolute) {
+      if (item.status === 'granted') {
+        const current = Math.max(Date.now(), Number(item.expiresAt) || 0);
+        item.expiresAt = absolute ? Date.now() + absolute * 60_000 : current + delta * 60_000;
+      } else {
+        const current = Number(item.durationMs) || ttlMs;
+        item.durationMs = absolute ? absolute * 60_000 : current + delta * 60_000;
+      }
+    }
+
+    if (!item.keys.length || (item.status === 'granted' && Number(item.expiresAt) <= Date.now()) || (item.status === 'pending' && Number(item.durationMs) <= 0)) {
+      item.status = item.status === 'granted' ? 'revoked' : 'denied';
+      item.expiresAt = 0;
+    }
+    persist();
+    logger?.info('permission.adjusted', { id: item.id, addMinutes: delta, setMinutes: absolute, exclude: [...drop], keys: item.keys, status: item.status });
     return item;
   }
 
@@ -97,5 +130,5 @@ export function createPermissions({ file = 'state/permissions.json', ttlMs = 30 
     return `${who}刚刚同意：${items.map((x) => x.what).join('、')}。在有效期内可以做，但不要越过硬底线。`;
   }
 
-  return { request, pending, candidates, decide, active, activeText };
+  return { request, pending, candidates, decide, adjust, active, activeText };
 }
