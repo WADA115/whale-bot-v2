@@ -336,13 +336,13 @@ ${task.result}`);
   });
 
   async function interpretPermissionReply(text, key = '') {
-    const pending = key.startsWith('group:') ? permissions.pending(key) : permissions.candidates(key);
+    const pending = permissions.candidates(key);
     if (!pending.length || !String(text || '').trim()) return;
     try {
       const list = pending.map((x) => `${x.id}｜${x.what}｜${x.why || '没解释'}`).join('\n');
       const who = key.startsWith('group:') ? '群友' : '主人';
       const answer = await textRouter.generate({
-        system: `你在判断${who}对一条权限请求的回复。口语可能很随意：行、给、可以、批了、拿去、随你、没问题都算同意；不行、算了、不给、想得美、滚都算拒绝；闲聊、追问、没表态算 none。只输出 JSON：{"decision":"approve|deny|none","id":"编号"}。不确定就 none。`,
+        system: `你在判断${who}对一条权限请求的回复。口语可能很随意：行、给、可以、批了、拿去、随你、没问题都算同意；不行、算了、不给、想得美、滚都算拒绝；闲聊、追问、普通聊天、没明确表态算 none；不要因为随口一句就拒绝。只输出 JSON：{"decision":"approve|deny|none","id":"编号"}。不确定就 none。`,
         user: `待批/已给：\n${list}\n\n${who}说：${text}`,
         maxTokens: 600,
         temperature: 0
@@ -369,9 +369,13 @@ ${task.result}`);
     }
     const ownerId = String(config.allow?.private?.[0] || '');
     if (message.kind === 'private' && String(message.id) === ownerId) {
-      await interpretPermissionReply(message.text, message.key);
+      const waiting = permissions.pending(message.key).length > 0;
+      if (waiting) await interpretPermissionReply(message.text, message.key);
+      else interpretPermissionReply(message.text, message.key).catch(() => {});
     } else if (message.kind === 'group') {
-      await interpretPermissionReply(message.text, message.key);
+      const waiting = permissions.pending(message.key).length > 0;
+      if (waiting) await interpretPermissionReply(message.text, message.key);
+      else interpretPermissionReply(message.text, message.key).catch(() => {});
     }
     mind.touchContact();
     const decision = decide({ message, config, selfId: gateway.selfId });
