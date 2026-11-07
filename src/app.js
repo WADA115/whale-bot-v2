@@ -336,14 +336,14 @@ ${task.result}`);
   });
 
   async function interpretPermissionReply(text, key = '') {
-    const pending = permissions.pending().filter((x) => !key || !x.key || x.key === key);
+    const pending = key.startsWith('group:') ? permissions.pending(key) : permissions.candidates(key);
     if (!pending.length || !String(text || '').trim()) return;
     try {
       const list = pending.map((x) => `${x.id}｜${x.what}｜${x.why || '没解释'}`).join('\n');
       const who = key.startsWith('group:') ? '群友' : '主人';
       const answer = await textRouter.generate({
         system: `你在判断${who}对一条权限请求的回复。口语可能很随意：行、给、可以、批了、拿去、随你、没问题都算同意；不行、算了、不给、想得美、滚都算拒绝；闲聊、追问、没表态算 none。只输出 JSON：{"decision":"approve|deny|none","id":"编号"}。不确定就 none。`,
-        user: `待批：\n${list}\n\n${who}说：${text}`,
+        user: `待批/已给：\n${list}\n\n${who}说：${text}`,
         maxTokens: 600,
         temperature: 0
       });
