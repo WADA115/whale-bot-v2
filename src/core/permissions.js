@@ -1,4 +1,4 @@
-﻿import fs from 'node:fs';
+import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
@@ -33,9 +33,10 @@ export function createPermissions({ file = 'state/permissions.json', ttlMs = 30 
     return list.filter((x) => x.status === 'pending').slice(-10);
   }
 
-  function decide(id, ok) {
-    let item = id ? list.find((x) => x.id === String(id).toUpperCase() && x.status === 'pending') : null;
-    if (!item) item = pending().slice(-1)[0] || null;
+  function decide(id, ok, key = '') {
+    const scoped = list.filter((x) => x.status === 'pending' && (!key || !x.key || x.key === key));
+    let item = id ? scoped.find((x) => x.id === String(id).toUpperCase()) : null;
+    if (!item) item = scoped.slice(-1)[0] || null;
     if (!item) return null;
     item.status = ok ? 'granted' : 'denied';
     item.decidedAt = Date.now();
@@ -45,15 +46,16 @@ export function createPermissions({ file = 'state/permissions.json', ttlMs = 30 
     return item;
   }
 
-  function active() {
+  function active(key = '') {
     const now = Date.now();
-    return list.filter((x) => x.status === 'granted' && Number(x.expiresAt) > now);
+    return list.filter((x) => x.status === 'granted' && Number(x.expiresAt) > now && (!x.key || !key || x.key === key));
   }
 
-  function activeText() {
-    const items = active();
+  function activeText(key = '') {
+    const items = active(key);
     if (!items.length) return '';
-    return `主人刚刚允许：${items.map((x) => x.what).join('、')}。在有效期内可以做，但不要越过硬底线。`;
+    const who = items.every((x) => String(x.key || '').startsWith('group:')) ? '群里' : '主人';
+    return `${who}刚刚同意：${items.map((x) => x.what).join('、')}。在有效期内可以做，但不要越过硬底线。`;
   }
 
   return { request, pending, decide, active, activeText };

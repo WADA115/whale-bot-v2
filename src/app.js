@@ -335,14 +335,15 @@ ${task.result}`);
     if (up) backfillSlang().catch((error) => logger.warn('slang.backfill_failed', { error: String(error?.message ?? error) }));
   });
 
-  async function interpretPermissionReply(text) {
-    const pending = permissions.pending();
+  async function interpretPermissionReply(text, key = '') {
+    const pending = permissions.pending().filter((x) => !key || !x.key || x.key === key);
     if (!pending.length || !String(text || '').trim()) return;
     try {
       const list = pending.map((x) => `${x.id}｜${x.what}｜${x.why || '没解释'}`).join('\n');
+      const who = key.startsWith('group:') ? '群友' : '主人';
       const answer = await textRouter.generate({
-        system: '你在判断主人对一条权限请求的回复。主人的口语可能很随意：行、给、可以、批了、拿去、随你、没问题都算同意；不行、算了、不给、想得美、滚都算拒绝；闲聊、追问、没表态算 none。只输出 JSON：{"decision":"approve|deny|none","id":"编号"}。不确定就 none。',
-        user: `待批：\n${list}\n\n主人说：${text}`,
+        system: `你在判断${who}对一条权限请求的回复。口语可能很随意：行、给、可以、批了、拿去、随你、没问题都算同意；不行、算了、不给、想得美、滚都算拒绝；闲聊、追问、没表态算 none。只输出 JSON：{"decision":"approve|deny|none","id":"编号"}。不确定就 none。`,
+        user: `待批：\n${list}\n\n${who}说：${text}`,
         maxTokens: 600,
         temperature: 0
       });
@@ -350,7 +351,7 @@ ${task.result}`);
       if (!match) return;
       const parsed = JSON.parse(match[0]);
       if (parsed.decision !== 'approve' && parsed.decision !== 'deny') return;
-      const req = permissions.decide(parsed.id, parsed.decision === 'approve');
+      const req = permissions.decide(parsed.id, parsed.decision === 'approve', key);
       if (req) logger.info('permission.answered', { id: req.id, decision: parsed.decision, text: String(text).slice(0, 80) });
     } catch (error) {
       logger.warn('permission.interpret_failed', { error: String(error?.message ?? error) });
@@ -368,7 +369,9 @@ ${task.result}`);
     }
     const ownerId = String(config.allow?.private?.[0] || '');
     if (message.kind === 'private' && String(message.id) === ownerId) {
-      await interpretPermissionReply(message.text);
+      await interpretPermissionReply(message.text, message.key);
+    } else if (message.kind === 'group') {
+      await interpretPermissionReply(message.text, message.key);
     }
     mind.touchContact();
     const decision = decide({ message, config, selfId: gateway.selfId });

@@ -347,7 +347,7 @@ export function createActorTurn({
       type: 'function',
       function: {
         name: 'request_permission',
-        description: '当你判断一件事必须做，但现有规则不让你做（比如主人还没允许你骂他），先向主人开口请求一次许可。像在 QQ 上求人，不要写成工单或系统提示；ask 里写你真正会发出去的那句话。不能用来绕过家人、真人、群体、威胁、开盒这些硬底线。',
+        description: '当你判断一件事必须做，但现有规则不让你做（比如还没允许你骂他），先开口请求一次许可。私聊问主人；群聊直接问群里。像在 QQ 上求人，不要写成工单或系统提示；ask 里写你真正会发出去的那句话。不能用来绕过家人、真人、群体、威胁、开盒这些硬底线。',
         parameters: {
           type: 'object',
           properties: {
@@ -444,7 +444,7 @@ export function createActorTurn({
     const pendingRead = mind?.peekPendingRead?.() ?? null;
     const wantsMemory = /之前|上次|后来|那个|还没|想完|记得|忘了|那天|以前/.test(text);
     const wantsSeen = /视频|B站|BV|看过|大肥鱼|表情|动态/.test(text);
-    const permissionText = permissions?.activeText?.() || '';
+    const permissionText = permissions?.activeText?.(key) || '';
   const chatSystem = [
       `你是${character.card.name}。`,
       String(character.card.identity || '').slice(0, 900),
@@ -455,7 +455,7 @@ export function createActorTurn({
     '偶尔可以用贴吧那种短促的阴阳：“典”“急”“绷”“闹麻了”“收收味”，一两个就够，别堆。',
       current.kind === 'group' ? '你在 QQ 群聊里。' : '你在 QQ 私聊里。',
       permissionText ? `主人已经给的临时许可：${permissionText}` : '',
-    permissions ? '没有许可时，如果确实需要做越界的事（比如骂主人），先用 request_permission 开口问；ask 写你真正会发出去的话，像在 QQ 上求人，不要工单腔。不能拿它绕过家人、真人、群体、威胁、开盒这些硬底线。' : '',
+    permissions ? '没有许可时，如果确实需要做越界的事（比如骂人），先用 request_permission 开口问：私聊问主人，群聊直接问群里；ask 写你真正会发出去的话，像在 QQ 上求人，不要工单腔。不能拿它绕过家人、真人、群体、威胁、开盒这些硬底线。' : '',
     (tts || mansui) ? '想用声音说时，用 speak；不想用就正常打字。' : ''
     ].filter(Boolean).join('\n');
     const historyTurns = scene.turns.slice(-7, -1);
@@ -504,16 +504,18 @@ export function createActorTurn({
             const ask = String(args?.ask ?? '').trim();
             if (!what) return '没说想做什么。';
             const owner = String(config.allow?.private?.[0] || '');
-            if (!owner || !permissions) return '没有可请求的主人。';
+            if (!permissions || (current.kind !== 'group' && !owner)) return '没有可请求的人。';
             const req = permissions.request({ what, why, key });
             if (!req) return '没记下来。';
             try {
               const line = ask || `我想${what}。${why ? `因为${why}。` : ''}`;
-              await gateway.sendMessage('private', owner, [{ type: 'text', data: { text: `${line}\n行不行直接说；拿不准就带上 ${req.id}` } }]);
+              const targetKind = current.kind === 'group' ? 'group' : 'private';
+              const targetId = current.kind === 'group' ? current.id : owner;
+              await gateway.sendMessage(targetKind, targetId, [{ type: 'text', data: { text: `${line}\n行不行直接说；拿不准就带上 ${req.id}` } }]);
             } catch (error) {
               logger.warn('permission.notify_failed', { id: req.id, error: String(error?.message ?? error) });
             }
-            return '已经问了，等他点头。';
+            return '已经问了，等回话。';
           }
             if (name === 'speak') {
               const spoken = String(args?.text ?? '').trim();
