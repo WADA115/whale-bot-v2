@@ -78,6 +78,25 @@ export function createPanelHandler(ctx) {
       res.end();
       return;
     }
+    if (req.url === '/api/voice/stop' && req.method === 'POST') {
+      try {
+        ctx.mansui?.stop?.();
+        json(res, 200, { ok: true, message: '满穗语音服务已停止' });
+      } catch (error) {
+        json(res, 502, { error: String(error?.message ?? error) });
+      }
+      return;
+    }
+    if (req.url === '/api/voice/status' && req.method === 'GET') {
+      try {
+        if (!ctx.mansui) { json(res, 200, { ok: false }); return; }
+        ctx.mansui.health().then((status) => json(res, 200, { ok: true, ...status })).catch((error) => json(res, 200, { ok: false, error: String(error?.message ?? error) }));
+        return;
+      } catch (error) {
+        json(res, 200, { ok: false, error: String(error?.message ?? error) });
+      }
+      return;
+    }
     if (req.url === '/api/state') {
       json(res, 200, ctx.snapshot());
       return;

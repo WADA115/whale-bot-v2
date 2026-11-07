@@ -869,6 +869,18 @@ $('#personaRefine').addEventListener('click', personaRefine);
 $('#cardFile').addEventListener('change', importCard);
 $('#clearScenes').addEventListener('click', clearScenes);
 $('#saveConfig').addEventListener('click', saveConfig);
+$('#stopVoice').addEventListener('click', async () => {
+  const el = $('#voiceStatus');
+  if (el) el.textContent = '正在关闭…';
+  try {
+    const res = await fetch('/api/voice/stop', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '关闭失败');
+    if (el) el.textContent = '满穗语音服务已关闭';
+  } catch (error) {
+    if (el) el.textContent = String(error.message || error);
+  }
+});
 $('#gwExpand').addEventListener('click', () => {
   const expanded = $('#gwLog').classList.toggle('expanded');
   $('#gwExpand').textContent = expanded ? '收起' : '展开';
