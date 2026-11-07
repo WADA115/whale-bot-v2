@@ -346,7 +346,7 @@ ${task.result}`);
     }
     const ownerId = String(config.allow?.private?.[0] || '');
     if (message.kind === 'private' && String(message.id) === ownerId) {
-      const cmd = String(message.text || '').trim().match(/^(同意|允许|可以|拒绝|不行|不给)\s*([A-Za-z0-9]{4,8})?$/);
+      const cmd = String(message.text || '').trim().match(/^(同意|允许|可以|拒绝|不行|不给)\s*([A-Za-z0-9]{4,8})?[。！!]*$/);
       if (cmd) {
         const yes = ['同意', '允许', '可以'].includes(cmd[1]);
         const req = permissions.decide(cmd[2], yes);
