@@ -304,6 +304,7 @@ ${task.result}`);
         marks[groupId] = now;
         changed = true;
         logger.info('slang.backfilled', { groupId, count: messages.length });
+      await slangObserver.flush();
       } catch (error) {
         logger.warn('slang.backfill_failed', { groupId, error: String(error?.message ?? error) });
       }
@@ -325,6 +326,7 @@ ${task.result}`);
   });
   gateway.on('status', ({ connected: up }) => {
     connected = Boolean(up);
+    if (up) backfillSlang().catch((error) => logger.warn('slang.backfill_failed', { error: String(error?.message ?? error) }));
   });
 
   function dispatchMessage(message) {

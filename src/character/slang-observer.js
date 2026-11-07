@@ -166,6 +166,7 @@ export function createSlangObserver({
     if (busy || !total || !textRouter) return;
     busy = true;
     const lines = pendingLines().slice(-24);
+    logger?.info('slang.flush_start', { lines: lines.length });
     pending.clear();
     total = 0;
     try {
@@ -185,7 +186,8 @@ export function createSlangObserver({
         '每项：{"term":"原词","meaning":"在这个群里是什么意思","usage":"怎么用"}',
         '没有就输出 []。'
       ].filter(Boolean).join('\n');
-      const answer = await textRouter.generate({ system, user: '' });
+      const answer = await textRouter.generate({ system, user: '', maxTokens: 4000, temperature: 0.4 });
+      logger?.info('slang.flushed', { lines: lines.length, chars: String(answer?.text || '').length });
       const terms = parseTerms(answer?.text).slice(0, maxPerRun);
       let added = 0;
       for (const item of terms) {
@@ -194,6 +196,7 @@ export function createSlangObserver({
         const usage = clean(item?.usage, 120);
         if (!term || !meaning) continue;
         if (!transcript.includes(term)) continue;
+        if (lines.some((x) => x.sender === term)) continue;
         if (entries.some((x) => x.term === term)) continue;
         const evidence = lines
           .filter((x) => x.text.includes(term))

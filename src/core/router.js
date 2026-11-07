@@ -8,7 +8,7 @@ export function stripThink(text) {
     .trim();
 }
 
-function providerRequest(provider, { system, user, fetchImpl }) {
+function providerRequest(provider, { system, user, fetchImpl, maxTokens, temperature }) {
   if (provider.type === 'openai') {
     if (!provider.apiKey) throw new Error('missing api key');
     return fetchImpl(`${String(provider.baseURL).replace(/\/+$/, '')}/chat/completions`, {
@@ -20,8 +20,8 @@ function providerRequest(provider, { system, user, fetchImpl }) {
           ...(system ? [{ role: 'system', content: system }] : []),
           { role: 'user', content: user }
         ],
-        max_tokens: Number(provider.maxTokens) || 500,
-        temperature: Number(provider.temperature) || 0.7
+        max_tokens: Number(maxTokens) || Number(provider.maxTokens) || 500,
+        temperature: Number(temperature) || Number(provider.temperature) || 0.7
       }),
       signal: AbortSignal.timeout(Number(provider.timeoutMs) || 15000)
     });
@@ -39,7 +39,7 @@ function providerRequest(provider, { system, user, fetchImpl }) {
         think: false,
         options: {
           num_ctx: Number(provider.numCtx) || 4096,
-          num_predict: Number(provider.maxTokens) || 500,
+          num_predict: Number(maxTokens) || Number(provider.maxTokens) || 500,
           temperature: Number(provider.temperature) || 0.7
         }
       }),
@@ -90,7 +90,7 @@ export function createModelRouter({ providers = [], logger = null, fetchImpl = f
   if (!Array.isArray(providers) || !providers.length) throw new Error('providers required');
   const health = new Map(providers.map((p) => [p.id, { failures: 0, downUntil: 0 }]));
 
-  async function generate({ system = '', user } = {}) {
+  async function generate({ system = '', user, maxTokens, temperature } = {}) {
     const errors = [];
     for (const provider of providers) {
       const state = health.get(provider.id) ?? { failures: 0, downUntil: 0 };
@@ -99,7 +99,7 @@ export function createModelRouter({ providers = [], logger = null, fetchImpl = f
         continue;
       }
       try {
-        const response = await providerRequest(provider, { system, user, fetchImpl });
+        const response = await providerRequest(provider, { system, user, fetchImpl, maxTokens, temperature });
         const text = stripThink(await parseResponse(provider, response));
         if (!text) throw new Error('empty response');
         state.failures = 0;
