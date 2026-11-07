@@ -509,7 +509,7 @@ export function createActorTurn({
             if (!req) return '没记下来。';
             try {
               const line = ask || `我想${what}。${why ? `因为${why}。` : ''}`;
-              await gateway.sendMessage('private', owner, [{ type: 'text', data: { text: `${line}\n同意就回：同意 ${req.id}` } }]);
+              await gateway.sendMessage('private', owner, [{ type: 'text', data: { text: `${line}\n行不行直接说；拿不准就带上 ${req.id}` } }]);
             } catch (error) {
               logger.warn('permission.notify_failed', { id: req.id, error: String(error?.message ?? error) });
             }
