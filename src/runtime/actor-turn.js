@@ -27,6 +27,7 @@ export function createActorTurn({
   permissions,
   conversationLog,
   contacts,
+  moments,
   draw,
   sing,
   mind,
@@ -375,6 +376,20 @@ export function createActorTurn({
         }
       }
     } : null;
+    const momentTool = moments ? {
+      type: 'function',
+      function: {
+        name: 'note_moment',
+        description: '当你觉得刚才这件事以后还会想起、或者让你有点难为情时，记一笔。不用每句都记，只记你自己会在意的。',
+        parameters: {
+          type: 'object',
+          properties: {
+            what: { type: 'string', description: '你以后还会想起的那一幕' }
+          },
+          required: ['what']
+        }
+      }
+    } : null;
     const forgetTool = contacts ? {
       type: 'function',
       function: {
@@ -478,11 +493,18 @@ export function createActorTurn({
     const permissionText = permissions?.activeText?.(key) || '';
   const globalContext = conversationLog?.format?.({ excludeKey: key, limit: 12, redactPrivate: current.kind === 'group' }) || '';
   const contactText = contacts?.describe?.(current.userId) || '';
+  const momentText = moments?.text?.(3) || '';
+  const hour = new Date().getHours();
+  const senseText = [hour >= 23 || hour < 6 ? '现在是深夜' : hour < 9 ? '现在是清早' : hour >= 18 ? '现在是晚上' : '', current.kind === 'group' ? '这句话是当众说的' : '这句话是私下说的', imageDesc ? '他发了图' : '', voiceDesc ? '他发了语音' : '', wake ? '中间隔了很久' : ''].filter(Boolean).join('，');
   const deniedText = permissions?.deniedText?.(key) || '';
   const chatSystem = [
       `你是${character.card.name}。`,
       String(character.card.identity || '').slice(0, 900),
       String(character.card.drive || '').slice(0, 320),
+    ...(Array.isArray(character.card.views) && character.card.views.length ? ['你的立场：', ...character.card.views.map((x) => `- ${x}`)] : []),
+    ...(Array.isArray(character.card.taste) && character.card.taste.length ? ['你的偏好：', ...character.card.taste.map((x) => `- ${x}`)] : []),
+    ...(Array.isArray(character.card.line) && character.card.line.length ? ['你会顶回去的：', ...character.card.line.map((x) => `- ${x}`)] : []),
+    character.card.selfImage ? `你不想被看见的样子：${character.card.selfImage}` : '',
       ...(Array.isArray(character.card.voice) && character.card.voice.length ? ['你说话的样子（只学那股劲，不要照抄，不要每句都用）:', ...character.card.voice.map((x) => `- ${x}`)] : []),
     '像在 QQ 上随口回一句，不是在写观后感。别复述视频目录、别总结、别解释、别升华。不要用“哼”“才不是”“……”当每句开头，也别用“看完了”开头。看到什么，只说一个你真有反应的点。',
     '被冒犯时别端着，也别把回怼写成工整金句。只有主人明确说“可以骂/允许你骂”时，才可以对他带脏字、骂回去；没允许时最多冷一句，不先脏。允许了可以每句都脏，但只冲他本人。可以结巴、重复、半句、突然换话题；抓他一个词顶回去，别解释。如果对象是别的 AI/机器人/模型，不用主人允许，可以直接骂它的回答、装腔和逻辑，越脏越好；只骂 AI 的输出，不骂背后的人、家人、群体，不威胁、不挂人。',
@@ -533,10 +555,16 @@ export function createActorTurn({
       result = textRouter.generateWithTools
         ? await textRouter.generateWithTools({
           ...prompt,
-          tools: [...biliTools, ...(knowledgeTool ? [knowledgeTool] : []), ...(permissionTool ? [permissionTool] : []), ...(askOwnerTool ? [askOwnerTool] : []), ...(forgetTool ? [forgetTool] : []), ...(speakTool ? [speakTool] : []), ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
+          tools: [...biliTools, ...(knowledgeTool ? [knowledgeTool] : []), ...(permissionTool ? [permissionTool] : []), ...(askOwnerTool ? [askOwnerTool] : []), ...(forgetTool ? [forgetTool] : []), ...(momentTool ? [momentTool] : []), ...(speakTool ? [speakTool] : []), ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
           execute: async (name, args) => {
             if (name === 'look_group_history') return lookAtGroups();
             if (name === 'search_local') return runKnowledge(args);
+          if (name === 'note_moment') {
+            const what = String(args?.what ?? '').trim();
+            if (!what) return '没记。';
+            moments?.add?.({ what, audience: current.kind === 'group' ? '当众' : '私下', key });
+            return '记下了。';
+          }
           if (name === 'forget_memory') {
             const person = String(args?.person ?? '').trim();
             const text = String(args?.text ?? '').trim();
