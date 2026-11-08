@@ -25,6 +25,7 @@ export function createActorTurn({
   rvc,
   mansui,
   permissions,
+  conversationLog,
   draw,
   sing,
   mind,
@@ -459,6 +460,7 @@ export function createActorTurn({
     const wantsMemory = /之前|上次|后来|那个|还没|想完|记得|忘了|那天|以前/.test(text);
     const wantsSeen = /视频|B站|BV|看过|大肥鱼|表情|动态/.test(text);
     const permissionText = permissions?.activeText?.(key) || '';
+  const globalContext = conversationLog?.format?.({ excludeKey: key, limit: 12 }) || '';
   const chatSystem = [
       `你是${character.card.name}。`,
       String(character.card.identity || '').slice(0, 900),
@@ -490,6 +492,7 @@ export function createActorTurn({
       groupHistory,
       reference,
       slangBlock,
+      globalContext ? `其他会话里刚发生的（只是背景，让你别像两个人；不要在别的群或私聊里复述私事）：\n${globalContext}` : '',
       !imageDesc && mindState?.presence?.lastImage && Date.now() - Number(mindState.presence.lastImage.at || 0) < 15 * 60 * 1000 ? `他刚才发过一张图：${mindState.presence.lastImage.text}` : '',
       imageDesc ? `图片：${imageDesc}` : '',
       voiceDesc ? `语音：${voiceDesc}` : '',

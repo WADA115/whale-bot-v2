@@ -15,6 +15,7 @@ import { createTts } from './core/tts.js';
 import { createRvc } from './core/rvc.js';
 import { createMansui } from './core/mansui.js';
 import { createPermissions } from './core/permissions.js';
+import { createConversationLog } from './core/conversation-log.js';
 import { createDraw } from './core/draw.js';
 import { createSing } from './core/sing.js';
 import { createKnowledge } from './core/knowledge.js';
@@ -233,6 +234,14 @@ ${task.result}`);
   heartbeat.unref?.();
   const daydream = createDaydream({ mind, textRouter, storyStore, character, gateway, config, liveGroup, logger });
   daydream.start();
+  const conversationLog = createConversationLog({ limit: 80 });
+  const gatewaySend = gateway.sendMessage.bind(gateway);
+  gateway.sendMessage = async (kind, id, segments) => {
+    const result = await gatewaySend(kind, id, segments);
+    const text = (Array.isArray(segments) ? segments : []).filter((x) => x?.type === 'text').map((x) => String(x?.data?.text ?? '')).join(' ').trim();
+    if (text) conversationLog.add({ key: `${kind}:${id}`, kind, id: String(id), sender: '我', text, at: Date.now() });
+    return result;
+  };
   const permissions = createPermissions({
     file: path.join(ROOT, 'state', 'permissions.json'),
     logger
@@ -253,6 +262,7 @@ ${task.result}`);
     rvc,
     mansui,
     permissions,
+    conversationLog,
     draw,
     sing,
     mind,
@@ -409,6 +419,11 @@ ${task.result}`);
       logger.debug('message.self_ignored', { key: message.key });
       return;
     }
+    conversationLog.add({
+      key: message.key, kind: message.kind, id: message.id,
+      sender: message.senderName || message.userId || '',
+      text: message.text || (message.images?.length ? '[图片]' : ''), at: Date.now()
+    });
     const ownerId = String(config.allow?.private?.[0] || '');
     if (message.kind === 'private' && String(message.id) === ownerId) {
       const waiting = permissions.pending(message.key).length > 0;
