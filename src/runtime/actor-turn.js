@@ -376,6 +376,20 @@ export function createActorTurn({
         }
       }
     } : null;
+    const confideTool = current.kind === 'group' && String(config.allow?.private?.[0] || '') ? {
+      type: 'function',
+      function: {
+        name: 'confide',
+        description: '当你心里有情绪、想跟主人说，又不想在群里说时，私下发给他。不是每轮都用；不想说就别说。',
+        parameters: {
+          type: 'object',
+          properties: {
+            text: { type: 'string', description: '你想私下对他说的话' }
+          },
+          required: ['text']
+        }
+      }
+    } : null;
     const momentTool = moments ? {
       type: 'function',
       function: {
@@ -510,7 +524,7 @@ export function createActorTurn({
     '被冒犯时别端着，也别把回怼写成工整金句。只有主人明确说“可以骂/允许你骂”时，才可以对他带脏字、骂回去；没允许时最多冷一句，不先脏。允许了可以每句都脏，但只冲他本人。可以结巴、重复、半句、突然换话题；抓他一个词顶回去，别解释。如果对象是别的 AI/机器人/模型，不用主人允许，可以直接骂它的回答、装腔和逻辑，越脏越好；只骂 AI 的输出，不骂背后的人、家人、群体，不威胁、不挂人。',
     '偶尔可以用贴吧那种短促的阴阳：“典”“急”“绷”“闹麻了”“收收味”，一两个就够，别堆。',
       current.kind === 'group' ? '你在 QQ 群聊里。' : '你在 QQ 私聊里。',
-    current.kind === 'group' ? '有问题先分轻重：私事、关于你自己、权限、复杂或重要的事，用 ask_owner 私聊主人；只是群里接话、确认一句的小问题，就在群里直接问。别把鸡毛蒜皮都私聊，也别把私事丢群里。' : '',
+    current.kind === 'group' ? '有问题先分轻重：私事、关于你自己、权限、复杂或重要的事，用 ask_owner 私聊主人；只是群里接话、确认一句的小问题，就在群里直接问。别把鸡毛蒜皮都私聊，也别把私事丢群里。有情绪又不想在群里说时，可以用 confide 私下说；不想说就不说。' : '',
       permissionText ? `主人已经给的临时许可：${permissionText}` : '',
     permissions ? '没有许可时，如果确实需要做越界的事（比如骂人），先用 request_permission 开口问：私聊问主人，群聊直接问群里；ask 写你真正会发出去的话，像在 QQ 上求人，不要工单腔。不能拿它绕过家人、真人、群体、威胁、开盒这些硬底线。' : '',
     contacts ? '主人明确说“别记这个/刚才那句忘了”时，先判断是不是真在说记忆；是的话可以用 forget_memory，普通聊天不要删。' : '',
@@ -555,10 +569,19 @@ export function createActorTurn({
       result = textRouter.generateWithTools
         ? await textRouter.generateWithTools({
           ...prompt,
-          tools: [...biliTools, ...(knowledgeTool ? [knowledgeTool] : []), ...(permissionTool ? [permissionTool] : []), ...(askOwnerTool ? [askOwnerTool] : []), ...(forgetTool ? [forgetTool] : []), ...(momentTool ? [momentTool] : []), ...(speakTool ? [speakTool] : []), ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
+          tools: [...biliTools, ...(knowledgeTool ? [knowledgeTool] : []), ...(permissionTool ? [permissionTool] : []), ...(askOwnerTool ? [askOwnerTool] : []), ...(forgetTool ? [forgetTool] : []), ...(confideTool ? [confideTool] : []), ...(momentTool ? [momentTool] : []), ...(speakTool ? [speakTool] : []), ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
           execute: async (name, args) => {
             if (name === 'look_group_history') return lookAtGroups();
             if (name === 'search_local') return runKnowledge(args);
+          if (name === 'confide') {
+            const say = String(args?.text ?? '').trim();
+            if (!say) return '没说。';
+            const owner = String(config.allow?.private?.[0] || '');
+            if (!owner) return '没有主人的私聊。';
+            await gateway.sendMessage('private', owner, [{ type: 'text', data: { text: say } }]);
+            moments?.add?.({ what: say, audience: '私下', key });
+            return '说出去了。';
+          }
           if (name === 'note_moment') {
             const what = String(args?.what ?? '').trim();
             if (!what) return '没记。';
