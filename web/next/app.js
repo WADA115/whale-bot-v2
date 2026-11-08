@@ -914,6 +914,56 @@ async function permissionAction(action, id, extra = {}) {
   }
 }
 
+async function loadMemory() {
+  const box = $('#memoryList');
+  if (!box) return;
+  box.textContent = '读取中…';
+  try {
+    const res = await fetch('/api/memory/contacts', { cache: 'no-store' });
+    const data = await res.json();
+    box.replaceChildren();
+    for (const c of data.contacts || []) {
+      const row = document.createElement('div');
+      row.className = 'result-item';
+      const text = document.createElement('div');
+      text.textContent = `${c.name || c.id}｜${(c.notes || []).map((n) => n.text).join(' / ') || '没有备注'}`;
+      row.append(text);
+      const make = (label, note) => {
+        const b = document.createElement('button');
+        b.className = 'text-btn';
+        b.type = 'button';
+        b.textContent = label;
+        b.addEventListener('click', () => forgetMemory(c.id, note));
+        row.append(b);
+      };
+      for (const n of (c.notes || []).slice(-2)) make('忘掉这句', n.text);
+      make('忘掉这个人', '');
+      box.append(row);
+    }
+    if (!box.children.length) box.textContent = '还没有记住的人。';
+  } catch (error) {
+    box.textContent = String(error.message || error);
+  }
+}
+
+async function forgetMemory(id, text) {
+  try {
+    const res = await fetch('/api/memory/forget', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id, text })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '删除失败');
+    await loadMemory();
+  } catch (error) {
+    const box = $('#memoryList');
+    if (box) box.textContent = String(error.message || error);
+  }
+}
+
+$('#loadMemory').addEventListener('click', loadMemory);
+loadMemory().catch(() => {});
 $('#saveCard').addEventListener('click', saveCard);
 $('#personaDraft').addEventListener('click', personaDraft);
 $('#personaRefine').addEventListener('click', personaRefine);

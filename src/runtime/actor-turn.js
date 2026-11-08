@@ -375,6 +375,21 @@ export function createActorTurn({
         }
       }
     } : null;
+    const forgetTool = contacts ? {
+      type: 'function',
+      function: {
+        name: 'forget_memory',
+        description: '当主人明确让你忘掉某个人的某段话、或某个记忆时使用。先判断他是不是真在说记忆；普通聊天、随口一句不要删。',
+        parameters: {
+          type: 'object',
+          properties: {
+            person: { type: 'string', description: '人名、昵称或 QQ 号；不确定可以留空' },
+            text: { type: 'string', description: '要忘掉的那段话或关键词；留空表示忘掉这个人' }
+          },
+          required: []
+        }
+      }
+    } : null;
     const drawTool = draw ? {
       type: 'function',
       function: {
@@ -461,7 +476,7 @@ export function createActorTurn({
     const wantsMemory = /之前|上次|后来|那个|还没|想完|记得|忘了|那天|以前/.test(text);
     const wantsSeen = /视频|B站|BV|看过|大肥鱼|表情|动态/.test(text);
     const permissionText = permissions?.activeText?.(key) || '';
-  const globalContext = conversationLog?.format?.({ excludeKey: key, limit: 12 }) || '';
+  const globalContext = conversationLog?.format?.({ excludeKey: key, limit: 12, redactPrivate: current.kind === 'group' }) || '';
   const contactText = contacts?.describe?.(current.userId) || '';
   const deniedText = permissions?.deniedText?.(key) || '';
   const chatSystem = [
@@ -476,6 +491,7 @@ export function createActorTurn({
     current.kind === 'group' ? '有问题先分轻重：私事、关于你自己、权限、复杂或重要的事，用 ask_owner 私聊主人；只是群里接话、确认一句的小问题，就在群里直接问。别把鸡毛蒜皮都私聊，也别把私事丢群里。' : '',
       permissionText ? `主人已经给的临时许可：${permissionText}` : '',
     permissions ? '没有许可时，如果确实需要做越界的事（比如骂人），先用 request_permission 开口问：私聊问主人，群聊直接问群里；ask 写你真正会发出去的话，像在 QQ 上求人，不要工单腔。不能拿它绕过家人、真人、群体、威胁、开盒这些硬底线。' : '',
+    contacts ? '主人明确说“别记这个/刚才那句忘了”时，先判断是不是真在说记忆；是的话可以用 forget_memory，普通聊天不要删。' : '',
     (tts || mansui) ? '想用声音说时，用 speak；不想用就正常打字。' : ''
     ].filter(Boolean).join('\n');
     const historyTurns = scene.turns.slice(-7, -1);
@@ -517,10 +533,17 @@ export function createActorTurn({
       result = textRouter.generateWithTools
         ? await textRouter.generateWithTools({
           ...prompt,
-          tools: [...biliTools, ...(knowledgeTool ? [knowledgeTool] : []), ...(permissionTool ? [permissionTool] : []), ...(askOwnerTool ? [askOwnerTool] : []), ...(speakTool ? [speakTool] : []), ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
+          tools: [...biliTools, ...(knowledgeTool ? [knowledgeTool] : []), ...(permissionTool ? [permissionTool] : []), ...(askOwnerTool ? [askOwnerTool] : []), ...(forgetTool ? [forgetTool] : []), ...(speakTool ? [speakTool] : []), ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
           execute: async (name, args) => {
             if (name === 'look_group_history') return lookAtGroups();
             if (name === 'search_local') return runKnowledge(args);
+          if (name === 'forget_memory') {
+            const person = String(args?.person ?? '').trim();
+            const text = String(args?.text ?? '').trim();
+            const numeric = /^\d+$/.test(person);
+            const ok = contacts?.forget?.({ id: numeric ? person : (person ? '' : String(current.userId || '')), name: numeric ? '' : person, text });
+            return ok ? '忘了。' : '没找到。';
+          }
           if (name === 'ask_owner') {
             const ask = String(args?.text ?? '').trim();
             if (!ask) return '没说什么。';

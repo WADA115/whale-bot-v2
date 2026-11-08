@@ -78,6 +78,17 @@ export function createPanelHandler(ctx) {
       res.end();
       return;
     }
+    if (req.url === '/api/memory/contacts' && req.method === 'GET') {
+      json(res, 200, { ok: true, contacts: ctx.contacts?.list?.() ?? [] });
+      return;
+    }
+    if (req.url === '/api/memory/forget' && req.method === 'POST') {
+      readBody(req).then((body) => {
+        const ok = ctx.contacts?.forget?.({ id: String(body?.id || ''), text: String(body?.text || '') }) ?? false;
+        json(res, ok ? 200 : 404, { ok });
+      }).catch(() => json(res, 400, { error: 'invalid json' }));
+      return;
+    }
     if (req.url === '/api/permissions' && req.method === 'GET') {
       const pending = ctx.permissions?.pending?.() ?? [];
       const active = ctx.permissions?.active?.() ?? [];
