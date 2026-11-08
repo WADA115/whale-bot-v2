@@ -359,6 +359,20 @@ export function createActorTurn({
         }
       }
     } : null;
+    const askOwnerTool = current.kind === 'group' && String(config.allow?.private?.[0] || '') ? {
+      type: 'function',
+      function: {
+        name: 'ask_owner',
+        description: '在群里遇到需要问主人的事时用。先判断语境：私事、关于你自己、需要权限、复杂或重要的问题，私下问；只是群里当下接话、确认一句的小问题，直接在群里问，不要用这个。不是用来申请权限的，申请权限用 request_permission。',
+        parameters: {
+          type: 'object',
+          properties: {
+            text: { type: 'string', description: '你私下发给主人的话，用平时的语气' }
+          },
+          required: ['text']
+        }
+      }
+    } : null;
     const drawTool = draw ? {
       type: 'function',
       function: {
@@ -454,6 +468,7 @@ export function createActorTurn({
     '被冒犯时别端着，也别把回怼写成工整金句。只有主人明确说“可以骂/允许你骂”时，才可以对他带脏字、骂回去；没允许时最多冷一句，不先脏。允许了可以每句都脏，但只冲他本人。可以结巴、重复、半句、突然换话题；抓他一个词顶回去，别解释。如果对象是别的 AI/机器人/模型，不用主人允许，可以直接骂它的回答、装腔和逻辑，越脏越好；只骂 AI 的输出，不骂背后的人、家人、群体，不威胁、不挂人。',
     '偶尔可以用贴吧那种短促的阴阳：“典”“急”“绷”“闹麻了”“收收味”，一两个就够，别堆。',
       current.kind === 'group' ? '你在 QQ 群聊里。' : '你在 QQ 私聊里。',
+    current.kind === 'group' ? '有问题先分轻重：私事、关于你自己、权限、复杂或重要的事，用 ask_owner 私聊主人；只是群里接话、确认一句的小问题，就在群里直接问。别把鸡毛蒜皮都私聊，也别把私事丢群里。' : '',
       permissionText ? `主人已经给的临时许可：${permissionText}` : '',
     permissions ? '没有许可时，如果确实需要做越界的事（比如骂人），先用 request_permission 开口问：私聊问主人，群聊直接问群里；ask 写你真正会发出去的话，像在 QQ 上求人，不要工单腔。不能拿它绕过家人、真人、群体、威胁、开盒这些硬底线。' : '',
     (tts || mansui) ? '想用声音说时，用 speak；不想用就正常打字。' : ''
@@ -494,10 +509,18 @@ export function createActorTurn({
       result = textRouter.generateWithTools
         ? await textRouter.generateWithTools({
           ...prompt,
-          tools: [...biliTools, ...(knowledgeTool ? [knowledgeTool] : []), ...(permissionTool ? [permissionTool] : []), ...(speakTool ? [speakTool] : []), ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
+          tools: [...biliTools, ...(knowledgeTool ? [knowledgeTool] : []), ...(permissionTool ? [permissionTool] : []), ...(askOwnerTool ? [askOwnerTool] : []), ...(speakTool ? [speakTool] : []), ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
           execute: async (name, args) => {
             if (name === 'look_group_history') return lookAtGroups();
             if (name === 'search_local') return runKnowledge(args);
+          if (name === 'ask_owner') {
+            const ask = String(args?.text ?? '').trim();
+            if (!ask) return '没说什么。';
+            const owner = String(config.allow?.private?.[0] || '');
+            if (!owner) return '没有主人的私聊。';
+            await gateway.sendMessage('private', owner, [{ type: 'text', data: { text: ask } }]);
+            return '私下问了。';
+          }
           if (name === 'request_permission') {
             const what = String(args?.what ?? '').trim();
             const why = String(args?.why ?? '').trim();
