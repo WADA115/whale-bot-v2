@@ -526,6 +526,7 @@ ${task.result}`);
     actors,
     knowledge,
     slang,
+    permissions,
     textRouter,
     isConnected: () => connected,
     snapshot: snapshotState,

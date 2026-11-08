@@ -587,4 +587,12 @@ select option { background: #0b1426; color: var(--text); }
 .emotion-grid img:hover {
   border: 0;
   box-shadow: none;
+}.permission-list { display: grid; gap: 8px; margin-top: 12px; }
+.permission-list .result-item {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px;
+  background: rgba(7, 14, 29, .45);
 }
+.permission-list .result-item > div:first-child { flex: 1 1 260px; min-width: 220px; }
+.permission-list .text-btn { font-size: 12px; padding: 2px 0; }
+.permission-list .text-btn + .text-btn { margin-left: 4px; }
