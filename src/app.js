@@ -398,6 +398,8 @@ ${task.result}`);
     }
   }
 
+  const groupApprovers = String(config.permissions?.groupApprovers || 'any');
+
   async function dispatchMessage(message) {
     if (message.kind === 'group') {
       liveGroup.observe(message);
@@ -415,7 +417,7 @@ ${task.result}`);
         interpretPermissionReply(message.text, message.key).catch(() => {});
         interpretProactiveGrant(message.text, message.key).catch(() => {});
       }
-    } else if (message.kind === 'group') {
+    } else if (message.kind === 'group' && groupApprovers !== 'owner') {
       const waiting = permissions.pending(message.key).length > 0;
       if (waiting) await interpretPermissionReply(message.text, message.key);
       else {
