@@ -427,14 +427,14 @@ ${task.result}`);
     const ownerId = String(config.allow?.private?.[0] || '');
     if (message.kind === 'private' && String(message.id) === ownerId) {
       const waiting = permissions.pending(message.key).length > 0;
-      if (waiting) await interpretPermissionReply(message.text, message.key);
+      if (waiting) interpretPermissionReply(message.text, message.key).catch(() => {});
       else {
         interpretPermissionReply(message.text, message.key).catch(() => {});
         interpretProactiveGrant(message.text, message.key).catch(() => {});
       }
     } else if (message.kind === 'group' && groupApprovers !== 'owner') {
       const waiting = permissions.pending(message.key).length > 0;
-      if (waiting) await interpretPermissionReply(message.text, message.key);
+      if (waiting) interpretPermissionReply(message.text, message.key).catch(() => {});
       else {
         interpretPermissionReply(message.text, message.key).catch(() => {});
         interpretProactiveGrant(message.text, message.key).catch(() => {});
