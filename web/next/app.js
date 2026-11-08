@@ -863,6 +863,57 @@ $('#biliLogout').addEventListener('click', biliLogout);
 $('#qzoneLoad').addEventListener('click', qzoneLoad);
 $('#qzoneSend').addEventListener('click', qzoneSend);
 $('#autoTick').addEventListener('click', autoTick);
+async function loadPermissions() {
+  const box = $('#permissionList');
+  if (!box) return;
+  box.textContent = '读取中…';
+  try {
+    const res = await fetch('/api/permissions', { cache: 'no-store' });
+    const data = await res.json();
+    box.replaceChildren();
+    const add = (item, kind) => {
+      const row = document.createElement('div');
+      row.className = 'result-item';
+      const text = document.createElement('div');
+      const mins = kind === 'active' ? `｜还剩 ${Math.max(0, Math.round((Number(item.expiresAt) - Date.now()) / 60000))} 分钟` : '';
+      text.textContent = `${kind === 'pending' ? '待批' : '有效'} ${item.id}｜${item.what}${mins}｜${(item.keys || []).join(', ') || '全部'}`;
+      row.append(text);
+      const make = (label, action, extra = {}) => {
+        const b = document.createElement('button');
+        b.className = 'text-btn';
+        b.type = 'button';
+        b.textContent = label;
+        b.addEventListener('click', () => permissionAction(action, item.id, extra));
+        row.append(b);
+      };
+      if (kind === 'pending') { make('同意', 'approve'); make('拒绝', 'deny'); }
+      else { make('撤回', 'revoke'); make('+10 分钟', 'adjust', { addMinutes: 10 }); make('-10 分钟', 'adjust', { addMinutes: -10 }); }
+      box.append(row);
+    };
+    for (const item of data.pending || []) add(item, 'pending');
+    for (const item of data.active || []) add(item, 'active');
+    if (!box.children.length) box.textContent = '没有待批或有效的许可。';
+  } catch (error) {
+    box.textContent = String(error.message || error);
+  }
+}
+
+async function permissionAction(action, id, extra = {}) {
+  try {
+    const res = await fetch('/api/permissions/action', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action, id, ...extra })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '操作失败');
+    await loadPermissions();
+  } catch (error) {
+    const box = $('#permissionList');
+    if (box) box.textContent = String(error.message || error);
+  }
+}
+
 $('#saveCard').addEventListener('click', saveCard);
 $('#personaDraft').addEventListener('click', personaDraft);
 $('#personaRefine').addEventListener('click', personaRefine);
@@ -881,6 +932,7 @@ $('#stopVoice').addEventListener('click', async () => {
     if (el) el.textContent = String(error.message || error);
   }
 });
+$('#loadPermissions').addEventListener('click', loadPermissions);
 $('#gwExpand').addEventListener('click', () => {
   const expanded = $('#gwLog').classList.toggle('expanded');
   $('#gwExpand').textContent = expanded ? '收起' : '展开';

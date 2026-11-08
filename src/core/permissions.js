@@ -43,6 +43,25 @@ export function createPermissions({ file = 'state/permissions.json', ttlMs = 30 
     return item;
   }
 
+  function grant({ what, why = '主动给的', keys = [], approvedBy = '', durationMs = ttlMs } = {}) {
+    const text = String(what ?? '').trim().slice(0, 120);
+    if (!text) return null;
+    let id = crypto.randomUUID().replace(/-/g, '').slice(0, 4).toUpperCase();
+    while (list.some((x) => x.id === id)) id = crypto.randomUUID().replace(/-/g, '').slice(0, 4).toUpperCase();
+    const allKeys = [...new Set((Array.isArray(keys) ? keys : []).map(String).filter(Boolean))];
+    const item = {
+      id, what: text, why: String(why ?? '').trim().slice(0, 240),
+      keys: allKeys, key: allKeys[0] || '', status: 'granted',
+      at: Date.now(), decidedAt: Date.now(), expiresAt: Date.now() + (Number(durationMs) || ttlMs),
+      deniedBy: [], durationMs: Number(durationMs) || ttlMs, approvedBy
+    };
+    list.push(item);
+    list = list.slice(-50);
+    persist();
+    logger?.info('permission.granted_directly', { id, what: text, keys: allKeys, approvedBy });
+    return item;
+  }
+
   function pending(key = '') {
     return list.filter((x) => x.status === 'pending' && inScope(x, key)).slice(-10);
   }
@@ -130,5 +149,5 @@ export function createPermissions({ file = 'state/permissions.json', ttlMs = 30 
     return `${who}刚刚同意：${items.map((x) => x.what).join('、')}。在有效期内可以做，但不要越过硬底线。`;
   }
 
-  return { request, pending, candidates, decide, adjust, active, activeText };
+  return { request, grant, pending, candidates, decide, adjust, active, activeText };
 }

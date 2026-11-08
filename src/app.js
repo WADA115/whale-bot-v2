@@ -365,6 +365,39 @@ ${task.result}`);
     }
   }
 
+  async function interpretProactiveGrant(text, key = '') {
+    const raw = String(text || '').trim();
+    if (!raw || raw.length > 80) return;
+    if (!/可以|允许|准|给你|拿去|骂|权限|分钟|小时|今天|这次|随便/.test(raw)) return;
+    if (permissions.candidates(key).length) return;
+    try {
+      const who = key.startsWith('group:') ? '群友' : '主人';
+      const answer = await textRouter.generate({
+        system: `你在判断${who}是不是在主动给一个权限，不是回复待批请求。只有明确说“可以骂/允许你/给你十分钟/今天随便”才算；普通聊天、反问、拒绝都不算。输出 JSON：{"grant":true,"what":"要允许的事","addMinutes":0,"setMinutes":0,"exclude":[]} 或 {"grant":false}。不要解释。`,
+        user: `${who}说：${raw}`,
+        maxTokens: 500,
+        temperature: 0
+      });
+      const match = String(answer?.text || '').match(/\{[\s\S]*\}/);
+      if (!match) return;
+      const parsed = JSON.parse(match[0]);
+      if (parsed.grant !== true) return;
+      const owner = String(config.allow?.private?.[0] || '');
+      const ownerKey = owner ? `private:${owner}` : '';
+      const keys = key.startsWith('group:') ? [key, ownerKey].filter(Boolean) : [];
+      const add = Number(parsed.addMinutes) || 0;
+      const set = Number(parsed.setMinutes) || 0;
+      const durationMs = set ? set * 60_000 : (30 + add) * 60_000;
+      const grant = permissions.grant({ what: parsed.what || raw, why: `${who}主动给的`, keys, approvedBy: key, durationMs });
+      if (grant && Array.isArray(parsed.exclude) && parsed.exclude.length) {
+        permissions.adjust(grant.id, { exclude: parsed.exclude }, key);
+      }
+      logger.info('permission.direct_grant', { id: grant?.id, what: grant?.what, keys: grant?.keys, approvedBy: key });
+    } catch (error) {
+      logger.warn('permission.grant_interpret_failed', { error: String(error?.message ?? error) });
+    }
+  }
+
   async function dispatchMessage(message) {
     if (message.kind === 'group') {
       liveGroup.observe(message);
@@ -378,11 +411,17 @@ ${task.result}`);
     if (message.kind === 'private' && String(message.id) === ownerId) {
       const waiting = permissions.pending(message.key).length > 0;
       if (waiting) await interpretPermissionReply(message.text, message.key);
-      else interpretPermissionReply(message.text, message.key).catch(() => {});
+      else {
+        interpretPermissionReply(message.text, message.key).catch(() => {});
+        interpretProactiveGrant(message.text, message.key).catch(() => {});
+      }
     } else if (message.kind === 'group') {
       const waiting = permissions.pending(message.key).length > 0;
       if (waiting) await interpretPermissionReply(message.text, message.key);
-      else interpretPermissionReply(message.text, message.key).catch(() => {});
+      else {
+        interpretPermissionReply(message.text, message.key).catch(() => {});
+        interpretProactiveGrant(message.text, message.key).catch(() => {});
+      }
     }
     mind.touchContact();
     const decision = decide({ message, config, selfId: gateway.selfId });

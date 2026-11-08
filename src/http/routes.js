@@ -78,6 +78,29 @@ export function createPanelHandler(ctx) {
       res.end();
       return;
     }
+    if (req.url === '/api/permissions' && req.method === 'GET') {
+      const pending = ctx.permissions?.pending?.() ?? [];
+      const active = ctx.permissions?.active?.() ?? [];
+      json(res, 200, { ok: true, pending, active });
+      return;
+    }
+    if (req.url === '/api/permissions/action' && req.method === 'POST') {
+      readBody(req).then((body) => {
+        const action = String(body?.action || '');
+        const id = String(body?.id || '');
+        let item = null;
+        if (action === 'approve' || action === 'deny') item = ctx.permissions?.decide?.(id, action === 'approve');
+        else if (action === 'revoke') item = ctx.permissions?.decide?.(id, false);
+        else if (action === 'adjust') item = ctx.permissions?.adjust?.(id, {
+          addMinutes: Number(body?.addMinutes) || 0,
+          setMinutes: Number(body?.setMinutes) || 0,
+          exclude: Array.isArray(body?.exclude) ? body.exclude : []
+        });
+        if (!item) return json(res, 404, { error: 'no such permission' });
+        json(res, 200, { ok: true, item });
+      }).catch(() => json(res, 400, { error: 'invalid json' }));
+      return;
+    }
     if (req.url === '/api/voice/stop' && req.method === 'POST') {
       try {
         ctx.mansui?.stop?.();
