@@ -16,6 +16,7 @@ import { createRvc } from './core/rvc.js';
 import { createMansui } from './core/mansui.js';
 import { createPermissions } from './core/permissions.js';
 import { createConversationLog } from './core/conversation-log.js';
+import { createContacts } from './core/contacts.js';
 import { createDraw } from './core/draw.js';
 import { createSing } from './core/sing.js';
 import { createKnowledge } from './core/knowledge.js';
@@ -235,6 +236,7 @@ ${task.result}`);
   const daydream = createDaydream({ mind, textRouter, storyStore, character, gateway, config, liveGroup, logger });
   daydream.start();
   const conversationLog = createConversationLog({ limit: 80 });
+  const contacts = createContacts({ file: path.join(ROOT, 'state', 'contacts.json'), logger });
   const gatewaySend = gateway.sendMessage.bind(gateway);
   gateway.sendMessage = async (kind, id, segments) => {
     const result = await gatewaySend(kind, id, segments);
@@ -263,6 +265,7 @@ ${task.result}`);
     mansui,
     permissions,
     conversationLog,
+    contacts,
     draw,
     sing,
     mind,
@@ -424,6 +427,7 @@ ${task.result}`);
       sender: message.senderName || message.userId || '',
       text: message.text || (message.images?.length ? '[图片]' : ''), at: Date.now()
     });
+    if (message.text) contacts.remember({ id: message.userId, name: message.senderName, key: message.key, text: message.text });
     const ownerId = String(config.allow?.private?.[0] || '');
     if (message.kind === 'private' && String(message.id) === ownerId) {
       const waiting = permissions.pending(message.key).length > 0;

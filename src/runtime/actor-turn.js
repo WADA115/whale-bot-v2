@@ -26,6 +26,7 @@ export function createActorTurn({
   mansui,
   permissions,
   conversationLog,
+  contacts,
   draw,
   sing,
   mind,
@@ -461,6 +462,8 @@ export function createActorTurn({
     const wantsSeen = /视频|B站|BV|看过|大肥鱼|表情|动态/.test(text);
     const permissionText = permissions?.activeText?.(key) || '';
   const globalContext = conversationLog?.format?.({ excludeKey: key, limit: 12 }) || '';
+  const contactText = contacts?.describe?.(current.userId) || '';
+  const deniedText = permissions?.deniedText?.(key) || '';
   const chatSystem = [
       `你是${character.card.name}。`,
       String(character.card.identity || '').slice(0, 900),
@@ -493,6 +496,8 @@ export function createActorTurn({
       reference,
       slangBlock,
       globalContext ? `其他会话里刚发生的（只是背景，让你别像两个人；不要在别的群或私聊里复述私事）：\n${globalContext}` : '',
+      contactText ? `你记得这个人：${contactText}` : '',
+      deniedText || '',
       !imageDesc && mindState?.presence?.lastImage && Date.now() - Number(mindState.presence.lastImage.at || 0) < 15 * 60 * 1000 ? `他刚才发过一张图：${mindState.presence.lastImage.text}` : '',
       imageDesc ? `图片：${imageDesc}` : '',
       voiceDesc ? `语音：${voiceDesc}` : '',

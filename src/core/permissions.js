@@ -142,12 +142,19 @@ export function createPermissions({ file = 'state/permissions.json', ttlMs = 30 
     return list.filter((x) => x.status === 'granted' && Number(x.expiresAt) > now && inScope(x, key));
   }
 
+  function deniedText(key = '') {
+    const items = list.filter((x) => ['denied', 'revoked'].includes(x.status) && inScope(x, key)).slice(-3);
+    if (!items.length) return '';
+    return `之前没让做的：${items.map((x) => x.what).join('、')}。别纠缠；相关时再提。`;
+  }
+
   function activeText(key = '') {
     const items = active(key);
     if (!items.length) return '';
     const who = items.every((x) => String(x.approvedBy || '').startsWith('group:')) ? '群里' : '主人';
-    return `${who}刚刚同意：${items.map((x) => x.what).join('、')}。在有效期内可以做，但不要越过硬底线。`;
+    const soon = items.some((x) => Number(x.expiresAt) - Date.now() < 5 * 60 * 1000);
+    return `${who}刚刚同意：${items.map((x) => x.what).join('、')}。在有效期内可以做，但不要越过硬底线。${soon ? '（快到期；看语境提一句，不想提就不提。）' : ''}`;
   }
 
-  return { request, grant, pending, candidates, decide, adjust, active, activeText };
+  return { request, grant, pending, candidates, decide, adjust, active, activeText, deniedText };
 }
