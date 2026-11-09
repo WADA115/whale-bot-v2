@@ -153,7 +153,7 @@ export function createActorTurn({
     let imagePending = false;
     if (current.images?.length && config.vision?.enabled !== false) {
       const visionWaitMs = Number(config.media?.visionWaitMs) || 10000;
-      const visionPromise = visionRouter.describe({ message: current });
+      const visionPromise = visionLimiter ? visionLimiter.run(() => visionRouter.describe({ message: current })) : visionRouter.describe({ message: current });
       try {
         const described = await withDeadline(visionPromise, visionWaitMs);
         if (described?.text) {
@@ -183,7 +183,7 @@ export function createActorTurn({
     let voicePending = false;
     if (current.voices?.length && asr) {
       const asrWaitMs = Number(config.media?.asrWaitMs) || 5000;
-      const asrPromise = asr.transcribe(current.segments);
+      const asrPromise = asrLimiter ? asrLimiter.run(() => asr.transcribe(current.segments)) : asr.transcribe(current.segments);
       try {
         const heard = await withDeadline(asrPromise, asrWaitMs);
         if (heard) {
@@ -682,7 +682,7 @@ export function createActorTurn({
               }
               else {
                 file = await tts.synthesize(spoken);
-                if (file && rvc) file = await rvc.convert(file);
+                if (file && rvc) file = await (rvcLimiter ? rvcLimiter.run(() => rvc.convert(file)) : rvc.convert(file));
               }
               if (!file) return '没合成出来。';
               await gateway.sendMessage(current.kind, current.id, [{ type: 'record', data: { file } }]);

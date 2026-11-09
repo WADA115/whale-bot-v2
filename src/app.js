@@ -18,6 +18,7 @@ import { createPermissions } from './core/permissions.js';
 import { createConversationLog } from './core/conversation-log.js';
 import { createContacts } from './core/contacts.js';
 import { createMoments } from './core/moments.js';
+import { createLimiter } from './core/limiter.js';
 import { createDraw } from './core/draw.js';
 import { createSing } from './core/sing.js';
 import { createKnowledge } from './core/knowledge.js';
@@ -79,6 +80,9 @@ export async function main(argv = process.argv.slice(2)) {
   }
   const gateway = new OneBotGateway({ ...config.gateway, logger });
   const textRouter = createModelRouter({ providers: config.models.text, logger });
+  const visionLimiter = createLimiter({ limit: 1 });
+  const asrLimiter = createLimiter({ limit: 1 });
+  const rvcLimiter = createLimiter({ limit: 1 });
   const visionRouter = createVisionRouter({
     providers: config.vision?.providers ?? [],
     ffmpegPath: FFMPEG,
@@ -121,6 +125,7 @@ export async function main(argv = process.argv.slice(2)) {
         scriptPath: config.rvc.scriptPath,
         pythonPath: config.rvc.pythonPath,
         model: config.rvc.model,
+        device: config.rvc.device || 'cpu',
         outDir: config.rvc.outDir || path.join(ROOT, 'state', 'voice'),
         logger
       })
@@ -277,6 +282,9 @@ ${task.result}`);
     conversationLog,
     contacts,
     moments,
+    visionLimiter,
+    asrLimiter,
+    rvcLimiter,
     draw,
     sing,
     mind,

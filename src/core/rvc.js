@@ -6,6 +6,7 @@ export function createRvc({
   scriptPath = '',
   pythonPath = '',
   model = 'atri_e5.pth',
+  device = 'cpu',
   outDir = 'state/voice',
   timeoutMs = 60000,
   logger = null
@@ -14,7 +15,7 @@ export function createRvc({
   async function convert(input) {
     const out = path.join(outDir, `rvc-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.wav`);
     await new Promise((resolve, reject) => {
-      const child = spawn(pythonPath, [scriptPath, '--input', input, '--output', out, '--model', model], {
+      const child = spawn(pythonPath, [scriptPath, '--input', input, '--output', out, '--model', model, '--device', device], {
         windowsHide: true,
         stdio: 'ignore'
       });
