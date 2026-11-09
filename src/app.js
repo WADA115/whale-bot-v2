@@ -79,7 +79,12 @@ export async function main(argv = process.argv.slice(2)) {
   }
   const gateway = new OneBotGateway({ ...config.gateway, logger });
   const textRouter = createModelRouter({ providers: config.models.text, logger });
-  const visionRouter = createVisionRouter({ providers: config.vision?.providers ?? [], logger });
+  const visionRouter = createVisionRouter({
+    providers: config.vision?.providers ?? [],
+    ffmpegPath: FFMPEG,
+    cacheFile: path.join(ROOT, 'state', 'cache', 'vision.json'),
+    logger
+  });
   visionRouter?.warmup?.().catch(() => {});
   const asr = config.asr?.enabled !== false
     ? createAsr({
