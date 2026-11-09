@@ -127,6 +127,13 @@
             <label>再改一点<textarea id="personaInstruction" rows="3" placeholder="例如：再冷一点，别老是反问；把在意的东西写具体一点"></textarea></label>
             <div class="config-actions">
               <button class="text-btn" id="personaRefine" type="button">按这句话精修</button>
+            <div class="config-actions"><h3>精调对话</h3></div>
+            <div id="personaChatLog" class="task-result" style="max-height:260px;overflow:auto"></div>
+            <label>继续聊<textarea id="personaChatInput" rows="2" placeholder="回答她的问题；说“就这样”让她生成角色卡"></textarea></label>
+            <div class="config-actions">
+              <button class="text-btn" id="personaChatSend" type="button">发过去</button>
+              <span class="muted" id="personaChatStatus"></span>
+            </div>
             </div>
           </div>
           <div class="rule"></div>

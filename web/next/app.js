@@ -981,6 +981,46 @@ async function forgetMemory(id, text) {
 $('#loadMemory').addEventListener('click', loadMemory);
 loadMemory().catch(() => {});
 $('#saveCard').addEventListener('click', saveCard);
+let personaHistory = [];
+function personaChatAppend(role, text) {
+  const box = $('#personaChatLog');
+  if (!box) return;
+  const row = document.createElement('div');
+  row.textContent = `${role === 'assistant' ? '她' : '你'}：${text}`;
+  box.append(row);
+  box.scrollTop = box.scrollHeight;
+}
+
+async function personaChatSend() {
+  const input = $('#personaChatInput');
+  const message = input.value.trim();
+  if (!message) return;
+  const status = $('#personaChatStatus');
+  if (status) status.textContent = '她在想…';
+  personaChatAppend('user', message);
+  const history = personaHistory.slice(-20);
+  personaHistory.push({ role: 'user', text: message });
+  input.value = '';
+  try {
+    const res = await fetch('/api/persona/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message, history, card: readCardForm() })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '对话失败');
+    personaChatAppend('assistant', data.reply || '……');
+    personaHistory.push({ role: 'assistant', text: data.reply || '' });
+    if (data.card) {
+      fillCardForm(data.card);
+      if (status) status.textContent = '新卡已填入，点保存角色卡';
+    } else if (status) status.textContent = '';
+  } catch (error) {
+    if (status) status.textContent = String(error.message || error);
+  }
+}
+
+$('#personaChatSend').addEventListener('click', personaChatSend);
 $('#personaDraft').addEventListener('click', personaDraft);
 $('#personaRefine').addEventListener('click', personaRefine);
 $('#cardFile').addEventListener('change', importCard);
