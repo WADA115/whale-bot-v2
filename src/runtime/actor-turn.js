@@ -38,6 +38,7 @@ export function createActorTurn({
   moments,
   diary,
   milestones,
+  memorySummary,
   visionLimiter,
   asrLimiter,
   rvcLimiter,
@@ -581,6 +582,7 @@ export function createActorTurn({
   const momentText = moments?.text?.(3) || '';
   const diaryText = diary?.recent?.(2)?.map?.((x) => x.text).join('\n') || '';
   const milestoneText = milestones?.recent?.(4)?.map?.((x) => x.what).join(' / ') || '';
+  const memorySummaryText = current.kind === 'private' ? (memorySummary?.read?.() || '') : '';
   const hour = new Date().getHours();
   const senseText = [hour >= 23 || hour < 6 ? '现在是深夜' : hour < 9 ? '现在是清早' : hour >= 18 ? '现在是晚上' : '', current.kind === 'group' ? '这句话是当众说的' : '这句话是私下说的', imageDesc ? '他发了图' : '', voiceDesc ? '他发了语音' : '', wake ? '中间隔了很久' : ''].filter(Boolean).join('，');
   const deniedText = permissions?.deniedText?.(key) || '';
@@ -628,6 +630,7 @@ export function createActorTurn({
       momentText ? `你之前还会想起：\n${momentText}` : '',
       diaryText ? `你之前自己写下的：\n${diaryText}` : '',
       milestoneText ? `你们之间发生过：${milestoneText}` : '',
+      memorySummaryText ? `你整理过的旧事：\n${memorySummaryText}` : '',
       deniedText || '',
       !imageDesc && mindState?.presence?.lastImage && Date.now() - Number(mindState.presence.lastImage.at || 0) < 15 * 60 * 1000 ? `[media:image_late] ${mindState.presence.lastImage.text}` : '',
       imageDesc ? `图片：${imageDesc}` : '',

@@ -21,6 +21,7 @@ import { createMoments } from './core/moments.js';
 import { createLimiter } from './core/limiter.js';
 import { createDiary } from './core/diary.js';
 import { createMilestones } from './core/milestones.js';
+import { createMemorySummary } from './core/memory-summary.js';
 import { createDraw } from './core/draw.js';
 import { createSing } from './core/sing.js';
 import { createKnowledge } from './core/knowledge.js';
@@ -257,6 +258,14 @@ ${task.result}`);
   const moments = createMoments({ file: path.join(ROOT, 'state', 'moments.json'), logger });
   const diary = createDiary({ file: path.join(ROOT, 'state', 'diary.json'), logger });
   const milestones = createMilestones({ file: path.join(ROOT, 'state', 'milestones.json'), logger });
+  const memorySummary = createMemorySummary({
+    file: path.join(ROOT, 'state', 'memory-summary.md'),
+    metaFile: path.join(ROOT, 'state', 'memory-summary.meta.json'),
+    textRouter, diary, milestones, contacts, logger
+  });
+  memorySummary.refresh({ force: false }).catch(() => {});
+  const summaryTimer = setInterval(() => memorySummary.refresh().catch(() => {}), 6 * 60 * 60 * 1000);
+  summaryTimer.unref?.();
   const gatewaySend = gateway.sendMessage.bind(gateway);
   gateway.sendMessage = async (kind, id, segments) => {
     const result = await gatewaySend(kind, id, segments);
@@ -289,6 +298,7 @@ ${task.result}`);
     moments,
     diary,
     milestones,
+    memorySummary,
     visionLimiter,
     asrLimiter,
     rvcLimiter,
