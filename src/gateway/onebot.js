@@ -118,6 +118,7 @@ export class OneBotGateway extends EventEmitter {
     const userId = String(payload.sender?.user_id ?? payload.user_id ?? '');
     const selfId = String(payload.self_id ?? this.selfId ?? '');
     const segments = Array.isArray(payload.message) ? payload.message : [];
+    const replySegment = segments.find((seg) => seg?.type === 'reply');
     return {
       kind,
       id,
