@@ -1,0 +1,14 @@
+﻿{
+    "version":  "0.1.0",
+    "name":  "xiaoyu-desktop",
+    "main":  "main.js",
+    "description":  "小鲸鱼面板桌面壳",
+    "scripts":  {
+                    "start":  "node launch.js",
+                    "dev":  "node launch.js"
+                },
+    "devDependencies":  {
+                            "electron":  "^45.2.3"
+                        },
+    "private":  true
+}

@@ -12,3 +12,9 @@ scripts/local.paths.ps1
 training/runs/
 training/memory/
 training/blind/
+
+desktop/node_modules/
+desktop/run.*
+desktop/e*.out
+desktop/e*.err
+desktop/debug.log

@@ -29,6 +29,11 @@ if (-not (Get-NetTCPConnection -LocalPort 3199 -State Listen -ErrorAction Silent
   }
 }
 
+if (-not (Get-NetTCPConnection -LocalPort 9881 -State Listen -ErrorAction SilentlyContinue)) {
+  if ($env:RVC_SERVER_SCRIPT -and $env:RVC_PYTHON -and (Test-Path $env:RVC_SERVER_SCRIPT)) {
+    Start-Process -FilePath $env:RVC_PYTHON -ArgumentList @($env:RVC_SERVER_SCRIPT, '--port', '9881', '--model', 'atri_e20_s700.pth', '--device', 'cuda') -WorkingDirectory 'E:\AI\RVC' -WindowStyle Hidden
+  }
+}
 if (-not (Get-NetTCPConnection -LocalPort 11434 -State Listen -ErrorAction SilentlyContinue)) {
   $ollama = if ($env:OLLAMA_EXE) { $env:OLLAMA_EXE } else { Join-Path (Split-Path -Parent $v2) 'ollama\app\ollama.exe' }
   if (Test-Path $ollama) {
