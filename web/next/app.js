@@ -131,6 +131,10 @@ function renderCharacter() {
   $('#cardVoice').value = (card.voice || []).join('\n');
   $('#cardWorld').value = (card.world || []).join('\n');
   $('#cardBounds').value = (card.boundaries || []).join('\n');
+  $('#cardViews').value = (card.views || []).join('\n');
+  $('#cardTaste').value = (card.taste || []).join('\n');
+  $('#cardLine').value = (card.line || []).join('\n');
+  $('#cardSelfImage').value = card.selfImage || '';
   autoGrowAll();
 }
 
@@ -404,7 +408,11 @@ function readCardForm() {
     drive: $('#cardDrive').value.trim(),
     voice: lines('#cardVoice'),
     world: lines('#cardWorld'),
-    boundaries: lines('#cardBounds')
+    boundaries: lines('#cardBounds'),
+    views: lines('#cardViews'),
+    taste: lines('#cardTaste'),
+    line: lines('#cardLine'),
+    selfImage: $('#cardSelfImage').value
   };
 }
 
@@ -415,6 +423,10 @@ function fillCardForm(card) {
   $('#cardVoice').value = (card.voice || []).join('\n');
   $('#cardWorld').value = (card.world || []).join('\n');
   $('#cardBounds').value = (card.boundaries || []).join('\n');
+  $('#cardViews').value = (card.views || []).join('\n');
+  $('#cardTaste').value = (card.taste || []).join('\n');
+  $('#cardLine').value = (card.line || []).join('\n');
+  $('#cardSelfImage').value = card.selfImage || '';
   autoGrowAll();
 }
 
@@ -480,7 +492,11 @@ async function saveCard() {
     drive: $('#cardDrive').value,
     voice: lines('#cardVoice'),
     world: lines('#cardWorld'),
-    boundaries: lines('#cardBounds')
+    boundaries: lines('#cardBounds'),
+    views: lines('#cardViews'),
+    taste: lines('#cardTaste'),
+    line: lines('#cardLine'),
+    selfImage: $('#cardSelfImage').value
   };
   $('#cardStatus').textContent = '保存中…';
   try {

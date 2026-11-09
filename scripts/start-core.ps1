@@ -3,6 +3,9 @@ $v2 = Split-Path -Parent $PSScriptRoot
 $v1 = Join-Path (Split-Path -Parent $v2) 'qq-bridge'
 $localPaths = Join-Path $PSScriptRoot 'local.paths.ps1'
 if (Test-Path $localPaths) { . $localPaths }
+if ($env:COSYVOICE_DIR -and (Test-Path $env:COSYVOICE_DIR)) {
+  try { Remove-Item -LiteralPath $env:COSYVOICE_DIR -Recurse -Force -ErrorAction SilentlyContinue } catch {}
+}
 $maintenance = Join-Path $v2 'state\maintenance.flag'
 $log = Join-Path $v2 'state\logs\core.log'
 

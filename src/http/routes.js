@@ -588,6 +588,10 @@ export function createPanelHandler(ctx) {
           voice: list(input.voice, 12),
           world: list(input.world, 20),
           boundaries: list(input.boundaries, 12),
+          views: list(input.views, 12),
+          taste: list(input.taste, 12),
+          line: list(input.line, 12),
+          selfImage: text(input.selfImage, 600),
           examples: list(input.examples, 20)
         };
         if (!card.name) return json(res, 400, { error: 'name required' });
