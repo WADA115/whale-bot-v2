@@ -14,7 +14,7 @@ training/memory/
 training/blind/
 
 desktop/node_modules/
-desktop/run.*
+desktop/run*
 desktop/e*.out
 desktop/e*.err
 desktop/debug.log
