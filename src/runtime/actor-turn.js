@@ -617,6 +617,7 @@ export function createActorTurn({
     }).filter((line) => line.length > 3).join('\n');
     const chatNotes = [
       historyText ? `刚才聊的：\n${historyText}` : '',
+      current.quoted ? `他引用了一条：${current.quoted.senderName || '对方'}：${current.quoted.text || '[非文字消息]'}` : '',
       groupFact || '',
       pendingRead ? `他给你看了一个视频：${pendingRead.title}。要读就用 bili_video_content，BV 是 ${pendingRead.bvid}。` : '',
       wantsSeen && mindState?.seen ? `他给你看过的：\n${mindState.seen.slice(-1200)}` : '',

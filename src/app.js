@@ -464,6 +464,9 @@ ${task.result}`);
       text: message.text || (message.images?.length ? '[图片]' : ''), at: Date.now()
     });
     if (message.text) contacts.remember({ id: message.userId, name: message.senderName, key: message.key, text: message.text });
+    if (message.replyTo) {
+      try { message.quoted = await gateway.getMessage(message.replyTo); } catch {}
+    }
     const ownerId = String(config.allow?.private?.[0] || '');
     if (message.kind === 'private' && String(message.id) === ownerId) {
       const waiting = permissions.pending(message.key).length > 0;

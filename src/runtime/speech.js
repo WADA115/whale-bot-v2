@@ -74,7 +74,16 @@ export async function sendHumanReply({
 
   let stickerSent = false;
   if (sticker && !stopped) {
-    await gateway.sendMessage(kind, id, [{ type: 'image', data: { file: sticker.url } }]);
+    const idValue = String(sticker.resId || sticker.id || '');
+    const segment = idValue
+      ? { type: 'mface', data: { id: idValue, summary: sticker.desc || '[表情]', url: sticker.url || '' } }
+      : { type: 'image', data: { file: sticker.url } };
+    try {
+      await gateway.sendMessage(kind, id, [segment]);
+    } catch (error) {
+      logger?.warn('expression.mface_failed', { error: String(error?.message ?? error) });
+      await gateway.sendMessage(kind, id, [{ type: 'image', data: { file: sticker.url } }]);
+    }
     stickerSent = true;
     logger?.info('expression.sent', { key: `${kind}:${id}`, desc: sticker.desc });
   }

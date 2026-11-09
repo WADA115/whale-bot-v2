@@ -131,6 +131,7 @@ export class OneBotGateway extends EventEmitter {
       images: segments.filter((seg) => seg?.type === 'image' && (seg?.data?.url || seg?.data?.file)).map((seg) => seg.data),
       voices: segments.filter((seg) => (seg?.type === 'record' || seg?.type === 'voice') && (seg?.data?.url || seg?.data?.file)).map((seg) => seg.data),
       at: atList(payload.message, selfId),
+      replyTo: replySegment?.data?.id ? String(replySegment.data.id) : '',
       senderName: String(payload.sender?.card || payload.sender?.nickname || userId),
       raw: payload
     };
@@ -138,6 +139,17 @@ export class OneBotGateway extends EventEmitter {
 
   isSelf(message) {
     return Boolean(message.selfId && message.userId === message.selfId);
+  }
+
+  async getMessage(messageId) {
+    const data = await this.call('get_msg', { message_id: String(messageId) }, { timeoutMs: 8000 });
+    return {
+      messageId: String(messageId),
+      text: textOf(data?.message),
+      userId: String(data?.sender?.user_id ?? data?.user_id ?? ''),
+      senderName: String(data?.sender?.card || data?.sender?.nickname || data?.sender?.user_id || ''),
+      raw: data
+    };
   }
 
   async getGroupHistory({ groupId, count = 20 } = {}) {
