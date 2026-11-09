@@ -91,6 +91,8 @@ export async function main(argv = process.argv.slice(2)) {
       url: config.asr?.url || 'http://127.0.0.1:3199',
       ffmpegPath: config.asr?.ffmpegPath || FFMPEG,
       timeoutMs: Number(config.asr?.timeoutMs) || 30000,
+      cacheFile: path.join(ROOT, 'state', 'cache', 'asr.json'),
+      vad: config.asr?.vad !== false,
       logger
     })
     : null;
