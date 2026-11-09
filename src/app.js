@@ -20,6 +20,7 @@ import { createContacts } from './core/contacts.js';
 import { createMoments } from './core/moments.js';
 import { createLimiter } from './core/limiter.js';
 import { createDiary } from './core/diary.js';
+import { createMilestones } from './core/milestones.js';
 import { createDraw } from './core/draw.js';
 import { createSing } from './core/sing.js';
 import { createKnowledge } from './core/knowledge.js';
@@ -255,6 +256,7 @@ ${task.result}`);
   const contacts = createContacts({ file: path.join(ROOT, 'state', 'contacts.json'), logger });
   const moments = createMoments({ file: path.join(ROOT, 'state', 'moments.json'), logger });
   const diary = createDiary({ file: path.join(ROOT, 'state', 'diary.json'), logger });
+  const milestones = createMilestones({ file: path.join(ROOT, 'state', 'milestones.json'), logger });
   const gatewaySend = gateway.sendMessage.bind(gateway);
   gateway.sendMessage = async (kind, id, segments) => {
     const result = await gatewaySend(kind, id, segments);
@@ -286,6 +288,7 @@ ${task.result}`);
     contacts,
     moments,
     diary,
+    milestones,
     visionLimiter,
     asrLimiter,
     rvcLimiter,
@@ -554,6 +557,9 @@ ${task.result}`);
     knowledge,
     slang,
     permissions,
+    contacts,
+    diary,
+    milestones,
     textRouter,
     isConnected: () => connected,
     snapshot: snapshotState,

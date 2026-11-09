@@ -37,6 +37,7 @@ export function createActorTurn({
   contacts,
   moments,
   diary,
+  milestones,
   visionLimiter,
   asrLimiter,
   rvcLimiter,
@@ -431,6 +432,20 @@ export function createActorTurn({
         }
       }
     } : null;
+    const milestoneTool = milestones ? {
+      type: 'function',
+      function: {
+        name: 'remember_milestone',
+        description: '发生了一件你们之间真正重要的事时，记一笔。不是每件小事都记，也不要写成好感度。',
+        parameters: {
+          type: 'object',
+          properties: {
+            what: { type: 'string', description: '发生了什么，短一点' }
+          },
+          required: ['what']
+        }
+      }
+    } : null;
     const diaryTool = diary ? {
       type: 'function',
       function: {
@@ -565,6 +580,7 @@ export function createActorTurn({
   const contactText = contacts?.describe?.(current.userId) || '';
   const momentText = moments?.text?.(3) || '';
   const diaryText = diary?.recent?.(2)?.map?.((x) => x.text).join('\n') || '';
+  const milestoneText = milestones?.recent?.(4)?.map?.((x) => x.what).join(' / ') || '';
   const hour = new Date().getHours();
   const senseText = [hour >= 23 || hour < 6 ? '现在是深夜' : hour < 9 ? '现在是清早' : hour >= 18 ? '现在是晚上' : '', current.kind === 'group' ? '这句话是当众说的' : '这句话是私下说的', imageDesc ? '他发了图' : '', voiceDesc ? '他发了语音' : '', wake ? '中间隔了很久' : ''].filter(Boolean).join('，');
   const deniedText = permissions?.deniedText?.(key) || '';
@@ -587,6 +603,7 @@ export function createActorTurn({
     permissions ? '没有许可时，如果确实需要做越界的事（比如骂人），先用 request_permission 开口问：私聊问主人，群聊直接问群里；ask 写你真正会发出去的话，像在 QQ 上求人，不要工单腔。不能拿它绕过家人、真人、群体、威胁、开盒这些硬底线。' : '',
     contacts ? '主人明确说“别记这个/刚才那句忘了”时，先判断是不是真在说记忆；是的话可以用 forget_memory，普通聊天不要删。' : '',
     diary ? '有些事你以后会想起、想自己留一笔，可以写进日记；不是每轮都写，也不写流水账。' : '',
+    milestones ? '如果发生了你们之间真正重要的事（第一次、答应过的事、重要的日子），可以用 remember_milestone 记一笔；不是每件小事都记。' : '',
     (tts || mansui) ? '想用声音说时，用 speak；不想用就正常打字。' : ''
     ].filter(Boolean).join('\n');
     const historyTurns = scene.turns.slice(-7, -1);
@@ -608,6 +625,9 @@ export function createActorTurn({
       slangBlock,
       globalContext ? `其他会话里刚发生的（只是背景，让你别像两个人；不要在别的群或私聊里复述私事）：\n${globalContext}` : '',
       contactText ? `你记得这个人：${contactText}` : '',
+      momentText ? `你之前还会想起：\n${momentText}` : '',
+      diaryText ? `你之前自己写下的：\n${diaryText}` : '',
+      milestoneText ? `你们之间发生过：${milestoneText}` : '',
       deniedText || '',
       !imageDesc && mindState?.presence?.lastImage && Date.now() - Number(mindState.presence.lastImage.at || 0) < 15 * 60 * 1000 ? `[media:image_late] ${mindState.presence.lastImage.text}` : '',
       imageDesc ? `图片：${imageDesc}` : '',
@@ -631,7 +651,7 @@ export function createActorTurn({
       result = textRouter.generateWithTools
         ? await textRouter.generateWithTools({
           ...prompt,
-          tools: [...biliTools, ...(knowledgeTool ? [knowledgeTool] : []), ...(permissionTool ? [permissionTool] : []), ...(askOwnerTool ? [askOwnerTool] : []), ...(forgetTool ? [forgetTool] : []), ...(confideTool ? [confideTool] : []), ...(diaryTool ? [diaryTool] : []), ...(momentTool ? [momentTool] : []), ...(speakTool ? [speakTool] : []), ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
+          tools: [...biliTools, ...(knowledgeTool ? [knowledgeTool] : []), ...(permissionTool ? [permissionTool] : []), ...(askOwnerTool ? [askOwnerTool] : []), ...(forgetTool ? [forgetTool] : []), ...(confideTool ? [confideTool] : []), ...(milestoneTool ? [milestoneTool] : []), ...(diaryTool ? [diaryTool] : []), ...(momentTool ? [momentTool] : []), ...(speakTool ? [speakTool] : []), ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
           execute: async (name, args) => {
             if (name === 'look_group_history') return lookAtGroups();
             if (name === 'search_local') return runKnowledge(args);
@@ -643,6 +663,12 @@ export function createActorTurn({
             await gateway.sendMessage('private', owner, [{ type: 'text', data: { text: say } }]);
             moments?.add?.({ what: say, audience: '私下', key });
             return '说出去了。';
+          }
+          if (name === 'remember_milestone') {
+            const what = String(args?.what ?? '').trim();
+            if (!what) return '没记。';
+            milestones?.add?.({ what, who: String(current.senderName || current.userId || ''), key });
+            return '记下了。';
           }
           if (name === 'write_diary') {
             const text = String(args?.text ?? '').trim();

@@ -930,6 +930,48 @@ async function permissionAction(action, id, extra = {}) {
   }
 }
 
+async function loadMilestones() {
+  const box = $('#milestoneList');
+  if (!box) return;
+  box.textContent = '读取中…';
+  try {
+    const res = await fetch('/api/milestones', { cache: 'no-store' });
+    const data = await res.json();
+    box.replaceChildren();
+    for (const entry of data.entries || []) {
+      const row = document.createElement('div');
+      row.className = 'result-item';
+      const text = document.createElement('div');
+      text.textContent = entry.what;
+      row.append(text);
+      const b = document.createElement('button');
+      b.className = 'text-btn';
+      b.type = 'button';
+      b.textContent = '删掉';
+      b.addEventListener('click', () => deleteMilestone(entry.at));
+      row.append(b);
+      box.append(row);
+    }
+    if (!box.children.length) box.textContent = '还没有节点。';
+  } catch (error) {
+    box.textContent = String(error.message || error);
+  }
+}
+
+async function deleteMilestone(at) {
+  try {
+    const res = await fetch('/api/milestones/delete', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ at })
+    });
+    if (!res.ok) throw new Error('删除失败');
+    await loadMilestones();
+  } catch (error) {
+    const box = $('#milestoneList');
+    if (box) box.textContent = String(error.message || error);
+  }
+}
+
 async function loadDiary() {
   const box = $('#diaryList');
   if (!box) return;
@@ -1023,6 +1065,8 @@ async function forgetMemory(id, text) {
 $('#loadMemory').addEventListener('click', loadMemory);
 loadMemory().catch(() => {});
 loadDiary().catch(() => {});
+loadMilestones().catch(() => {});
+$('#loadMilestones').addEventListener('click', loadMilestones);
 $('#loadDiary').addEventListener('click', loadDiary);
 $('#saveCard').addEventListener('click', saveCard);
 let personaHistory = [];
