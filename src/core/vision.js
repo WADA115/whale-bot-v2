@@ -159,11 +159,14 @@ export function createVisionRouter({
     const cached = [];
     for (const seg of segs.slice(0, 3)) {
       try {
+        const raw = String(seg.data?.url ?? seg.data?.file ?? '');
+        const urlKey = raw ? 'u:' + crypto.createHash('sha256').update(raw).digest('hex') : '';
+        if (urlKey && cache[urlKey]) { cached.push(cache[urlKey]); continue; }
         const source = await readSource(seg.data, { timeoutMs: 30000, fetchImpl });
         const key = crypto.createHash('sha256').update(source.buffer).digest('hex');
-        if (cache[key]) { cached.push(cache[key]); continue; }
+        if (cache[key]) { cached.push(cache[key]); if (urlKey) cache[urlKey] = cache[key]; continue; }
         const shrunk = await shrinkImage(source, { ffmpegPath });
-        images.push({ base64: shrunk.buffer.toString('base64'), mime: shrunk.mime, key });
+        images.push({ base64: shrunk.buffer.toString('base64'), mime: shrunk.mime, key, urlKey });
       } catch (error) {
         logger?.warn('vision.image_fetch_failed', { error: String(error?.message ?? error) });
       }
@@ -187,7 +190,7 @@ export function createVisionRouter({
         const data = await res.json();
         const text = String(parseProvider(provider, data) ?? '').trim();
         if (!text) throw new Error('empty response');
-        for (const image of images) cache[image.key] = text;
+        for (const image of images) { cache[image.key] = text; if (image.urlKey) cache[image.urlKey] = text; }
         const keys = Object.keys(cache);
         while (keys.length > cacheLimit) delete cache[keys.shift()];
         persistCache();
