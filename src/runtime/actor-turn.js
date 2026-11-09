@@ -4,6 +4,14 @@ import { sanitizeReply, shadowReply } from '../core/reply.js';
 import { chooseSticker } from '../character/expression.js';
 import { matchSlang } from '../character/slang.js';
 import { buildNotices } from './notices.js';
+
+function withDeadline(promise, ms) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const timer = setTimeout(() => { if (!settled) { settled = true; resolve(null); } }, Math.max(100, Number(ms) || 0));
+    Promise.resolve(promise).then((value) => { if (!settled) { settled = true; clearTimeout(timer); resolve(value); } }).catch(() => { if (!settled) { settled = true; clearTimeout(timer); resolve(null); } });
+  });
+}
 import { selectRelevantSlices } from '../story/retrieval.js';
 import { sendHumanReply } from './speech.js';
 import { shouldReflect } from '../story/reflect.js';
@@ -143,13 +151,26 @@ export function createActorTurn({
     const notices = buildNotices({ message: current, text, person });
     let imageDesc = '';
     if (current.images?.length && config.vision?.enabled !== false) {
+      const visionWaitMs = Number(config.media?.visionWaitMs) || 10000;
+      const visionPromise = visionRouter.describe({ message: current });
       try {
-        const described = await visionRouter.describe({ message: current });
-        imageDesc = described.text;
-        if (imageDesc) mind?.noteImage?.(imageDesc);
-        stats.imageCount += 1;
-        metrics?.inc('qqbot_vision_requests_total', { provider: described.provider, outcome: 'ok' });
-        logger.info('vision.described', { key, provider: described.provider, chars: imageDesc.length });
+        const described = await withDeadline(visionPromise, visionWaitMs);
+        if (described?.text) {
+          imageDesc = described.text;
+          if (imageDesc) mind?.noteImage?.(imageDesc);
+          stats.imageCount += 1;
+          metrics?.inc('qqbot_vision_requests_total', { provider: described.provider, outcome: 'ok' });
+          logger.info('vision.described', { key, provider: described.provider, chars: imageDesc.length });
+        } else {
+          imageDesc = '[图片还没看清]';
+          visionPromise.then((late) => {
+            if (!late?.text) return;
+            mind?.noteImage?.(late.text);
+            logger.info('vision.late', { key, chars: late.text.length });
+          }).catch(() => {});
+          metrics?.inc('qqbot_vision_requests_total', { provider: 'unknown', outcome: 'timeout' });
+          logger.warn('vision.timeout', { key });
+        }
       } catch (error) {
         metrics?.inc('qqbot_vision_requests_total', { provider: 'unknown', outcome: 'error' });
         logger.warn('vision.failed', { key, error: String(error?.message ?? error) });
@@ -158,11 +179,23 @@ export function createActorTurn({
     let reference = '';
     let voiceDesc = '';
     if (current.voices?.length && asr) {
+      const asrWaitMs = Number(config.media?.asrWaitMs) || 5000;
+      const asrPromise = asr.transcribe(current.segments);
       try {
-        voiceDesc = await asr.transcribe(current.segments);
-        if (voiceDesc) {
+        const heard = await withDeadline(asrPromise, asrWaitMs);
+        if (heard) {
+          voiceDesc = heard;
           metrics?.inc('qqbot_asr_requests_total', { outcome: 'ok' });
           logger.info('asr.described', { key, chars: voiceDesc.length });
+        } else {
+          voiceDesc = '[语音还没听清]';
+          asrPromise.then((late) => {
+            if (!late) return;
+            mind?.noteVoice?.(late);
+            logger.info('asr.late', { key, chars: late.length });
+          }).catch(() => {});
+          metrics?.inc('qqbot_asr_requests_total', { outcome: 'timeout' });
+          logger.warn('asr.timeout', { key });
         }
       } catch (error) {
         metrics?.inc('qqbot_asr_requests_total', { outcome: 'error' });
@@ -501,6 +534,7 @@ export function createActorTurn({
     const wake = mind?.takeWake?.() ?? null;
     if (wake) logger.info('mind.wake_injected', { word: wake.word });
     const mindState = mind?.read?.() ?? null;
+  const pendingVoice = mind?.takeVoice?.() || '';
     const pendingRead = mind?.peekPendingRead?.() ?? null;
     const wantsMemory = /之前|上次|后来|那个|还没|想完|记得|忘了|那天|以前/.test(text);
     const wantsSeen = /视频|B站|BV|看过|大肥鱼|表情|动态/.test(text);
@@ -553,6 +587,7 @@ export function createActorTurn({
       !imageDesc && mindState?.presence?.lastImage && Date.now() - Number(mindState.presence.lastImage.at || 0) < 15 * 60 * 1000 ? `他刚才发过一张图：${mindState.presence.lastImage.text}` : '',
       imageDesc ? `图片：${imageDesc}` : '',
       voiceDesc ? `语音：${voiceDesc}` : '',
+      pendingVoice ? `他刚才那条语音，后来听清了：${pendingVoice}` : '',
       wake ? `中间断了${wake.word}。没有声音，也没有画面。` : ''
     ].filter(Boolean).join('\n\n');
     const chatUser = [

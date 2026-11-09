@@ -169,6 +169,19 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     try { return JSON.parse(fs.readFileSync(readsFile, 'utf8')); } catch { return []; }
   }
 
+  function noteVoice(text) {
+    const value = String(text ?? '').trim().slice(0, 500);
+    if (value) writePresence({ pendingVoice: { text: value, at: Date.now() } });
+    return value;
+  }
+
+  function takeVoice() {
+    const pending = readPresence().pendingVoice;
+    if (!pending) return '';
+    writePresence({ pendingVoice: null });
+    return String(pending.text || '');
+  }
+
   function noteRead(entry = {}) {
     const list = readReads();
     list.unshift({ ...entry, at: Date.now() });
@@ -235,5 +248,5 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
   }
 
   try { syncCard(card); } catch {}
-  return { ensure, read, writeSection, appendUndercurrent, appendHeld, appendSeen, noteRead, readReads, setPendingRead, peekPendingRead, touchContact, touchThought, readPresence, beginSession, heartbeat, markShutdown, peekWake, takeWake, canReach, noteReach, canQzone, noteQzone, noteImage, syncCard, base };
+  return { ensure, read, writeSection, appendUndercurrent, appendHeld, appendSeen, noteRead, readReads, setPendingRead, peekPendingRead, touchContact, touchThought, readPresence, beginSession, heartbeat, markShutdown, peekWake, takeWake, canReach, noteReach, canQzone, noteQzone, noteImage, noteVoice, takeVoice, syncCard, base };
 }
