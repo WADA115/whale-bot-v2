@@ -180,6 +180,8 @@ export function createActorTurn({
           logger.warn('vision.timeout', { key });
         }
       } catch (error) {
+        imageDesc = '';
+        imagePending = true;
         metrics?.inc('qqbot_vision_requests_total', { provider: 'unknown', outcome: 'error' });
         logger.warn('vision.failed', { key, error: String(error?.message ?? error) });
       }
@@ -208,6 +210,8 @@ export function createActorTurn({
           logger.warn('asr.timeout', { key });
         }
       } catch (error) {
+        voiceDesc = '';
+        voicePending = true;
         metrics?.inc('qqbot_asr_requests_total', { outcome: 'error' });
         logger.warn('asr.failed', { key, error: String(error?.message ?? error) });
       }
@@ -635,9 +639,9 @@ export function createActorTurn({
       deniedText || '',
       !imageDesc && mindState?.presence?.lastImage && Date.now() - Number(mindState.presence.lastImage.at || 0) < 15 * 60 * 1000 ? `[media:image_late] ${mindState.presence.lastImage.text}` : '',
       imageDesc ? `图片：${imageDesc}` : '',
-      imagePending ? '[media:image_pending]' : '',
+      imagePending ? '[media:image_pending] 这张图你现在没看到。不要描述图里的任何内容，不要猜；只能承认没看清、让他重发，或先接文字。' : '',
       voiceDesc ? `语音：${voiceDesc}` : '',
-      voicePending ? '[media:voice_pending]' : '',
+      voicePending ? '[media:voice_pending] 这条语音你没听清。不要复述语音内容；可以说没听清、让他再说，或先接文字。' : '',
       pendingVoice ? `[media:voice_late] ${pendingVoice}` : '',
       wake ? `中间断了${wake.word}。没有声音，也没有画面。` : ''
     ].filter(Boolean).join('\n\n');
