@@ -74,9 +74,10 @@ function requestFor(provider, { system, user, images }) {
           ],
           stream: false,
           think: false,
+          keep_alive: provider.keepAlive || '30m',
           options: {
-            num_ctx: Number(provider.numCtx) || 4096,
-            num_predict: Number(provider.maxTokens) || 700,
+            num_ctx: Number(provider.numCtx) || 2048,
+            num_predict: Number(provider.maxTokens) || 300,
             temperature: 0.1
           }
         }),
@@ -143,7 +144,20 @@ export function createVisionRouter({ providers = [], logger = null, fetchImpl = 
     }
     throw new Error(`all vision providers failed: ${errors.join(' | ')}`);
   }
-  return { describe };
+  async function warmup() {
+    for (const provider of providers) {
+      if (provider.type !== 'ollama') continue;
+      try {
+        await fetchImpl(`${String(provider.baseURL).replace(/\/+$/, '').replace(/\/v1$/, '')}/api/chat`, {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ model: provider.model, messages: [{ role: 'user', content: 'ok' }], stream: false, think: false, keep_alive: provider.keepAlive || '30m', options: { num_predict: 1 } }),
+          signal: AbortSignal.timeout(120000)
+        });
+        logger?.info('vision.warmed', { provider: provider.id, model: provider.model });
+      } catch (error) { logger?.warn('vision.warm_failed', { provider: provider.id, error: String(error?.message ?? error) }); }
+    }
+  }
+  return { describe, warmup };
 }
 
 export { DEFAULT_PROMPT };

@@ -80,6 +80,7 @@ export async function main(argv = process.argv.slice(2)) {
   const gateway = new OneBotGateway({ ...config.gateway, logger });
   const textRouter = createModelRouter({ providers: config.models.text, logger });
   const visionRouter = createVisionRouter({ providers: config.vision?.providers ?? [], logger });
+  visionRouter?.warmup?.().catch(() => {});
   const asr = config.asr?.enabled !== false
     ? createAsr({
       url: config.asr?.url || 'http://127.0.0.1:3199',
