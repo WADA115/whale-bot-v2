@@ -22,6 +22,7 @@ const ROOT = process.env.QQ_BRIDGE_ROOT
   || path.dirname(__dirname);
 fs.appendFileSync(path.join(require('node:os').tmpdir(), 'xiaoyu-desktop.log'), 'root=' + ROOT + ' portable=' + (process.env.PORTABLE_EXECUTABLE_DIR || '') + '\n');
 const PANEL = process.env.QQ_BRIDGE_PANEL || 'http://127.0.0.1:3201/next/';
+const ICON = app.isPackaged ? path.join(process.resourcesPath, 'icon.png') : path.join(__dirname, 'assets', 'icon.png');
 const STATE_FILE = path.join(ROOT, 'state', 'desktop-window.json');
 let win = null;
 let tray = null;
@@ -62,14 +63,17 @@ function saveState() {
 
 function startCore() {
   const logFile = path.join(require('node:os').tmpdir(), 'xiaoyu-desktop.log');
-  const script = path.join(ROOT, 'scripts', 'start-core.ps1');
-  fs.appendFileSync(logFile, 'startCore script=' + script + ' exists=' + fs.existsSync(script) + '\n');
-  if (!fs.existsSync(script)) return;
-  const ps = 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe';
-  const child = spawn(ps, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script], {
-    cwd: ROOT, detached: true, stdio: 'ignore', windowsHide: true
+  const index = path.join(ROOT, 'src', 'index.js');
+  fs.appendFileSync(logFile, 'startCore index=' + index + ' exists=' + fs.existsSync(index) + '\n');
+  if (!fs.existsSync(index)) return;
+  const env = { ...process.env };
+  delete env.ELECTRON_RUN_AS_NODE;
+  const node = process.env.NODE_EXE || 'node.exe';
+  const child = spawn(node, ['src/index.js'], {
+    cwd: ROOT, detached: true, stdio: 'ignore', windowsHide: true, env
   });
   child.on('error', (error) => fs.appendFileSync(logFile, 'startCore error=' + String(error) + '\n'));
+  child.on('exit', (code) => fs.appendFileSync(logFile, 'startCore exit=' + code + '\n'));
   fs.appendFileSync(logFile, 'startCore pid=' + child.pid + '\n');
   child.unref();
 }
@@ -92,6 +96,7 @@ function createWindow() {
     width, height, x, y,
     minWidth: 900, minHeight: 600,
     title: '小鲸鱼',
+    icon: ICON,
     backgroundColor: '#08111f',
     autoHideMenuBar: true,
     webPreferences: {
@@ -126,7 +131,7 @@ function createWindow() {
 }
 
 function buildTray() {
-  const iconPath = path.join(ROOT, 'web', 'next', 'preview.png');
+  const iconPath = ICON;
   let icon = nativeImage.createFromPath(iconPath);
   if (icon.isEmpty()) return;
   icon = icon.resize({ width: 18, height: 18 });

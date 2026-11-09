@@ -33,10 +33,16 @@
                                              }
                                          ],
                               "artifactName":  "小鲸鱼-${version}.exe",
-                              "icon":  "../web/next/preview.png"
+                              "icon":  "assets/icon.ico"
                           },
                   "portable":  {
                                    "artifactName":  "小鲸鱼-${version}.exe"
-                               }
+                               },
+                  "extraResources":  [
+                                         {
+                                             "from":  "assets/icon.png",
+                                             "to":  "icon.png"
+                                         }
+                                     ]
               }
 }
