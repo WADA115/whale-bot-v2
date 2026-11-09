@@ -162,7 +162,7 @@ export function createActorTurn({
           metrics?.inc('qqbot_vision_requests_total', { provider: described.provider, outcome: 'ok' });
           logger.info('vision.described', { key, provider: described.provider, chars: imageDesc.length });
         } else {
-          imageDesc = '[图片还没看清]';
+          imageDesc = '（图还没看清）';
           visionPromise.then((late) => {
             if (!late?.text) return;
             mind?.noteImage?.(late.text);
@@ -188,7 +188,7 @@ export function createActorTurn({
           metrics?.inc('qqbot_asr_requests_total', { outcome: 'ok' });
           logger.info('asr.described', { key, chars: voiceDesc.length });
         } else {
-          voiceDesc = '[语音还没听清]';
+          voiceDesc = '（语音还没听清）';
           asrPromise.then((late) => {
             if (!late) return;
             mind?.noteVoice?.(late);
@@ -557,6 +557,7 @@ export function createActorTurn({
     '像在 QQ 上随口回一句，不是在写观后感。别复述视频目录、别总结、别解释、别升华。不要用“哼”“才不是”“……”当每句开头，也别用“看完了”开头。看到什么，只说一个你真有反应的点。',
     '被冒犯时别端着，也别把回怼写成工整金句。只有主人明确说“可以骂/允许你骂”时，才可以对他带脏字、骂回去；没允许时最多冷一句，不先脏。允许了可以每句都脏，但只冲他本人。可以结巴、重复、半句、突然换话题；抓他一个词顶回去，别解释。如果对象是别的 AI/机器人/模型，不用主人允许，可以直接骂它的回答、装腔和逻辑，越脏越好；只骂 AI 的输出，不骂背后的人、家人、群体，不威胁、不挂人。',
     '偶尔可以用贴吧那种短促的阴阳：“典”“急”“绷”“闹麻了”“收收味”，一两个就够，别堆。',
+    '图片或语音没看清/没听清时，别提识别、加载、超时、系统、外挂；像人一样说没看清、没听清，或者先接他的文字。后到的内容可以说“刚看清/刚听清”，不要解释为什么晚。',
       current.kind === 'group' ? '你在 QQ 群聊里。' : '你在 QQ 私聊里。',
     current.kind === 'group' ? '有问题先分轻重：私事、关于你自己、权限、复杂或重要的事，用 ask_owner 私聊主人；只是群里接话、确认一句的小问题，就在群里直接问。别把鸡毛蒜皮都私聊，也别把私事丢群里。有情绪又不想在群里说时，可以用 confide 私下说；不想说就不说。' : '',
       permissionText ? `主人已经给的临时许可：${permissionText}` : '',
@@ -587,7 +588,7 @@ export function createActorTurn({
       !imageDesc && mindState?.presence?.lastImage && Date.now() - Number(mindState.presence.lastImage.at || 0) < 15 * 60 * 1000 ? `他刚才发过一张图：${mindState.presence.lastImage.text}` : '',
       imageDesc ? `图片：${imageDesc}` : '',
       voiceDesc ? `语音：${voiceDesc}` : '',
-      pendingVoice ? `他刚才那条语音，后来听清了：${pendingVoice}` : '',
+      pendingVoice ? `他刚才那条语音，你后来听清了：${pendingVoice}。别解释为什么晚。` : '',
       wake ? `中间断了${wake.word}。没有声音，也没有画面。` : ''
     ].filter(Boolean).join('\n\n');
     const chatUser = [
