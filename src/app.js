@@ -19,6 +19,7 @@ import { createConversationLog } from './core/conversation-log.js';
 import { createContacts } from './core/contacts.js';
 import { createMoments } from './core/moments.js';
 import { createLimiter } from './core/limiter.js';
+import { createDiary } from './core/diary.js';
 import { createDraw } from './core/draw.js';
 import { createSing } from './core/sing.js';
 import { createKnowledge } from './core/knowledge.js';
@@ -253,6 +254,7 @@ ${task.result}`);
   const conversationLog = createConversationLog({ limit: 80 });
   const contacts = createContacts({ file: path.join(ROOT, 'state', 'contacts.json'), logger });
   const moments = createMoments({ file: path.join(ROOT, 'state', 'moments.json'), logger });
+  const diary = createDiary({ file: path.join(ROOT, 'state', 'diary.json'), logger });
   const gatewaySend = gateway.sendMessage.bind(gateway);
   gateway.sendMessage = async (kind, id, segments) => {
     const result = await gatewaySend(kind, id, segments);
@@ -283,6 +285,7 @@ ${task.result}`);
     conversationLog,
     contacts,
     moments,
+    diary,
     visionLimiter,
     asrLimiter,
     rvcLimiter,

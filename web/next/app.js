@@ -930,6 +930,48 @@ async function permissionAction(action, id, extra = {}) {
   }
 }
 
+async function loadDiary() {
+  const box = $('#diaryList');
+  if (!box) return;
+  box.textContent = '读取中…';
+  try {
+    const res = await fetch('/api/diary', { cache: 'no-store' });
+    const data = await res.json();
+    box.replaceChildren();
+    for (const entry of data.entries || []) {
+      const row = document.createElement('div');
+      row.className = 'result-item';
+      const text = document.createElement('div');
+      text.textContent = entry.text;
+      row.append(text);
+      const b = document.createElement('button');
+      b.className = 'text-btn';
+      b.type = 'button';
+      b.textContent = '删掉';
+      b.addEventListener('click', () => deleteDiary(entry.at));
+      row.append(b);
+      box.append(row);
+    }
+    if (!box.children.length) box.textContent = '还没写过。';
+  } catch (error) {
+    box.textContent = String(error.message || error);
+  }
+}
+
+async function deleteDiary(at) {
+  try {
+    const res = await fetch('/api/diary/delete', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ at })
+    });
+    if (!res.ok) throw new Error('删除失败');
+    await loadDiary();
+  } catch (error) {
+    const box = $('#diaryList');
+    if (box) box.textContent = String(error.message || error);
+  }
+}
+
 async function loadMemory() {
   const box = $('#memoryList');
   if (!box) return;
@@ -980,6 +1022,8 @@ async function forgetMemory(id, text) {
 
 $('#loadMemory').addEventListener('click', loadMemory);
 loadMemory().catch(() => {});
+loadDiary().catch(() => {});
+$('#loadDiary').addEventListener('click', loadDiary);
 $('#saveCard').addEventListener('click', saveCard);
 let personaHistory = [];
 function personaChatAppend(role, text) {

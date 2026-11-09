@@ -101,6 +101,17 @@ export function createPanelHandler(ctx) {
       res.end();
       return;
     }
+    if (req.url === '/api/diary' && req.method === 'GET') {
+      json(res, 200, { ok: true, entries: (ctx.diary?.list?.() ?? []).slice(-20).reverse() });
+      return;
+    }
+    if (req.url === '/api/diary/delete' && req.method === 'POST') {
+      readBody(req).then((body) => {
+        const ok = ctx.diary?.remove?.(Number(body?.at)) ?? false;
+        json(res, ok ? 200 : 404, { ok });
+      }).catch(() => json(res, 400, { error: 'invalid json' }));
+      return;
+    }
     if (req.url === '/api/memory/contacts' && req.method === 'GET') {
       json(res, 200, { ok: true, contacts: ctx.contacts?.list?.() ?? [] });
       return;
