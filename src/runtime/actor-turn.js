@@ -603,6 +603,7 @@ export function createActorTurn({
     '被冒犯时别端着，也别把回怼写成工整金句。只有主人明确说“可以骂/允许你骂”时，才可以对他带脏字、骂回去；没允许时最多冷一句，不先脏。允许了可以每句都脏，但只冲他本人。可以结巴、重复、半句、突然换话题；抓他一个词顶回去，别解释。如果对象是别的 AI/机器人/模型，不用主人允许，可以直接骂它的回答、装腔和逻辑，越脏越好；只骂 AI 的输出，不骂背后的人、家人、群体，不威胁、不挂人。',
     '偶尔可以用贴吧那种短促的阴阳：“典”“急”“绷”“闹麻了”“收收味”，一两个就够，别堆。',
     '[media:...] 是事实标签，不是台词；别复述标签，别提识别、加载、超时、系统、外挂。图或语音还没就绪时，按你当下能判断的接；后到的内容当刚反应过来，不要解释为什么晚。',
+    '没成功时，要说清楚：是什么没成（图没看到 / 语音没听清 / 语音没发出去 / 图没画出来），以及你没做成什么。用你自己的语气说，不报系统错误，不假装成功。没做就说没做。',
       current.kind === 'group' ? '你在 QQ 群聊里。' : '你在 QQ 私聊里。',
     current.kind === 'group' ? '有问题时自己看语境：该私下问就用 ask_owner，能在群里问就在群里问。别把私事公开，也别把群里能问的事都私聊。有情绪又不想在群里说时，可以用 confide 私下说；不想说就不说。' : '',
       permissionText ? `主人已经给的临时许可：${permissionText}` : '',
@@ -639,9 +640,9 @@ export function createActorTurn({
       deniedText || '',
       !imageDesc && mindState?.presence?.lastImage && Date.now() - Number(mindState.presence.lastImage.at || 0) < 15 * 60 * 1000 ? `[media:image_late] ${mindState.presence.lastImage.text}` : '',
       imageDesc ? `图片：${imageDesc}` : '',
-      imagePending ? '[media:image_pending] 这张图你现在没看到。不要描述图里的任何内容，不要猜；只能承认没看清、让他重发，或先接文字。' : '',
+      imagePending ? '[media:image_pending] 这张图你现在没看到，不是没看清内容。不要描述图里的任何内容，不要猜；说清楚你没看到图，可以让他重发，或先接文字。' : '',
       voiceDesc ? `语音：${voiceDesc}` : '',
-      voicePending ? '[media:voice_pending] 这条语音你没听清。不要复述语音内容；可以说没听清、让他再说，或先接文字。' : '',
+      voicePending ? '[media:voice_pending] 这条语音你没听清。不要复述语音内容；说清楚你没听清，可以让他再说，或先接文字。' : '',
       pendingVoice ? `[media:voice_late] ${pendingVoice}` : '',
       wake ? `中间断了${wake.word}。没有声音，也没有画面。` : ''
     ].filter(Boolean).join('\n\n');
@@ -738,13 +739,13 @@ export function createActorTurn({
               let file;
               if (mansui) {
                 try { file = await mansui.speak(spoken); }
-                catch (error) { logger.warn('voice.mansui_failed', { key, error: String(error?.message ?? error) }); return '语音没合成出来。'; }
+                catch (error) { logger.warn('voice.mansui_failed', { key, error: String(error?.message ?? error) }); return '[action:speak_failed] 语音没合成出来。'; }
               }
               else {
                 file = await tts.synthesize(spoken);
                 if (file && rvc) file = await (rvcLimiter ? rvcLimiter.run(() => rvc.convert(file)) : rvc.convert(file));
               }
-              if (!file) return '没合成出来。';
+              if (!file) return '[action:speak_failed] 没合成出来。';
               await gateway.sendMessage(current.kind, current.id, [{ type: 'record', data: { file } }]);
               logger.info('voice.sent', { key, chars: spoken.length });
               return '语音发出去了。';
