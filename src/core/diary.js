@@ -34,5 +34,5 @@ export function createDiary({ file = 'state/diary.json', limit = 80, logger = nu
     return list.length !== before;
   }
 
-  return { add, recent, list, remove, persist, data: list };
+  return { add, recent, list: () => list, remove, persist, data: list };
 }

@@ -1,4 +1,4 @@
-﻿import fs from 'node:fs';
+import fs from 'node:fs';
 import path from 'node:path';
 
 export function createMilestones({ file = 'state/milestones.json', limit = 120, logger = null } = {}) {
@@ -29,5 +29,5 @@ export function createMilestones({ file = 'state/milestones.json', limit = 120, 
     persist();
     return list.length !== before;
   }
-  return { add, recent, list, remove, data: list };
+  return { add, recent, list: () => list, remove, data: list };
 }
