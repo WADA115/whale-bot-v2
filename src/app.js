@@ -126,6 +126,7 @@ export async function main(argv = process.argv.slice(2)) {
         pythonPath: config.rvc.pythonPath,
         model: config.rvc.model,
         device: config.rvc.device || 'cpu',
+        url: config.rvc.url || '',
         outDir: config.rvc.outDir || path.join(ROOT, 'state', 'voice'),
         logger
       })
