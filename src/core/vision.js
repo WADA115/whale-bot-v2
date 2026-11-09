@@ -6,6 +6,19 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { stripThink } from './router.js';
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function fetchWithRetry(fetchImpl, url, init, attempts = 3) {
+  let last;
+  for (let i = 0; i < attempts; i += 1) {
+    try { return await fetchImpl(url, init); } catch (error) {
+      last = error;
+      if (i < attempts - 1) await sleep(700 * (i + 1));
+    }
+  }
+  throw last;
+}
+
 const DEFAULT_PROMPT = [
   '你在帮 QQ 机器人认图。只写真实可见的内容，不要编。',
   '按三行输出：',
@@ -182,7 +195,7 @@ export function createVisionRouter({
     for (const provider of providers) {
       try {
         const { url, init } = requestFor(provider, { system: '', user, images });
-        const res = await fetchImpl(url, init);
+        const res = await fetchWithRetry(fetchImpl, url, init);
         if (!res.ok) {
           const body = await res.text().catch(() => '');
           throw new Error(`http ${res.status}${body ? ': ' + body.slice(0, 160) : ''}`);
@@ -208,11 +221,11 @@ export function createVisionRouter({
     for (const provider of providers) {
       if (provider.type !== 'ollama') continue;
       try {
-        await fetchImpl(`${String(provider.baseURL).replace(/\/+$/, '').replace(/\/v1$/, '')}/api/chat`, {
+        await fetchWithRetry(fetchImpl, `${String(provider.baseURL).replace(/\/+$/, '').replace(/\/v1$/, '')}/api/chat`, {
           method: 'POST', headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ model: provider.model, messages: [{ role: 'user', content: 'ok' }], stream: false, think: false, keep_alive: provider.keepAlive || '30m', options: { num_predict: 1 } }),
           signal: AbortSignal.timeout(120000)
-        });
+        }, 8);
         logger?.info('vision.warmed', { provider: provider.id, model: provider.model });
       } catch (error) { logger?.warn('vision.warm_failed', { provider: provider.id, error: String(error?.message ?? error) }); }
     }
