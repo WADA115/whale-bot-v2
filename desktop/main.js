@@ -14,9 +14,13 @@ function findRoot(start) {
   }
   return '';
 }
+const packagedDir = process.env.PORTABLE_EXECUTABLE_DIR || path.dirname(app.getPath('exe'));
+const KNOWN_ROOT = 'E:\\deepseek_qq.bot\\qq-bridge-v2';
 const ROOT = process.env.QQ_BRIDGE_ROOT
-  || findRoot(app.isPackaged ? path.dirname(app.getPath('exe')) : path.dirname(__dirname))
+  || findRoot(app.isPackaged ? packagedDir : path.dirname(__dirname))
+  || (fs.existsSync(path.join(KNOWN_ROOT, 'scripts', 'start-core.ps1')) ? KNOWN_ROOT : '')
   || path.dirname(__dirname);
+fs.appendFileSync(path.join(require('node:os').tmpdir(), 'xiaoyu-desktop.log'), 'root=' + ROOT + ' portable=' + (process.env.PORTABLE_EXECUTABLE_DIR || '') + '\n');
 const PANEL = process.env.QQ_BRIDGE_PANEL || 'http://127.0.0.1:3201/next/';
 const STATE_FILE = path.join(ROOT, 'state', 'desktop-window.json');
 let win = null;
@@ -57,11 +61,16 @@ function saveState() {
 }
 
 function startCore() {
+  const logFile = path.join(require('node:os').tmpdir(), 'xiaoyu-desktop.log');
   const script = path.join(ROOT, 'scripts', 'start-core.ps1');
+  fs.appendFileSync(logFile, 'startCore script=' + script + ' exists=' + fs.existsSync(script) + '\n');
   if (!fs.existsSync(script)) return;
-  const child = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script], {
+  const ps = 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe';
+  const child = spawn(ps, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script], {
     cwd: ROOT, detached: true, stdio: 'ignore', windowsHide: true
   });
+  child.on('error', (error) => fs.appendFileSync(logFile, 'startCore error=' + String(error) + '\n'));
+  fs.appendFileSync(logFile, 'startCore pid=' + child.pid + '\n');
   child.unref();
 }
 
