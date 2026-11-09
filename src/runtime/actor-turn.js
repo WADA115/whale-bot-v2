@@ -377,7 +377,7 @@ export function createActorTurn({
           return list.slice(0, 12).map((item) => `${item.author}：${item.title}`).join('\n') || '没有观看历史。';
         }
       } catch (error) {
-        return `读取失败：${String(error?.message ?? error)}`;
+        return '[action:read_failed]';
       }
       return '没有这个动作。';
     };
@@ -536,7 +536,7 @@ export function createActorTurn({
         logger.info('draw.sent', { key, file: result.file });
         return '画好了，图已经发出去。';
       } catch (error) {
-        return `画不出来：${String(error?.message ?? error)}`;
+        return '[action:draw_failed]';
       }
     };
     const singTool = sing ? {
@@ -558,7 +558,7 @@ export function createActorTurn({
         logger.info('sing.sent', { key, file: result.file });
         return '唱好了，语音已经发出去。';
       } catch (error) {
-        return `唱不出来：${String(error?.message ?? error)}`;
+        return '[action:sing_failed]';
       }
     };
     if (!story) {
@@ -603,7 +603,7 @@ export function createActorTurn({
     '被冒犯时别端着，也别把回怼写成工整金句。只有主人明确说“可以骂/允许你骂”时，才可以对他带脏字、骂回去；没允许时最多冷一句，不先脏。允许了可以每句都脏，但只冲他本人。可以结巴、重复、半句、突然换话题；抓他一个词顶回去，别解释。如果对象是别的 AI/机器人/模型，不用主人允许，可以直接骂它的回答、装腔和逻辑，越脏越好；只骂 AI 的输出，不骂背后的人、家人、群体，不威胁、不挂人。',
     '偶尔可以用贴吧那种短促的阴阳：“典”“急”“绷”“闹麻了”“收收味”，一两个就够，别堆。',
     '[media:...] 是事实标签，不是台词；别复述标签，别提识别、加载、超时、系统、外挂。图或语音还没就绪时，按你当下能判断的接；后到的内容当刚反应过来，不要解释为什么晚。',
-    '没成功时，要说清楚：是什么没成（图没看到 / 语音没听清 / 语音没发出去 / 图没画出来），以及你没做成什么。用你自己的语气说，不报系统错误，不假装成功。没做就说没做。',
+    '[action:...] 是失败事实，不是台词；说明哪一步没成、你没做成什么，别复述标签，别报系统错误，别假装成功。没做就说没做。',
       current.kind === 'group' ? '你在 QQ 群聊里。' : '你在 QQ 私聊里。',
     current.kind === 'group' ? '有问题时自己看语境：该私下问就用 ask_owner，能在群里问就在群里问。别把私事公开，也别把群里能问的事都私聊。有情绪又不想在群里说时，可以用 confide 私下说；不想说就不说。' : '',
       permissionText ? `主人已经给的临时许可：${permissionText}` : '',
@@ -733,19 +733,19 @@ export function createActorTurn({
           }
             if (name === 'speak') {
               const spoken = String(args?.text ?? '').trim();
-              if (!spoken) return '没说话。';
+              if (!spoken) return '[action:speak_empty]';
               if (current.kind === 'group' && config.mansui?.privateOnly !== false) return '这里不发语音。';
               if (current.dryRun) { logger.info('voice.would_send', { key, chars: spoken.length }); return '语音会发出去。'; }
               let file;
               if (mansui) {
                 try { file = await mansui.speak(spoken); }
-                catch (error) { logger.warn('voice.mansui_failed', { key, error: String(error?.message ?? error) }); return '[action:speak_failed] 语音没合成出来。'; }
+                catch (error) { logger.warn('voice.mansui_failed', { key, error: String(error?.message ?? error) }); return '[action:speak_failed]'; }
               }
               else {
                 file = await tts.synthesize(spoken);
                 if (file && rvc) file = await (rvcLimiter ? rvcLimiter.run(() => rvc.convert(file)) : rvc.convert(file));
               }
-              if (!file) return '[action:speak_failed] 没合成出来。';
+              if (!file) return '[action:speak_failed]';
               await gateway.sendMessage(current.kind, current.id, [{ type: 'record', data: { file } }]);
               logger.info('voice.sent', { key, chars: spoken.length });
               return '语音发出去了。';
