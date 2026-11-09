@@ -74,9 +74,9 @@ export async function sendHumanReply({
 
   let stickerSent = false;
   if (sticker && !stopped) {
-    const idValue = String(sticker.resId || sticker.id || '');
-    const segment = idValue
-      ? { type: 'mface', data: { id: idValue, summary: sticker.desc || '[表情]', url: sticker.url || '' } }
+    const emojiId = String(sticker.md5 || (String(sticker.resId || sticker.id || '').match(/[0-9a-fA-F]{32}/)?.[0]) || '');
+    const segment = emojiId
+      ? { type: 'mface', data: { emojiId, emojiPackageId: String(sticker.emojiPackageId || ''), emojiKey: String(sticker.resId || sticker.id || ''), text: sticker.desc || '[表情]' } }
       : { type: 'image', data: { file: sticker.url } };
     try {
       await gateway.sendMessage(kind, id, [segment]);
