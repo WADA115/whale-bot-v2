@@ -1,4 +1,4 @@
-﻿{
+{
     "version":  "0.1.0",
     "name":  "xiaoyu-desktop",
     "main":  "main.js",
@@ -8,7 +8,35 @@
                     "dev":  "node launch.js"
                 },
     "devDependencies":  {
-                            "electron":  "^45.2.3"
+                            "electron":  "^45.2.3",
+                            "electron-builder":  "^26.18.0"
                         },
-    "private":  true
+    "private":  true,
+    "build":  {
+                  "appId":  "com.xiaoyu.panel",
+                  "productName":  "小鲸鱼",
+                  "directories":  {
+                                      "output":  "dist"
+                                  },
+                  "asar":  true,
+                  "files":  [
+                                "main.js",
+                                "package.json"
+                            ],
+                  "win":  {
+                              "target":  [
+                                             {
+                                                 "target":  "portable",
+                                                 "arch":  [
+                                                              "x64"
+                                                          ]
+                                             }
+                                         ],
+                              "artifactName":  "小鲸鱼-${version}.exe",
+                              "icon":  "../web/next/preview.png"
+                          },
+                  "portable":  {
+                                   "artifactName":  "小鲸鱼-${version}.exe"
+                               }
+              }
 }

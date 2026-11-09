@@ -4,7 +4,19 @@ const fs = require('node:fs');
 const net = require('node:net');
 const { spawn } = require('node:child_process');
 
-const ROOT = process.env.QQ_BRIDGE_ROOT || path.dirname(__dirname);
+function findRoot(start) {
+  let dir = start;
+  for (let i = 0; i < 4; i += 1) {
+    if (fs.existsSync(path.join(dir, 'scripts', 'start-core.ps1'))) return dir;
+    const up = path.dirname(dir);
+    if (up === dir) break;
+    dir = up;
+  }
+  return '';
+}
+const ROOT = process.env.QQ_BRIDGE_ROOT
+  || findRoot(app.isPackaged ? path.dirname(app.getPath('exe')) : path.dirname(__dirname))
+  || path.dirname(__dirname);
 const PANEL = process.env.QQ_BRIDGE_PANEL || 'http://127.0.0.1:3201/next/';
 const STATE_FILE = path.join(ROOT, 'state', 'desktop-window.json');
 let win = null;
@@ -107,7 +119,8 @@ function createWindow() {
 function buildTray() {
   const iconPath = path.join(ROOT, 'web', 'next', 'preview.png');
   let icon = nativeImage.createFromPath(iconPath);
-  if (!icon.isEmpty()) icon = icon.resize({ width: 18, height: 18 });
+  if (icon.isEmpty()) return;
+  icon = icon.resize({ width: 18, height: 18 });
   tray = new Tray(icon);
   tray.setToolTip('小鲸鱼');
   const menu = Menu.buildFromTemplate([

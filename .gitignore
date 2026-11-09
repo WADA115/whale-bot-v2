@@ -18,3 +18,5 @@ desktop/run*
 desktop/e*.out
 desktop/e*.err
 desktop/debug.log
+
+desktop/dist/
