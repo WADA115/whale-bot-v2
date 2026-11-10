@@ -845,6 +845,9 @@ function switchPage(name) {
 $$('.rail-item').forEach((btn) => btn.addEventListener('click', () => switchPage(btn.dataset.page)));
 $('#storyLoad').addEventListener('click', () => loadStory($('#storyKey').value));
 $('#storySave').addEventListener('click', saveStory);
+$('#storyPersonLoad').addEventListener('click', loadPerson);
+$('#storyPersonForget').addEventListener('click', forgetPerson);
+$('#storyPersonSave').addEventListener('click', savePerson);
 $('#mindDaydream').addEventListener('click', mindDaydream);
 $('#mindSave').addEventListener('click', saveMind);
 $('#biliSearch').addEventListener('click', biliSearch);
@@ -1133,7 +1136,7 @@ $('#stopAI').addEventListener('click', async () => {
   } finally {
     setTimeout(() => {
       button.disabled = false;
-      button.textContent = '释放 AI';
+      button.textContent = '关闭 AI 服务';
     }, 4000);
   }
 });
