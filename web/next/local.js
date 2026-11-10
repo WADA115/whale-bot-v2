@@ -201,6 +201,40 @@ async function loadStickers() {
   }
 }
 
+const KAOMOJI = [
+  '(๑•̀ㅂ•́)و✧', '(´・ω・`)', '_(:з」∠)_', '(≧▽≦)',
+  '(｡•́︿•̀｡)', '(๑•́ ₃ •̀๑)', '(ง •̀_•́)ง', '(づ｡◕‿‿◕｡)づ',
+  '(￣▽￣)', '(╯°□°）╯︵ ┻━┻', '(´；ω；`)', '(〃\'▽\'〃)',
+  '( •̀ ω •́ )✧', '(´▽`ʃ♡ƪ)', '(๑¯◡¯๑)', '(｡•̀ᴗ-)✧'
+];
+
+function renderKaomoji() {
+  if (!kaomojiGrid || kaomojiGrid.childElementCount) return;
+  for (const text of KAOMOJI) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = text;
+    button.addEventListener('click', () => {
+      const start = input.selectionStart ?? input.value.length;
+      const end = input.selectionEnd ?? start;
+      input.value = input.value.slice(0, start) + text + input.value.slice(end);
+      input.selectionStart = input.selectionEnd = start + text.length;
+      kaomojiPanel.hidden = true;
+      input.focus();
+      resize();
+    });
+    kaomojiGrid.append(button);
+  }
+}
+
+kaomojiToggle?.addEventListener('click', () => {
+  if (!kaomojiPanel) return;
+  renderKaomoji();
+  const show = kaomojiPanel.hidden;
+  kaomojiPanel.hidden = !show;
+  if (stickerPanel) stickerPanel.hidden = true;
+});
+
 stickerToggle?.addEventListener('click', async () => {
   if (!stickerPanel) return;
   stickerPanel.hidden = !stickerPanel.hidden;
@@ -208,9 +242,11 @@ stickerToggle?.addEventListener('click', async () => {
 });
 
 document.addEventListener('click', (event) => {
-  if (!stickerPanel || stickerPanel.hidden) return;
-  if (stickerPanel.contains(event.target) || stickerToggle?.contains(event.target)) return;
-  stickerPanel.hidden = true;
+  for (const panel of [stickerPanel, kaomojiPanel]) {
+    if (!panel || panel.hidden) continue;
+    if (panel.contains(event.target) || stickerToggle?.contains(event.target) || kaomojiToggle?.contains(event.target)) continue;
+    panel.hidden = true;
+  }
 });
 
 /* 直接录音，不走文件选择 */

@@ -169,3 +169,17 @@ body {
   border: 2px dashed rgba(232,196,124,.45); z-index: 20;
 }
 .drop-overlay.show { display: grid; }
+
+.kaomoji-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; max-height: 240px; overflow-y: auto; }
+.kaomoji-grid button {
+  padding: 7px 8px;
+  color: #c8d4e5;
+  background: rgba(255,255,255,.025);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.kaomoji-grid button:hover { color: var(--gold); border-color: rgba(232,196,124,.4); }
