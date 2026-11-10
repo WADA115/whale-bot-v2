@@ -69,7 +69,7 @@ body {
 .member i { width: 7px; height: 7px; border-radius: 50%; background: #78e0b0; }
 .member small { color: var(--gold); font-size: 9px; }
 .members-hint { margin-top: 18px; color: #5f7088; font-size: 10px; line-height: 1.6; }
-@media (max-width: 760px) {
+@media (max-width: 680px) {
   .group-main { grid-template-columns: 1fr; }
   .members { display: none; }
   .invite-box { display: none; }

@@ -227,12 +227,16 @@ function createWindow() {
       const base = new URL(PANEL);
       const target = new URL(url);
       if (target.origin === base.origin) {
+        const isGroup = target.pathname.includes('/group.html');
         return {
           action: 'allow',
           overrideBrowserWindowOptions: {
-            width: 680, height: 860, minWidth: 420, minHeight: 560,
-            title: '和小鲸鱼说话',
-            backgroundColor: '#060b14',
+            width: isGroup ? 1100 : 680,
+            height: isGroup ? 820 : 860,
+            minWidth: isGroup ? 760 : 420,
+            minHeight: isGroup ? 560 : 560,
+            title: isGroup ? '小鲸鱼群聊' : '和小鲸鱼说话',
+            backgroundColor: isGroup ? '#050a12' : '#060b14',
             autoHideMenuBar: true,
             webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true }
           }
