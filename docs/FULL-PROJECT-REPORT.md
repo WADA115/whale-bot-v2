@@ -1,6 +1,6 @@
-# 小鲸鱼 QQ 角色运行时：完整项目报告
+# 小鲸鱼角色运行时：完整项目报告
 
-> 版本：v2  
+> 版本：v2 / 本地优先版  
 > 更新时间：2026-11-10  
 > 这份报告描述当前真实状态，不把计划写成已完成。
 
@@ -8,41 +8,49 @@
 
 ## 0. 摘要
 
-小鲸鱼是一个自托管的 QQ 角色运行时。
+小鲸鱼原本是一个自托管的 QQ 角色运行时。
 
-它不是关键词机器人，也不是客服助手。它试图让一个角色在 QQ 里持续存在：
-
-- 有自己的身份、立场、偏好和自我形象；
-- 有连续的记忆、关系和没说完的话；
-- 群聊和私聊里是同一个人；
-- 会主动、会沉默、会错过、会事后想起；
-- 能调用工具，但工具不写进角色；
-- 需要越界时先问主人；
-- 对主人偏心、护短，但不是没有判断。
-
-当前状态：
+现在它是一个**本地优先**的角色运行时：
 
 ```text
-文字聊天       可用
-私聊 / 群聊    可用
-共享上下文     可用
-权限请求/批准  可用
-成员记忆       可用
-日记           可用
-关系节点       可用
-旧记忆整理     可用
-图片识别       可用，带缓存和重试
-语音识别       可用，带 VAD 和缓存
-语音发送       Edge + RVC，可用但情绪平
-表情 / 引用    已修，真实 QQ 仍需复测
-Web 面板       可用
-Electron 桌面  可用，已打包单文件 exe
-Live2D 桌宠    未做
-情绪语音 s1    未完成
-真实全链路     未完整验收
+本地桌面对话是主入口
+QQ 适配层保留，但暂不继续投入
+角色、记忆、关系、日记、媒体都在本机
 ```
 
-核心约束始终没变：
+当前可以做到：
+
+```text
+本地文字聊天
+本地发图
+本地发表情
+本地录语音
+图片识别
+语音识别
+语音发送
+颜文字
+媒体历史
+两套本地媒体库
+桌面通知 / 托盘未读
+权限系统
+成员记忆
+日记
+关系节点
+旧记忆整理
+Web 面板
+Electron 独立窗口
+```
+
+当前不做：
+
+```text
+继续和 QQ 风控对抗
+换号 / 买号 / 借号
+把权限写成硬沙箱
+给角色加好感度 / 情绪分数 / 固定台词
+```
+
+核心约束仍然没变：
 
 ```text
 角色层不写死：
@@ -53,8 +61,8 @@ Live2D 桌宠    未做
 不写函数
 ```
 
-运行时可以有超时、计数、缓存、日志、权限状态。  
-这些是运行时的东西，不属于角色。
+运行时可以有状态、超时、缓存、日志、权限。  
+这些不属于角色。
 
 ---
 
@@ -63,11 +71,12 @@ Live2D 桌宠    未做
 ### 1.1 它是什么
 
 ```text
-一个自托管的 QQ 角色运行时
 一个长期存在的角色
 一套跨会话记忆
+一套本地媒体库
 一套双向权限
-一组后台能力
+一个本地桌面入口
+一个可替换的平台适配层
 ```
 
 ### 1.2 它不是什么
@@ -78,23 +87,32 @@ Live2D 桌宠    未做
 不是角色卡播放器
 不是好感度养成游戏
 不是无边界工具代理
+不是 QQ 风控对抗工具
 ```
 
-### 1.3 硬边界
+### 1.3 为什么转向本地
 
-以下事情不因权限、调情、角色关系而开放：
+QQ 的第三方客户端存在风控和封禁风险。
+
+继续做：
 
 ```text
-攻击现实家人
-攻击现实中的真人
-攻击受保护群体
-威胁
-开盒 / 人肉
-身份攻击
+换号
+买号
+借号
+绕风控
+频繁重连
 ```
 
-权限只能打开“角色之间/角色与主人之间”的临时空间，  
-不能打开这些底线。
+会把角色、账号和更多关联账号一起拖进去。
+
+所以当前决策是：
+
+```text
+QQ 先不动
+本地桌面作为主入口
+等平台环境变化，再换适配层
+```
 
 ---
 
@@ -141,12 +159,13 @@ selfImage
 ```text
 mind/           内在状态、心跳、离线连续感
 story/          关系、共同经历、场景、人物
-state/scenes    每个会话的最近往返
+state/scenes    会话往返
 state/contacts  成员记忆
 state/moments   她以后还会想起的事
 state/diary     她自己写的日记
 state/milestones 关系节点
 state/memory-summary.md 整理后的旧事
+state/local-history.json 本地对话历史
 ```
 
 ### 2.4 语音弯路
@@ -244,6 +263,24 @@ Electron 独立窗口
 打包单文件 exe
 ```
 
+### 2.10 本地优先
+
+QQ 被暂停后，新增：
+
+```text
+本地聊天窗
+本地发图 / 表情 / 语音
+颜文字
+本地媒体库
+媒体历史
+媒体库管理
+桌面通知
+托盘未读
+```
+
+本地聊天走同一套角色、记忆和工具，  
+但不经过 OneBot。
+
 ---
 
 ## 3. 设计原则
@@ -318,11 +355,13 @@ if 情绪=生气 -> 说某句
 ## 4. 总体架构
 
 ```text
-QQ
+本地桌面 / 可选 QQ
  │
- ├─ SnowLuma / OneBot
- │    ├─ HTTP 3000
- │    └─ WebSocket 3001
+ ├─ Electron 桌面
+ │    ├─ 主面板
+ │    ├─ 本地对话窗
+ │    ├─ 托盘 / 通知
+ │    └─ 单文件 exe
  │
  ├─ v2 运行时
  │    ├─ app.js
@@ -334,29 +373,37 @@ QQ
  │    ├─ platform/
  │    └─ http/
  │
+ ├─ 本地面板 / API 3201
  ├─ ASR 3199
- ├─ 面板 / API 3201
- ├─ Ollama 11434
  ├─ RVC 9881
+ ├─ Ollama 11434
+ ├─ SnowLuma / OneBot 3000 / 3001（保留，不主用）
  └─ GPT-SoVITS 9880（按需，当前不用）
 ```
 
-### 4.1 数据流
+### 4.1 本地链路
+
+```text
+本地对话窗
+→ POST /api/local/chat
+→ 构造 private:local 消息
+→ 同一套 actor
+→ 输出被本地 gateway 拦截
+→ 不发送到 QQ
+→ 文字 / 图片 / 语音返回窗口
+```
+
+### 4.2 QQ 链路（保留）
 
 ```text
 QQ 消息
+→ SnowLuma
 → OneBot 标准化
-→ 共享会话流
-→ 成员记忆
-→ 群聊观察 / 黑话
-→ 权限判断
-→ 会话 actor 队列
-→ 上下文组装
-→ 模型 / 工具
-→ 回复清洗
-→ 文字 / 语音 / 表情
-→ 记录发出
+→ 同一套 actor
+→ 发送回 QQ
 ```
+
+当前不作为主入口。
 
 ---
 
@@ -365,12 +412,15 @@ QQ 消息
 ```text
 qq-bridge-v2/
 ├─ characters/          角色卡
-├─ core/                基础能力
 ├─ desktop/             Electron 桌面壳
+│  ├─ main.js
+│  ├─ launch.js
+│  ├─ assets/
+│  └─ dist/
 ├─ docs/                文档
 ├─ scripts/             启动、维护、本地路径
 ├─ src/
-│  ├─ runtime/          一次回合、能力、发言、锁
+│  ├─ runtime/          回合、能力、语音、本地对话
 │  ├─ character/        场景、表达、黑话、任务
 │  ├─ mind/             内在状态、daydream
 │  ├─ story/            关系、共同经历、编辑
@@ -379,9 +429,16 @@ qq-bridge-v2/
 │  ├─ gateway/          OneBot
 │  └─ http/             面板 API
 ├─ state/               运行数据（不进仓库）
+│  ├─ media/
+│  │  ├─ her/
+│  │  └─ user/
+│  ├─ local-history.json
+│  ├─ diary.json
+│  ├─ milestones.json
+│  └─ memory-summary.md
 ├─ tests/               35 个测试文件
 ├─ training/            语音训练资料
-├─ web/next/            面板前端
+├─ web/next/            面板 + 本地对话前端
 ├─ config.example.json
 ├─ config.json          本地配置（不进仓库）
 └─ package.json
@@ -394,10 +451,10 @@ qq-bridge-v2/
 ### 6.1 端口
 
 ```text
-3000  OneBot HTTP
-3001  OneBot WebSocket
+3000  OneBot HTTP（保留）
+3001  OneBot WebSocket（保留）
 3199  ASR
-3201  面板 / API
+3201  面板 / API / 本地媒体
 5099  SnowLuma WebUI
 9880  GPT-SoVITS（按需）
 9881  RVC 常驻服务
@@ -427,53 +484,47 @@ v2 core
 ### 6.3 桌面
 
 ```text
-desktop/main.js
-desktop/launch.js
+desktop/小鲸鱼面板.exe
 desktop/启动小鲸鱼.vbs
-desktop/dist/小鲸鱼面板.exe
 ```
+
+桌面启动器会清除：
+
+```text
+ELECTRON_RUN_AS_NODE
+```
+
+否则 Electron 会被当成 Node 跑。
 
 ---
 
 ## 7. 一次消息的完整链路
 
-### 7.1 入站
+### 7.1 本地入站
+
+```text
+本地对话窗输入
+→ /api/local/chat
+→ 附件校验
+→ 构造 private:local
+→ 本地历史记录用户消息
+→ actor 队列
+```
+
+### 7.2 QQ 入站
 
 ```text
 SnowLuma 收到 QQ 消息
 → 网关标准化
-→ 记录共享会话流
-→ 记录成员记忆
 → 引用消息取原消息
-→ 群聊给 live-group / 黑话观察器
-→ 权限判断（不阻塞）
-→ 决定是否处理
-→ 进入对应会话的 actor 队列
+→ 共享会话流
+→ 成员记忆
+→ 群聊观察 / 黑话
+→ 权限判断
+→ actor 队列
 ```
 
-### 7.2 引用
-
-OneBot 的 `reply` 段只有消息 id，没有原话。
-
-现在：
-
-```text
-reply 段
-→ message.replyTo
-→ gateway.getMessage()
-→ 原消息发送者 / 文本
-→ 进入提示
-```
-
-她能看到：
-
-```text
-他引用了一条：某某：原话
-```
-
-非文字引用会标记为“非文字消息”。
-
-### 7.3 上下文组装
+### 7.3 上下文
 
 ```text
 当前会话最近往返
@@ -495,12 +546,9 @@ reply 段
 + 被拒绝的事
 ```
 
-### 7.4 生成
+### 7.4 工具
 
 ```text
-直接回复
-或调用工具：
-
 speak
 request_permission
 ask_owner
@@ -516,11 +564,29 @@ bili_*
 look_group_history
 ```
 
-### 7.5 出站
+### 7.5 本地出站
+
+```text
+reply 文字
+→ 本地 gateway 拦截
+→ 写入 local-history
+→ 返回聊天窗
+```
+
+图片 / 表情 / 语音：
+
+```text
+sendMessage 段
+→ 缓存到 state/media/her
+→ 返回 /media/her/...
+→ 聊天窗显示
+```
+
+### 7.6 QQ 出站
 
 ```text
 文字 → 当前会话
-图片 / 语音 / 表情 → gateway
+图片 / 语音 / 表情 → OneBot gateway
 记录发出的文字到共享流
 ```
 
@@ -608,10 +674,7 @@ confide
 最近聊过的几句话
 ```
 
-记忆条目带来源和时间，  
-但没有次数、好感、等级。
-
-面板可查看、忘掉某句、忘掉这个人。
+没有次数、好感、等级。
 
 ### 9.2 moment
 
@@ -622,8 +685,11 @@ confide
 是当众还是私下
 ```
 
-她可以主动用 `note_moment` 记，  
-不是每句都记。
+工具：
+
+```text
+note_moment
+```
 
 ### 9.3 日记
 
@@ -639,17 +705,9 @@ confide
 write_diary
 ```
 
-特点：
-
-```text
-不是每轮都写
-不写流水账
-不是模板日记
-内容由她自己写
-```
-
-她回复时会带最近两段，  
-作为自己的记忆。
+不是每轮都写，  
+不写流水账，  
+不是模板日记。
 
 ### 9.4 关系节点
 
@@ -693,14 +751,18 @@ remember_milestone
 之后定期检查；  
 内容没变就跳过。
 
-### 9.6 拒绝记忆
+### 9.6 本地对话历史
 
-被拒绝的事会留在权限状态里：
+`state/local-history.json`：
 
 ```text
-之前没让做的：...
-别纠缠；相关时再提。
+本地用户消息
+她的回复
+图片 / 表情 / 语音段
 ```
+
+用于刷新后恢复聊天，  
+不进入 QQ。
 
 ### 9.7 内在状态
 
@@ -730,172 +792,170 @@ held.md
 
 ---
 
-## 10. 跨会话与隐私
+## 10. 本地媒体库
 
-所有私聊和群聊进入同一个环形流：
-
-```text
-最近 80 条进出消息
-每次回复带最近 12 条其他会话背景
-```
-
-### 隐私
-
-群聊上下文里，私聊内容只显示：
+### 10.1 两套库
 
 ```text
-私聊 主人：说过一件事（原话不展开）
+state/media/her    她自己的
+state/media/user   你的
 ```
 
-她仍然知道“发生过”，  
-但拿不到私聊原句。
+各有：
 
-私聊里可以看到群聊内容，  
-但提示要求不把私聊原话带回群。
+```text
+index.json
+图片 / 表情 / 语音文件
+```
 
-记忆整理摘要只在私聊进入提示，  
-群聊不读。
+按内容 hash 去重，  
+通过 `/media/her/...`、`/media/user/...` 读取。
+
+### 10.2 你的库
+
+来源：
+
+```text
+粘贴图片
+拖入图片
+录音
+从表情面板选择
+```
+
+接口：
+
+```text
+POST /api/local/upload
+GET  /api/media/list?scope=user
+POST /api/media/delete
+```
+
+### 10.3 她的库
+
+来源：
+
+```text
+她发的图片
+她发的表情
+她发的语音
+```
+
+本地 gateway 拦截后自动缓存：
+
+```text
+image → state/media/her
+sticker → state/media/her
+record → state/media/her
+```
+
+聊天窗直接读取本地文件，  
+不依赖 QQ 临时链接。
+
+### 10.4 媒体历史
+
+`state/local-history.json` 记录：
+
+```text
+user：文字 + 附件段
+assistant：文字 + 附件段
+```
+
+刷新后：
+
+```text
+图片还能显示
+语音还能播放
+表情还能显示
+```
+
+### 10.5 管理
+
+本地对话窗有：
+
+```text
+库
+├─ 我的
+└─ 她的
+```
+
+可以：
+
+```text
+看缩略图
+点图发送
+删除
+```
 
 ---
 
-## 11. 虚拟感官
+## 11. 本地对话界面
 
-她能感到的只有 QQ：
-
-```text
-时间：深夜 / 清早 / 晚上
-空间：私聊 / 群聊
-公开性：当众 / 私下
-媒体：图片 / 语音
-间隔：中间隔了很久
-```
-
-提示里会出现：
+### 11.1 独立窗口
 
 ```text
-此刻：深夜，这句话是当众说的，他发了图。
+desktop/main.js
+→ window.open('/next/local.html')
+→ Electron 独立 BrowserWindow
 ```
 
-不假装闻到、摸到、现实里发生过。
+不是面板里的输入框。
+
+### 11.2 操作
+
+QQ 式：
+
+```text
+Ctrl+V 粘贴图片
+拖图片进窗口
+表情面板
+颜文字面板
+点“说话”录音
+Enter 发送
+Shift+Enter 换行
+```
+
+没有文件选择框。
+
+### 11.3 显示
+
+```text
+用户消息靠右
+她的回复靠左
+图片直接显示
+语音带播放器
+表情显示为图
+```
+
+### 11.4 通知
+
+主进程轮询本地历史：
+
+```text
+有新 assistant 消息
+且对话窗没聚焦
+→ Windows 通知
+→ 托盘未读 +1
+```
+
+点通知：
+
+```text
+打开对话窗
+清空未读
+```
 
 ---
 
-## 12. 权限
+## 12. 视觉
 
-### 12.1 请求
-
-角色调用 `request_permission`。
-
-群聊请求同时发：
-
-```text
-当前群
-主人私聊
-```
-
-私聊请求只发主人。
-
-### 12.2 批准
-
-当前设置：
-
-```text
-groupApprovers: owner
-```
-
-群里只有主人私聊能批。  
-群里其他人说“行”不算。
-
-### 12.3 口语
-
-支持：
-
-```text
-行
-可以
-拿去
-算了
-不给
-再加 20 分钟
-减 10 分钟
-改成 10 分钟
-不要私聊
-不要群聊
-```
-
-不是固定命令表，  
-按意思判断。
-
-### 12.4 默认
-
-```text
-范围：群聊 + 私聊
-时长：三十分钟
-```
-
-### 12.5 主动给
-
-主人可以直接说：
-
-```text
-今天可以骂
-这货可以骂
-给你十分钟
-```
-
-不必等她请求。
-
-### 12.6 撤回
-
-批准后可以：
-
-```text
-算了
-不给
-不行
-```
-
-### 12.7 面板
-
-权限中心：
-
-```text
-待批
-有效
-剩余时间
-生效范围
-同意 / 拒绝
-撤回
-加十分钟 / 减十分钟
-```
-
-### 12.8 边界
-
-不能申请：
-
-```text
-家人
-真人
-群体
-威胁
-开盒
-```
-
-权限是提示层约束，不是硬沙箱。  
-它约束模型，不替代系统级隔离。
-
----
-
-## 13. 媒体能力
-
-### 13.1 视觉
+### 12.1 模型
 
 ```text
 Ollama
 qwen3-vl:4b
 ```
 
-当前配置：
+配置：
 
 ```text
 num_ctx 4096
@@ -905,7 +965,7 @@ provider timeout 30s
 actor wait 10s
 ```
 
-处理链路：
+链路：
 
 ```text
 下载原图
@@ -922,15 +982,6 @@ actor wait 10s
 state/cache/vision.json
 ```
 
-特点：
-
-```text
-同一张图第二次不再调模型
-同一 URL 不再下载
-模型常驻 GPU
-Ollama 未就绪时重试
-```
-
 实测：
 
 ```text
@@ -938,7 +989,28 @@ Ollama 未就绪时重试
 同一张图缓存命中约 1 毫秒
 ```
 
-### 13.2 语音识别
+### 12.2 失败状态
+
+```text
+[media:image_pending]
+这张图你现在没看到，不是没看清内容。
+不要描述图里的任何内容，不要猜。
+```
+
+工具失败：
+
+```text
+[action:draw_failed]
+[action:read_failed]
+```
+
+这些是事实标签，不是台词。
+
+---
+
+## 13. 语音
+
+### 13.1 识别
 
 ```text
 sherpa-onnx paraformer-zh-small
@@ -946,7 +1018,7 @@ int8
 本地 3199
 ```
 
-处理链路：
+链路：
 
 ```text
 下载 / 读取语音
@@ -965,21 +1037,22 @@ state/cache/asr.json
 实测：
 
 ```text
-第一次约 550 毫秒
+WAV 第一次约 550 毫秒
 同一段缓存命中 0 毫秒
+WebM/Opus 上传也能转写
 ```
 
-### 13.3 语音合成
+### 13.2 合成
 
 ```text
 Edge 中文
 → RVC ATRI
 ```
 
-RVC 当前：
+RVC：
 
 ```text
-9881 常驻服务
+9881 常驻
 GPU
 半精度
 ```
@@ -993,29 +1066,22 @@ GPU 常驻第一次约 3.77 秒
 GPU 常驻后续约 0.12 秒
 ```
 
-服务失败会回退 CLI。
-
-### 13.4 并发
+### 13.3 本地录音
 
 ```text
-识图：单并发
-ASR：单并发
-RVC：单并发
+MediaRecorder
+→ WebM / Opus
+→ 上传到 user 库
+→ ASR
 ```
 
-避免多张图、识图和 RVC 互相抢 GPU。
-
-### 13.5 失败状态
-
-视觉超时或失败：
+Electron 麦克风权限：
 
 ```text
-[media:image_pending]
-这张图你现在没看到，不是没看清内容。
-不要描述图里的任何内容，不要猜。
+getUserMedia({audio:true}) → ok
 ```
 
-语音超时或失败：
+### 13.4 失败状态
 
 ```text
 [media:voice_pending]
@@ -1023,22 +1089,9 @@ RVC：单并发
 不要复述语音内容。
 ```
 
-工具失败：
-
-```text
-[action:speak_failed]
-[action:draw_failed]
-[action:sing_failed]
-[action:read_failed]
-```
-
-这些是事实标签，不是台词。  
-模型需要说明哪一步没成、没做成什么，  
-不能假装成功。
-
 ---
 
-## 14. 表达、表情与引用
+## 14. 表达
 
 ### 14.1 文字
 
@@ -1046,13 +1099,18 @@ RVC：单并发
 
 ### 14.2 颜文字
 
-颜文字是正常文本，不会被过滤：
+本地对话窗有颜文字面板：
 
 ```text
 (๑•̀ㅂ•́)و✧
 (´・ω・`)
 _(:з」∠)_
+(づ｡◕‿‿◕｡)づ
+(╯°□°）╯︵ ┻━┻
 ```
+
+点击插入输入框，  
+不是固定回复。
 
 ### 14.3 QQ 表情
 
@@ -1067,30 +1125,118 @@ emojiKey      = resId
 text          = 表情备注
 ```
 
+本地模式走：
+
+```text
+local-sticker
+→ 下载到 state/media/her
+```
+
 失败回退普通 image。
 
 ### 14.4 引用
 
-收到：
+QQ 入站：
 
 ```text
-reply 段 → get_msg → 原消息
+reply 段
+→ get_msg
+→ 原消息
+→ 进入提示
 ```
 
-发送：
-
-```text
-当前没有主动引用工具
-她能看到别人的引用
-```
-
-真实 QQ 仍需复测引用读取。
+当前没有主动引用工具。
 
 ---
 
-## 15. 主动性与时间
+## 15. 权限
 
-### 15.1 daydream
+### 15.1 请求
+
+角色调用 `request_permission`。
+
+群聊请求同时发：
+
+```text
+当前群
+主人私聊
+```
+
+私聊请求只发主人。
+
+### 15.2 批准
+
+当前设置：
+
+```text
+groupApprovers: owner
+```
+
+群里只有主人私聊能批。
+
+### 15.3 口语
+
+支持：
+
+```text
+行
+可以
+拿去
+算了
+不给
+再加 20 分钟
+减 10 分钟
+改成 10 分钟
+不要私聊
+不要群聊
+```
+
+不是固定命令表。
+
+### 15.4 默认
+
+```text
+范围：群聊 + 私聊
+时长：三十分钟
+```
+
+### 15.5 主动给 / 撤回
+
+```text
+今天可以骂
+这货可以骂
+给你十分钟
+算了
+不给
+不行
+```
+
+### 15.6 边界
+
+不能申请：
+
+```text
+家人
+真人
+群体
+威胁
+开盒
+```
+
+权限是提示层约束，不是硬沙箱。
+
+### 15.7 本地对话的限制
+
+本地 `private:local` 不走 QQ 权限审批。
+
+她可以说话、用工具，  
+但本地没有群审批界面。
+
+---
+
+## 16. 主动性与时间
+
+### 16.1 daydream
 
 `src/mind/daydream.js`
 
@@ -1109,18 +1255,15 @@ reply 段 → get_msg → 原消息
 内在状态推进
 ```
 
-未验证：
+未完成：
 
 ```text
-她真的会自己想起一件事并发出来
+本地主动发消息
 ```
 
-### 15.2 主动性
-
-现有：
+### 16.2 现有主动性
 
 ```text
-daydream
 note_moment
 write_diary
 remember_milestone
@@ -1129,13 +1272,11 @@ remember_milestone
 她可以记录，  
 不一定会主动发消息。
 
-主动私聊仍受运行时策略约束。
-
 ---
 
-## 16. 黑话与知识
+## 17. 黑话与知识
 
-### 16.1 黑话
+### 17.1 黑话
 
 群聊消息进入观察器，  
 够一批后模型提取候选。
@@ -1161,7 +1302,7 @@ Bing 搜索
 
 没有固定词表。
 
-### 16.2 本地检索
+### 17.2 本地检索
 
 `search_local`：
 
@@ -1171,12 +1312,9 @@ SQLite FTS 优先
 不额外走网络
 ```
 
-适合查旧事、设定、视频背景。  
-新主题没灌入时，查不到就是查不到。
-
 ---
 
-## 17. 平台
+## 18. 平台
 
 ### B站
 
@@ -1198,15 +1336,12 @@ SQLite FTS 优先
 可见范围
 ```
 
-动作有超时，  
-失败不影响主对话。
-
-当前代码可用，  
-真实平台操作未全测。
+当前代码保留，  
+QQ 平台实机不主用。
 
 ---
 
-## 18. 面板
+## 19. 面板
 
 包含：
 
@@ -1227,19 +1362,25 @@ Story Agency
 关系节点
 ```
 
-权限中心可操作：
+权限中心：
 
 ```text
-待批、有效、同意、拒绝、撤回、加减时间
+待批
+有效
+同意 / 拒绝
+撤回
+加减时间
 ```
 
-记忆区可：
+记忆区：
 
 ```text
-查看、忘掉某句、忘掉这个人
+查看
+忘掉某句
+忘掉这个人
 ```
 
-日记 / 关系节点可：
+日记 / 关系节点：
 
 ```text
 查看
@@ -1248,15 +1389,15 @@ Story Agency
 
 ---
 
-## 19. 桌面壳
+## 20. 桌面壳
 
-### 19.1 技术
+### 20.1 技术
 
 ```text
 Electron
 ```
 
-### 19.2 入口
+### 20.2 入口
 
 ```text
 desktop/main.js
@@ -1265,7 +1406,7 @@ desktop/启动小鲸鱼.vbs
 desktop/dist/小鲸鱼面板.exe
 ```
 
-### 19.3 功能
+### 20.3 功能
 
 ```text
 独立窗口
@@ -1274,20 +1415,37 @@ desktop/dist/小鲸鱼面板.exe
 单实例
 关闭收进托盘
 窗口大小 / 位置记忆
-面板服务未起时自动启动 core
+面板服务没起时自动启动 core
 ```
 
-### 19.4 图标
+### 20.4 本地对话窗口
+
+```text
+window.open('/next/local.html')
+→ 独立 BrowserWindow
+→ 680 × 860
+```
+
+### 20.5 通知
+
+```text
+轮询 /api/local/history
+→ 新 assistant 消息
+→ 对话窗没聚焦
+→ Windows 通知
+→ 托盘未读
+```
+
+### 20.6 图标
 
 ```text
 desktop/assets/icon.png
 desktop/assets/icon.ico
 ```
 
-深色圆角底、蓝鲸。  
-窗口、托盘、exe 共用。
+深色圆角底、蓝鲸。
 
-### 19.5 打包
+### 20.7 打包
 
 ```text
 electron-builder
@@ -1297,19 +1455,20 @@ target: portable
 
 单文件约 110 MB。
 
-### 19.6 已知限制
+### 20.8 已知限制
 
 ```text
-自动启动只拉起 core，不保证 ASR / RVC / Ollama 也起来
-Windows 图标缓存可能让旧快捷方式继续显示旧图
-旧快捷方式可能仍指向 v1
+自动启动只保证 core
+Windows 图标缓存可能显示旧图标
+exe 未签名，可能触发 SmartScreen
+通知靠轮询，不是推送
 ```
 
 ---
 
-## 20. 数据与隐私
+## 21. 数据与隐私
 
-### 20.1 不入库
+### 21.1 不入库
 
 ```text
 config.json
@@ -1318,12 +1477,14 @@ state/secrets.json
 state/bilibili.json
 state/logs/
 state/voice/
+state/media/
+state/local-history.json
 scripts/local.paths.ps1
 desktop/node_modules/
 desktop/dist/
 ```
 
-### 20.2 仓库内
+### 21.2 仓库内
 
 ```text
 config.example.json
@@ -1334,30 +1495,28 @@ friend-kit/
 desktop 源码 / 图标
 ```
 
-### 20.3 已检查
+### 21.3 隐私
 
 ```text
-没有真实 QQ 号
-没有 Bearer token
-没有 Cookie
-没有本机绝对路径
-历史里没有 config / state / secrets
+本地媒体只在本机
+媒体库不自动上传
+旧记忆整理只在私聊使用
+群聊上下文不展开私聊原话
 ```
 
-### 20.4 仍需注意
+### 21.4 仍需注意
 
 ```text
-不要打包整个工作目录
-不要上传 state/
+不要打包整个 state/
 不要把本地配置塞进 release
-桌面 exe 只包含壳，不包含 state
+不要把媒体库当公开静态目录暴露到公网
 ```
 
 ---
 
-## 21. 测试与验收
+## 22. 测试与验收
 
-### 21.1 自动测试
+### 22.1 自动测试
 
 ```text
 35 个测试文件
@@ -1380,58 +1539,65 @@ desktop 源码 / 图标
 平台
 ```
 
-### 21.2 已做的人工 / 模块验收
+### 22.2 本地媒体实测
 
 ```text
-私聊模拟回合
-router.ok
-simulate.would_send
-图片识图 + 缓存
-ASR + VAD + 缓存
-RVC 常驻服务
-桌面 exe 启动
-桌面 exe 自动拉起 core
+图片上传 → 视觉识别 → 回复
+WebM/Opus 语音上传 → ASR → 回复
+她的表情 → 自动缓存到 her 库
+历史 → 图片 / 语音段保留
+媒体库 → 列表 / 删除
+Electron 麦克风 → 权限 ok
+Windows 通知 → supported / unread +1
 ```
 
-### 21.3 未覆盖
+### 22.3 未覆盖
 
 ```text
-真实 QQ 私聊投递
-真实 QQ 群聊 canary
-真实语音发送
-真实图片消息
-真实引用回复
-QQ空间 / B站实机
+真实按住录音全链路
+真实粘贴图片
+真实拖拽图片
+桌面通知点击行为
+真实 QQ 全链路
 Live2D
 ```
 
 ---
 
-## 22. 当前可用
+## 23. 当前可用
 
 ```text
-文字聊天：可用
-群聊：可用
-私聊：可用
-共享上下文：可用
-权限：可用
-面板：可用
-本地检索：可用
-黑话：可用
+本地文字聊天：可用
+本地发图：可用
+本地发表情：可用
+本地录语音：可用
 图片识别：可用
 语音识别：可用
 语音发送：可用但情绪平
-日记：可用
-关系节点：可用
-旧记忆整理：可用
-桌面壳：可用
+颜文字：可用
+媒体历史：可用
+媒体库：可用
+桌面通知：可用
+托盘未读：可用
+权限：可用
+面板：可用
+QQ：代码保留，暂不主用
 ```
 
 ---
 
-## 23. 已知问题
+## 24. 已知问题
 
-### 23.1 语音
+### 24.1 本地对话
+
+```text
+通知靠轮询，可能有 2-3 秒延迟
+粘贴 / 拖拽 / 录音交互未完全自动化验收
+媒体库没有容量统计和清理策略
+删除媒体会让历史里的旧引用失效
+```
+
+### 24.2 语音
 
 ```text
 s1 未完成
@@ -1440,73 +1606,50 @@ Edge + RVC 没有情绪
 RVC GPU 半精度可能改变音色
 ```
 
-### 23.2 权限
+### 24.3 权限
 
 ```text
 权限是提示层约束，不是硬沙箱
+本地对话没有群审批界面
 批准后同一轮可能来不及生效
-群审批人已锁成主人，但还没有管理员 / 被骂者选项
 ```
 
-### 23.3 媒体
+### 24.4 桌面
 
 ```text
-Ollama 未启动时视觉不可用
-图片下载可能超时
-RVC 和视觉同时占用显存
-GPU 半精度音色需要试听确认
+自动启动只保证 core
+未签名，可能触发 SmartScreen
+图标缓存可能显示旧图
 ```
 
-### 23.4 桌面
+### 24.5 QQ
 
 ```text
-打包版自动启动只保证 core
-Windows 图标缓存
-旧快捷方式可能指向 v1
-exe 未签名，可能触发 SmartScreen
-```
-
-### 23.5 运维
-
-```text
-GitHub 推送被网络阻断
-本地提交领先远端
-SnowLuma 重启路径可能找不到
-```
-
-### 23.6 未完成
-
-```text
-真实 QQ 全链路
-情绪语音
-Live2D 桌宠
-QQ空间 / B站实机
+账号 / 客户端风控
+不继续对抗
+真实 QQ 全链路未验收
 ```
 
 ---
 
-## 24. 后续
+## 25. 后续
 
 ### 必须
 
 ```text
-真实私聊 + 群聊各跑一条
-真实语音发送
-真实图片消息
-引用读取复测
-SnowLuma 重启路径
-GitHub 推送
+本地通知点击行为验收
+粘贴 / 拖拽 / 录音全链路验收
+媒体库容量和清理
+备份 / 导出
 ```
 
 ### 想做
 
 ```text
-s1 云端训练
+开机自启
+本地主动消息
 Live2D 桌宠
-群内人物关系
-她自己的时间
-桌面 exe 自动启动完整服务
-正式图标 / 签名
+情绪语音 s1
 ```
 
 ### 不做
@@ -1517,16 +1660,18 @@ Live2D 桌宠
 动作枚举
 羞耻数值
 把权限写成角色台词
+换号 / 买号绕 QQ 风控
 ```
 
 ---
 
-## 25. 结论
+## 26. 结论
 
 ```text
 一个角色
 一套记忆
-一个共享上下文
+一个本地入口
+两套媒体库
 一套权限
 工具在后台，不挡对话
 ```
@@ -1536,37 +1681,32 @@ Live2D 桌宠
 需要人点头的事，先问再动。
 
 它不是完成品，  
-但已经不是关键词回复机器人。
+但已经不再依赖 QQ 才能存在。
 
 ---
 
-## 26. 变更记录
+## 27. 变更记录
 
 近期关键提交：
 
 ```text
-feat: add her own diary
-feat: add relationship milestones and panel
-feat: consolidate her old memories
-perf: keep vision model warm and cheaper
-perf: shrink and cache images before vision
-perf: trim silence and cache speech recognition
-perf: serialize media work and use gpu rvc
-perf: use persistent rvc server
-fix: read quoted messages and send stickers as mface
-fix: never bluff about unseen images
-fix: retry vision when ollama is still starting
-refactor: remove remaining canned tool wording
-feat: add standalone electron panel
-feat: package portable electron panel
-feat: package icon and direct core startup
+feat: add local desktop chat
+feat: add standalone local chat window
+feat: add local media libraries and attachments
+feat: paste drag record local media
+feat: add kaomoji picker to local chat
+feat: persist local media history and library UI
+feat: desktop notifications and unread tray
+fix: media ext and webm mime
+fix: desktop notifications
+docs: refresh full project report
 ```
 
 ---
 
-## 27. 一句话版本
+## 28. 一句话版本
 
 ```text
-她不是靠一句句写死的回复活着；
-她靠身份、记忆、关系和运行时状态活着。
+QQ 可以没有；
+她得还在。
 ```
