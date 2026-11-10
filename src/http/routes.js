@@ -687,8 +687,7 @@ export function createPanelHandler(ctx) {
       return;
     }
     if (req.url === '/api/local/history' && req.method === 'GET') {
-    const scene = ctx.character?.scenes?.get?.('private:local');
-    const turns = (scene?.turns ?? []).slice(-24).map((turn) => ({ role: turn.role, text: turn.text }));
+    const turns = ctx.localHistory?.recent?.(60) ?? [];
     json(res, 200, { ok: true, turns });
     return;
   }
@@ -711,6 +710,13 @@ export function createPanelHandler(ctx) {
     return;
   }
 
+  if (req.url === '/api/media/delete' && req.method === 'POST') {
+    readBody(req).then((body) => {
+      const ok = ctx.mediaLibrary?.remove?.(String(body?.scope || 'user'), String(body?.id || '')) ?? false;
+      json(res, ok ? 200 : 404, { ok });
+    }).catch(() => json(res, 400, { error: 'invalid json' }));
+    return;
+  }
   if (req.url.startsWith('/api/media/list') && req.method === 'GET') {
     const url = new URL(req.url, 'http://127.0.0.1');
     const scope = url.searchParams.get('scope') === 'her' ? 'her' : 'user';

@@ -46,6 +46,7 @@ import { createLiveGroup } from './runtime/live-group.js';
 import { createWorldObserver } from './runtime/world-observer.js';
 import { createLocalChat } from './runtime/local-chat.js';
 import { createMediaLibrary } from './core/media-library.js';
+import { createLocalHistory } from './core/local-history.js';
 import { acquireRuntimeLock } from './runtime/lock.js';
 import { createMindStore } from './mind/store.js';
 import { createDaydream } from './mind/daydream.js';
@@ -496,7 +497,8 @@ ${task.result}`);
   }
 
   const mediaLibrary = createMediaLibrary({ root: path.join(ROOT, 'state', 'media'), logger });
-  const localChat = createLocalChat({ gateway, dispatch: dispatchMessage, media: mediaLibrary, logger });
+  const localHistory = createLocalHistory({ file: path.join(ROOT, 'state', 'local-history.json'), logger });
+  const localChat = createLocalChat({ gateway, dispatch: dispatchMessage, media: mediaLibrary, history: localHistory, logger });
 
   gateway.on('message', (payload) => {
     dispatchMessage(gateway.normalize(payload)).catch((error) => logger.warn('message.dispatch_failed', { error: String(error?.message ?? error) }));
@@ -586,6 +588,7 @@ ${task.result}`);
     metricsJson: metricsState,
     dispatch: dispatchMessage,
     localChat,
+    localHistory,
     mediaLibrary,
     capabilities,
     shutdownToken,

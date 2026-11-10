@@ -201,6 +201,82 @@ async function loadStickers() {
   }
 }
 
+async function renderLibrary() {
+  if (!libraryGrid) return;
+  libraryGrid.textContent = '读取中…';
+  try {
+    const res = await fetch(`/api/media/list?scope=${libraryScope}`, { cache: 'no-store' });
+    const data = await res.json();
+    const items = data.items || [];
+    libraryGrid.replaceChildren();
+    if (!items.length) {
+      const hint = document.createElement('div');
+      hint.className = 'library-empty';
+      hint.textContent = libraryScope === 'her' ? '她还没留下东西。' : '你的库还是空的。';
+      libraryGrid.append(hint);
+      return;
+    }
+    for (const item of items) {
+      const card = document.createElement('div');
+      card.className = 'library-card';
+      if (item.kind === 'voice') {
+        const mark = document.createElement('div');
+        mark.className = 'voice-mark';
+        mark.textContent = '◉';
+        mark.title = item.name || '语音';
+        mark.addEventListener('click', () => {
+          if (libraryScope === 'user') submit([{ kind: 'voice', url: item.url }]);
+        });
+        card.append(mark);
+      } else {
+        const img = document.createElement('img');
+        img.src = item.url;
+        img.alt = item.name || '';
+        img.title = item.name || '';
+        img.addEventListener('click', () => {
+          if (libraryScope === 'user') submit([{ kind: item.kind, url: item.url }]);
+        });
+        card.append(img);
+      }
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'delete';
+      del.textContent = '×';
+      del.title = '删除';
+      del.addEventListener('click', async (event) => {
+        event.stopPropagation();
+        await fetch('/api/media/delete', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ scope: libraryScope, id: item.id })
+        });
+        await renderLibrary();
+      });
+      card.append(del);
+      libraryGrid.append(card);
+    }
+  } catch (error) {
+    libraryGrid.textContent = String(error.message || error);
+  }
+}
+
+libraryToggle?.addEventListener('click', () => {
+  if (!libraryPanel) return;
+  const show = libraryPanel.hidden;
+  libraryPanel.hidden = !show;
+  if (stickerPanel) stickerPanel.hidden = true;
+  if (kaomojiPanel) kaomojiPanel.hidden = true;
+  if (show) renderLibrary();
+});
+
+libraryClose?.addEventListener('click', () => { if (libraryPanel) libraryPanel.hidden = true; });
+for (const tab of document.querySelectorAll('.library-tab')) {
+  tab.addEventListener('click', () => {
+    libraryScope = String(tab.dataset.scope || 'user');
+    for (const x of document.querySelectorAll('.library-tab')) x.classList.toggle('active', x === tab);
+    renderLibrary();
+  });
+}
+
 const KAOMOJI = [
   '(๑•̀ㅂ•́)و✧', '(´・ω・`)', '_(:з」∠)_', '(≧▽≦)',
   '(｡•́︿•̀｡)', '(๑•́ ₃ •̀๑)', '(ง •̀_•́)ง', '(づ｡◕‿‿◕｡)づ',
@@ -242,9 +318,9 @@ stickerToggle?.addEventListener('click', async () => {
 });
 
 document.addEventListener('click', (event) => {
-  for (const panel of [stickerPanel, kaomojiPanel]) {
+  for (const panel of [stickerPanel, kaomojiPanel, libraryPanel]) {
     if (!panel || panel.hidden) continue;
-    if (panel.contains(event.target) || stickerToggle?.contains(event.target) || kaomojiToggle?.contains(event.target)) continue;
+    if (panel.contains(event.target) || stickerToggle?.contains(event.target) || kaomojiToggle?.contains(event.target) || libraryToggle?.contains(event.target)) continue;
     panel.hidden = true;
   }
 });
@@ -299,7 +375,7 @@ async function loadHistory() {
     const res = await fetch('/api/local/history', { cache: 'no-store' });
     const data = await res.json();
     for (const turn of data.turns || []) {
-      append(turn.role === 'assistant' ? 'assistant' : 'user', String(turn.text || ''));
+      append(turn.role === 'assistant' ? 'assistant' : 'user', String(turn.text || ''), Array.isArray(turn.segments) ? turn.segments : []);
     }
   } catch {}
 }

@@ -1,4 +1,4 @@
-export function createLocalChat({ gateway, dispatch, media = null, logger = null, timeoutMs = 120000 } = {}) {
+export function createLocalChat({ gateway, dispatch, media = null, history = null, logger = null, timeoutMs = 120000 } = {}) {
   const originalSendText = gateway.sendText.bind(gateway);
   const originalSendMessage = gateway.sendMessage.bind(gateway);
   let active = null;
@@ -59,7 +59,9 @@ export function createLocalChat({ gateway, dispatch, media = null, logger = null
         if (timer) clearTimeout(timer);
         if (deadline) clearTimeout(deadline);
         active = null;
-        resolve({ ok: true, reply: chunks.join('\n').trim(), segments: output });
+        const reply = chunks.join('\n').trim();
+        history?.add?.({ role: 'assistant', text: reply, segments: output });
+        resolve({ ok: true, reply, segments: output });
       };
       active = {
         push(value) {
@@ -90,6 +92,7 @@ export function createLocalChat({ gateway, dispatch, media = null, logger = null
         if (kind === 'voice') segments.push({ type: 'record', data: { url: absolute } });
         else segments.push({ type: 'image', data: { file: absolute } });
       }
+      history?.add?.({ role: 'user', text: String(text ?? ''), segments: attachments });
       const message = {
         kind: 'private',
         id: 'local',

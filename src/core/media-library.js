@@ -124,6 +124,16 @@ export function createMediaLibrary({ root = 'state/media', logger = null, maxByt
     return item ? publicItem(scope, item) : null;
   }
 
+  function remove(scope, id) {
+    if (!SCOPES.has(scope)) return false;
+    const index = indexes[scope].findIndex((x) => x.id === id || x.file === id);
+    if (index < 0) return false;
+    const [item] = indexes[scope].splice(index, 1);
+    try { fs.rmSync(path.join(base, scope, item.file), { force: true }); } catch {}
+    persist(scope);
+    return true;
+  }
+
   function filePath(scope, file) {
     if (!SCOPES.has(scope)) return null;
     const safe = path.basename(String(file || ''));
@@ -131,5 +141,5 @@ export function createMediaLibrary({ root = 'state/media', logger = null, maxByt
     return path.join(base, scope, safe);
   }
 
-  return { addBuffer, addFile, addUrl, list, get, filePath, publicItem };
+  return { addBuffer, addFile, addUrl, list, get, remove, filePath, publicItem };
 }

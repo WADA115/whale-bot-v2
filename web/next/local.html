@@ -53,7 +53,16 @@
         <button type="button" class="attach" id="stickerToggle">表情</button>
         <button type="button" class="attach" id="kaomojiToggle">颜文字</button>
         <button type="button" class="attach" id="voiceToggle">说话</button>
+        <button type="button" class="attach" id="libraryToggle">库</button>
         <span class="attach-hint">可直接粘贴 / 拖入图片</span>
+      </div>
+      <div class="sticker-panel library-panel" id="libraryPanel" hidden>
+        <div class="library-head">
+          <button type="button" class="library-tab active" data-scope="user">我的</button>
+          <button type="button" class="library-tab" data-scope="her">她的</button>
+          <button type="button" class="library-close" id="libraryClose">×</button>
+        </div>
+        <div class="library-grid" id="libraryGrid"></div>
       </div>
       <div class="sticker-panel" id="kaomojiPanel" hidden>
         <div class="sticker-head">颜文字</div>

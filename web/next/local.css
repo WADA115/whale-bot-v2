@@ -183,3 +183,21 @@ body {
   cursor: pointer;
 }
 .kaomoji-grid button:hover { color: var(--gold); border-color: rgba(232,196,124,.4); }
+
+.library-panel { width: min(390px, 100%); }
+.library-head { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.library-tab {
+  padding: 4px 10px; color: var(--muted); background: transparent;
+  border: 1px solid var(--line); border-radius: 999px; font: inherit; font-size: 11px; cursor: pointer;
+}
+.library-tab.active { color: var(--gold); border-color: rgba(232,196,124,.45); }
+.library-close { margin-left: auto; color: #8d9db3; background: transparent; border: 0; font-size: 18px; cursor: pointer; }
+.library-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; max-height: 260px; overflow-y: auto; }
+.library-card { position: relative; aspect-ratio: 1; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.library-card img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+.library-card .voice-mark { display: grid; place-items: center; height: 100%; color: var(--gold); font-size: 18px; cursor: pointer; }
+.library-card .delete {
+  position: absolute; top: 2px; right: 2px; width: 18px; height: 18px;
+  border: 0; border-radius: 50%; background: rgba(4,8,15,.75); color: #ffb4a8; font-size: 12px; cursor: pointer;
+}
+.library-empty { grid-column: 1 / -1; color: #61718a; font-size: 12px; padding: 14px 2px; }
