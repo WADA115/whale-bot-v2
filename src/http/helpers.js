@@ -26,15 +26,22 @@ export function sendFile(res, file, type) {
   }
 }
 
-export function readBody(req) {
+export function readBody(req, maxBytes = 200_000) {
   return new Promise((resolve, reject) => {
-    let raw = '';
+    const chunks = [];
+    let size = 0;
     req.on('data', (chunk) => {
-      raw += chunk;
-      if (raw.length > 200_000) req.destroy();
+      size += chunk.length;
+      if (size > maxBytes) {
+        req.destroy();
+        reject(new Error('body too large'));
+        return;
+      }
+      chunks.push(chunk);
     });
     req.on('end', () => {
-      try { resolve(JSON.parse(raw || '{}')); } catch (error) { reject(error); }
+      try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')); }
+      catch (error) { reject(error); }
     });
     req.on('error', reject);
   });

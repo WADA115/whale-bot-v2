@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
@@ -48,6 +48,13 @@
       <div class="typing" id="typing" hidden>
         <span></span><span></span><span></span>
       </div>
+
+      <div class="attach-row">
+        <button type="button" class="attach" data-kind="image">图</button>
+        <button type="button" class="attach" data-kind="sticker">表情</button>
+        <button type="button" class="attach" data-kind="voice">语音</button>
+      </div>
+      <input type="file" id="filePick" hidden>
 
       <form class="composer" id="chatForm">
         <textarea id="chatInput" rows="1" autocomplete="off" placeholder="说点什么……"></textarea>

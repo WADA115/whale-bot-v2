@@ -45,6 +45,7 @@ import { createMetrics } from './runtime/metrics.js';
 import { createLiveGroup } from './runtime/live-group.js';
 import { createWorldObserver } from './runtime/world-observer.js';
 import { createLocalChat } from './runtime/local-chat.js';
+import { createMediaLibrary } from './core/media-library.js';
 import { acquireRuntimeLock } from './runtime/lock.js';
 import { createMindStore } from './mind/store.js';
 import { createDaydream } from './mind/daydream.js';
@@ -494,7 +495,8 @@ ${task.result}`);
     actors.enqueue(message.key, message);
   }
 
-  const localChat = createLocalChat({ gateway, dispatch: dispatchMessage, logger });
+  const mediaLibrary = createMediaLibrary({ root: path.join(ROOT, 'state', 'media'), logger });
+  const localChat = createLocalChat({ gateway, dispatch: dispatchMessage, media: mediaLibrary, logger });
 
   gateway.on('message', (payload) => {
     dispatchMessage(gateway.normalize(payload)).catch((error) => logger.warn('message.dispatch_failed', { error: String(error?.message ?? error) }));
@@ -584,6 +586,7 @@ ${task.result}`);
     metricsJson: metricsState,
     dispatch: dispatchMessage,
     localChat,
+    mediaLibrary,
     capabilities,
     shutdownToken,
     shutdown: () => shutdownHandler?.()

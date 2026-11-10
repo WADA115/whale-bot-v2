@@ -12,6 +12,11 @@ const TYPES = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
+  '.wav': 'audio/wav',
+  '.mp3': 'audio/mpeg',
+  '.ogg': 'audio/ogg',
+  '.m4a': 'audio/mp4',
+  '.amr': 'audio/amr',
   '.webp': 'image/webp',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon'
@@ -81,7 +86,14 @@ export function createPanelHandler(ctx) {
     const webRoot = path.join(ctx.root, 'web');
     const pathname = req.url.split('?')[0];
 
-    if (pathname === '/next') {
+    if (pathname.startsWith('/media/')) {
+      const rel = pathname.slice('/media/'.length);
+      const file = path.resolve(path.join(ctx.root, 'state', 'media'), rel);
+      const mediaRoot = path.resolve(path.join(ctx.root, 'state', 'media'));
+      if (!file.startsWith(mediaRoot + path.sep)) return json(res, 403, { error: 'forbidden' });
+      sendFile(res, file, TYPES[path.extname(file)] || 'application/octet-stream');
+      return;
+    }    if (pathname === '/next') {
       res.writeHead(302, { location: '/next/' });
       res.end();
       return;
@@ -680,12 +692,46 @@ export function createPanelHandler(ctx) {
     json(res, 200, { ok: true, turns });
     return;
   }
+  if (req.url === '/api/local/upload' && req.method === 'POST') {
+    readBody(req, 24_000_000).then((body) => {
+      if (!ctx.mediaLibrary) return json(res, 503, { error: 'media library unavailable' });
+      const kind = String(body?.kind || 'image');
+      if (!['image', 'sticker', 'voice'].includes(kind)) return json(res, 400, { error: 'invalid kind' });
+      const data = String(body?.data || '');
+      if (!data) return json(res, 400, { error: 'data required' });
+      const buffer = Buffer.from(data, 'base64');
+      const item = ctx.mediaLibrary.addBuffer({
+        scope: 'user', kind, buffer,
+        mime: String(body?.mime || ''),
+        name: String(body?.name || ''),
+        origin: 'local-upload'
+      });
+      json(res, 200, { ok: true, item });
+    }).catch((error) => json(res, 400, { error: String(error?.message ?? error) }));
+    return;
+  }
+
+  if (req.url.startsWith('/api/media/list') && req.method === 'GET') {
+    const url = new URL(req.url, 'http://127.0.0.1');
+    const scope = url.searchParams.get('scope') === 'her' ? 'her' : 'user';
+    const kind = String(url.searchParams.get('kind') || '');
+    json(res, 200, { ok: true, items: ctx.mediaLibrary?.list?.(scope, kind) ?? [] });
+    return;
+  }
+
   if (req.url === '/api/local/chat' && req.method === 'POST') {
-    readBody(req).then(async (body) => {
+    readBody(req, 24_000_000).then(async (body) => {
       const text = String(body?.text ?? '').trim();
-      if (!text) return json(res, 400, { error: 'text required' });
+      const attachments = Array.isArray(body?.attachments)
+        ? body.attachments.filter((x) => x && /^\/media\/user\//.test(String(x.url || ''))).map((x) => ({
+          kind: String(x.kind || 'image'),
+          url: String(x.url || '')
+        }))
+        : [];
+      if (!text && !attachments.length) return json(res, 400, { error: 'text or attachment required' });
       if (!ctx.localChat?.send) return json(res, 503, { error: 'local chat unavailable' });
-      const result = await ctx.localChat.send(text);
+      const origin = `http://${req.headers.host || '127.0.0.1:3201'}`;
+      const result = await ctx.localChat.send(text, attachments, { origin });
       json(res, 200, result);
     }).catch((error) => json(res, 500, { error: String(error?.message ?? error) }));
     return;

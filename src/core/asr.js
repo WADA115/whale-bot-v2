@@ -70,7 +70,7 @@ export function createAsr({
   }
 
   async function toWav(input, index) {
-    const out = path.join(tempDir(), `voice-${index}.wav`);
+    const out = path.join(tempDir(), `voice-${index}-conv.wav`);
     const base = ['-y', '-i', input, '-ar', '16000', '-ac', '1', '-c:a', 'pcm_s16le'];
     if (vad) {
       const filter = 'silenceremove=start_periods=1:start_duration=0.08:start_threshold=-45dB:stop_periods=-1:stop_duration=0.25:stop_threshold=-45dB';

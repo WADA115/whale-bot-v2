@@ -125,3 +125,19 @@ body {
   .chat-head h2 { font-size: 16px; }
   .msg { max-width: 88%; }
 }
+
+.attach-row { display: flex; gap: 6px; padding: 10px 0 0; }
+.attach {
+  padding: 5px 11px;
+  color: #9fb0c6;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.attach:hover { color: var(--gold); border-color: rgba(232,196,124,.4); }
+.bubble img { display: block; max-width: 220px; max-height: 220px; border-radius: 8px; margin-bottom: 6px; }
+.bubble audio { display: block; width: 220px; margin-top: 4px; }
+.composer { padding-top: 8px; border-top: 0; }
