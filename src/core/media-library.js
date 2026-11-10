@@ -114,7 +114,7 @@ export function createMediaLibrary({ root = 'state/media', logger = null, maxByt
     if (!SCOPES.has(scope)) return [];
     return indexes[scope]
       .filter((x) => !kind || x.kind === kind)
-      .slice(-80)
+      .slice(-300)
       .reverse()
       .map((x) => publicItem(scope, x));
   }

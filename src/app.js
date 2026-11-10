@@ -499,6 +499,26 @@ ${task.result}`);
   }
 
   const mediaLibrary = createMediaLibrary({ root: path.join(ROOT, 'state', 'media'), logger });
+  let stickerImportJob = null;
+  async function importQQStickers() {
+    if (stickerImportJob) return stickerImportJob;
+    stickerImportJob = (async () => {
+      let imported = 0;
+      let failed = 0;
+      const list = Array.isArray(stickers) ? stickers : [];
+      for (let i = 0; i < list.length; i += 4) {
+        await Promise.all(list.slice(i, i + 4).map(async (item) => {
+          try {
+            await mediaLibrary.addUrl({ scope: 'user', kind: 'sticker', url: item.url, name: item.desc || item.id || 'QQ表情', desc: item.desc || '', origin: item.url });
+            imported += 1;
+          } catch { failed += 1; }
+        }));
+      }
+      logger.info('stickers.imported', { imported, failed });
+      return { total: list.length, imported, failed };
+    })().finally(() => { stickerImportJob = null; });
+    return stickerImportJob;
+  }
   const localHistory = createLocalHistory({ file: path.join(ROOT, 'state', 'local-history.json'), logger });
   let roomAI = null;
   const roomServer = createRoomServer({
@@ -603,6 +623,7 @@ ${task.result}`);
     localChat,
     localHistory,
     mediaLibrary,
+    importQQStickers,
     capabilities,
     shutdownToken,
     shutdown: () => shutdownHandler?.()

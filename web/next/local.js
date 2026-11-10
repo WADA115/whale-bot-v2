@@ -188,6 +188,8 @@ async function loadStickers() {
     for (const item of items) {
       const img = document.createElement('img');
       img.src = item.url;
+      img.loading = 'lazy';
+      img.decoding = 'async';
       img.alt = item.name || '表情';
       img.title = item.name || '表情';
       img.addEventListener('click', () => {
@@ -309,6 +311,29 @@ kaomojiToggle?.addEventListener('click', () => {
   const show = kaomojiPanel.hidden;
   kaomojiPanel.hidden = !show;
   if (stickerPanel) stickerPanel.hidden = true;
+});
+
+$('#importQQStickers')?.addEventListener('click', async () => {
+  const button = $('#importQQStickers');
+  if (!button || button.disabled) return;
+  button.disabled = true;
+  button.textContent = '导入中…';
+  try {
+    const res = await fetch('/api/stickers/import-qq', { method: 'POST' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || '导入失败');
+    for (let i = 0; i < 20; i += 1) {
+      await new Promise((r) => setTimeout(r, 1500));
+      await loadStickers();
+      if (i >= 3) break;
+    }
+    button.textContent = '已导入';
+  } catch (error) {
+    button.textContent = '导入失败';
+    status.textContent = String(error.message || error);
+  } finally {
+    setTimeout(() => { button.disabled = false; button.textContent = '导入 QQ 表情'; }, 4000);
+  }
 });
 
 stickerToggle?.addEventListener('click', async () => {

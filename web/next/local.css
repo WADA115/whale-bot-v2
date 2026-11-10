@@ -201,3 +201,7 @@ body {
   border: 0; border-radius: 50%; background: rgba(4,8,15,.75); color: #ffb4a8; font-size: 12px; cursor: pointer;
 }
 .library-empty { grid-column: 1 / -1; color: #61718a; font-size: 12px; padding: 14px 2px; }
+
+.sticker-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.import-stickers { padding: 3px 8px; color: var(--gold); background: transparent; border: 1px solid rgba(232,196,124,.3); border-radius: 6px; font: inherit; font-size: 9px; cursor: pointer; }
+.import-stickers:disabled { opacity: .5; cursor: default; }

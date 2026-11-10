@@ -724,6 +724,12 @@ export function createPanelHandler(ctx) {
     json(res, 200, { ok: true, turns });
     return;
   }
+  if (req.url === '/api/stickers/import-qq' && req.method === 'POST') {
+    if (!ctx.importQQStickers) return json(res, 503, { error: 'sticker import unavailable' });
+    ctx.importQQStickers().catch((error) => logger?.warn('stickers.import_failed', { error: String(error?.message ?? error) }));
+    json(res, 200, { ok: true, started: true });
+    return;
+  }
   if (req.url === '/api/local/upload' && req.method === 'POST') {
     readBody(req, 24_000_000).then((body) => {
       if (!ctx.mediaLibrary) return json(res, 503, { error: 'media library unavailable' });
