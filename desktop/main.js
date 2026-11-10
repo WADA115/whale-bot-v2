@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, nativeImage, shell, screen, session } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, shell, screen, session, Notification } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const net = require('node:net');
@@ -25,8 +25,13 @@ const PANEL = process.env.QQ_BRIDGE_PANEL || 'http://127.0.0.1:3201/next/';
 const ICON = app.isPackaged ? path.join(process.resourcesPath, 'icon.png') : path.join(__dirname, 'assets', 'icon.png');
 const STATE_FILE = path.join(ROOT, 'state', 'desktop-window.json');
 let win = null;
+let chatWindow = null;
 let tray = null;
 let quitting = false;
+let unread = 0;
+let lastAssistantAt = 0;
+let notificationReady = false;
+app.setAppUserModelId('com.xiaoyu.panel');
 Menu.setApplicationMenu(null);
 
 function portOpen(port) {
@@ -84,6 +89,95 @@ async function ensurePanel() {
   return waitPort(3201, 35000);
 }
 
+function desktopLog(message) {
+  try { fs.appendFileSync(path.join(require('node:os').tmpdir(), 'xiaoyu-desktop.log'), `${new Date().toISOString()} ${message}\n`); } catch {}
+}
+
+function updateTrayMenu() {
+  if (!tray) return;
+  tray.setToolTip(unread ? `小鲸鱼 · ${unread} 条未读` : '小鲸鱼');
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: '显示面板', click: () => { if (win) { win.show(); win.focus(); } } },
+    { label: unread ? `和小鲸鱼说话（${unread}）` : '和小鲸鱼说话', click: showChat },
+    { label: '隐藏到托盘', click: () => { if (win) win.hide(); } },
+    { type: 'separator' },
+    { label: '退出', click: () => { quitting = true; app.quit(); } }
+  ]));
+}
+
+function clearUnread() {
+  if (!unread) return;
+  unread = 0;
+  updateTrayMenu();
+}
+
+function showChat() {
+  if (chatWindow && !chatWindow.isDestroyed()) {
+    if (chatWindow.isMinimized()) chatWindow.restore();
+    chatWindow.show();
+    chatWindow.focus();
+    clearUnread();
+    return;
+  }
+  if (!win) return;
+  win.webContents.executeJavaScript("window.open('/next/local.html','xiaoyu-chat','width=680,height=860')").catch(() => {});
+}
+
+function notifyReply(text, count) {
+  desktopLog('notify_check supported=' + Notification.isSupported());
+  if (!Notification.isSupported()) return;
+  const body = String(text || '她发来一条消息').replace(/\s+/g, ' ').slice(0, 120);
+  try {
+    const notification = new Notification({
+      title: count > 1 ? `小鲸鱼 · ${count} 条新消息` : '小鲸鱼',
+      body,
+      icon: ICON,
+      silent: false
+    });
+    notification.on('click', showChat);
+    notification.show();
+    desktopLog(`notify unread=${unread} body=${body}`);
+  } catch (error) {
+    desktopLog('notify_failed ' + String(error));
+  }
+}
+
+async function pollLocalHistory() {
+  try {
+    const res = await fetch(new URL('/api/local/history', PANEL), { signal: AbortSignal.timeout(4000) });
+    if (!res.ok) return;
+    const data = await res.json();
+    const turns = Array.isArray(data.turns) ? data.turns : [];
+    const assistants = turns.filter((turn) => turn.role === 'assistant');
+    if (!assistants.length) return;
+    const latest = Number(assistants[assistants.length - 1].at || 0);
+    desktopLog('poll latest=' + latest + ' last=' + lastAssistantAt + ' ready=' + notificationReady);
+    if (!notificationReady) {
+      lastAssistantAt = latest;
+      notificationReady = true;
+      return;
+    }
+    if (latest < lastAssistantAt) {
+      lastAssistantAt = latest;
+      return;
+    }
+    if (latest <= lastAssistantAt) return;
+    const fresh = assistants.filter((turn) => Number(turn.at || 0) > lastAssistantAt);
+    lastAssistantAt = latest;
+    if (!fresh.length) return;
+    const focused = chatWindow && !chatWindow.isDestroyed() && chatWindow.isVisible() && chatWindow.isFocused();
+    if (focused) { clearUnread(); return; }
+    unread += fresh.length;
+    updateTrayMenu();
+    notifyReply(fresh[fresh.length - 1].text || '发来一张图或一段语音', unread);
+  } catch (error) { desktopLog('poll_failed ' + String(error)); }
+}
+
+function startLocalWatcher() {
+  pollLocalHistory();
+  setInterval(pollLocalHistory, 2500);
+}
+
 function createWindow() {
   const saved = readState();
   const area = screen.getPrimaryDisplay().workArea;
@@ -110,6 +204,12 @@ function createWindow() {
   win.removeMenu();
   win.setTitle('小鲸鱼');
   win.webContents.on('page-title-updated', (event) => { event.preventDefault(); win.setTitle('小鲸鱼'); });
+  win.webContents.on('did-create-window', (child) => {
+    chatWindow = child;
+    child.on('closed', () => { chatWindow = null; });
+    child.on('focus', clearUnread);
+    child.on('show', clearUnread);
+  });
   win.once('ready-to-show', () => { win.show(); win.focus(); });
   win.on('resize', saveState);
   win.on('move', saveState);
@@ -152,15 +252,7 @@ function buildTray() {
   if (icon.isEmpty()) return;
   icon = icon.resize({ width: 18, height: 18 });
   tray = new Tray(icon);
-  tray.setToolTip('小鲸鱼');
-  const menu = Menu.buildFromTemplate([
-    { label: '显示面板', click: () => { if (win) { win.show(); win.focus(); } } },
-    { label: '和小鲸鱼说话', click: () => { if (win) { win.show(); win.webContents.executeJavaScript("window.open('/next/local.html','xiaoyu-chat','width=680,height=860')"); } } },
-    { label: '隐藏到托盘', click: () => { if (win) win.hide(); } },
-    { type: 'separator' },
-    { label: '退出', click: () => { quitting = true; app.quit(); } }
-  ]);
-  tray.setContextMenu(menu);
+  updateTrayMenu();
   tray.on('double-click', () => { if (win) { win.show(); win.focus(); } });
 }
 
@@ -176,6 +268,7 @@ if (!gotLock) {
     session.defaultSession.setPermissionCheckHandler((webContents, permission) => permission === 'media');
     createWindow();
     buildTray();
+    startLocalWatcher();
     app.on('activate', () => { if (win) win.show(); });
   });
   app.on('before-quit', () => { quitting = true; });
