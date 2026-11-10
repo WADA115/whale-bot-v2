@@ -1108,6 +1108,54 @@ async function personaChatSend() {
   }
 }
 
+const localChatLog = $('#localChatLog');
+const localChatInput = $('#localChatInput');
+const localChatSendButton = $('#localChatSend');
+
+function appendLocalChat(role, text, empty = false) {
+  if (!localChatLog) return;
+  const item = document.createElement('div');
+  item.className = `local-chat-msg ${role}${empty ? ' empty' : ''}`;
+  item.textContent = text;
+  localChatLog.append(item);
+  localChatLog.scrollTop = localChatLog.scrollHeight;
+}
+
+async function sendLocalChat() {
+  const text = String(localChatInput?.value || '').trim();
+  if (!text || !localChatSendButton) return;
+  localChatInput.value = '';
+  appendLocalChat('user', text);
+  localChatSendButton.disabled = true;
+  localChatSendButton.textContent = '…';
+  try {
+    const res = await fetch('/api/local/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || '本地对话失败');
+    const reply = String(data.reply || '').trim();
+    if (reply) appendLocalChat('assistant', reply);
+    else appendLocalChat('assistant', '（没回）', true);
+  } catch (error) {
+    appendLocalChat('assistant', String(error.message || error), true);
+  } finally {
+    localChatSendButton.disabled = false;
+    localChatSendButton.textContent = '发';
+    localChatInput?.focus();
+  }
+}
+
+if (localChatSendButton) localChatSendButton.addEventListener('click', sendLocalChat);
+if (localChatInput) localChatInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    sendLocalChat();
+  }
+});
+
 $('#personaChatSend').addEventListener('click', personaChatSend);
 $('#personaDraft').addEventListener('click', personaDraft);
 $('#personaRefine').addEventListener('click', personaRefine);

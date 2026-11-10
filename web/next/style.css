@@ -596,3 +596,55 @@ select option { background: #0b1426; color: var(--text); }
 .permission-list .result-item > div:first-child { flex: 1 1 260px; min-width: 220px; }
 .permission-list .text-btn { font-size: 12px; padding: 2px 0; }
 .permission-list .text-btn + .text-btn { margin-left: 4px; }
+
+/* 本地对话：桌面主界面 */
+.local-chat {
+  margin: 22px 0 10px;
+  padding: 16px 0 18px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.local-chat-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.local-chat-head h2 { margin: 0; }
+.local-chat-log {
+  display: grid;
+  gap: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 14px 0;
+  padding-right: 4px;
+}
+.local-chat-msg {
+  max-width: 78%;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
+.local-chat-msg.user {
+  justify-self: end;
+  background: rgba(232, 196, 124, .08);
+}
+.local-chat-msg.assistant {
+  justify-self: start;
+  background: rgba(7, 14, 29, .55);
+}
+.local-chat-msg.empty { opacity: .6; }
+.local-chat-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.local-chat-row input {
+  flex: 1;
+  min-width: 0;
+  color: var(--text);
+  padding: 8px 0;
+}
+.local-chat-row .text-btn { flex: 0 0 auto; }

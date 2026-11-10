@@ -673,7 +673,17 @@ export function createPanelHandler(ctx) {
       }).catch(() => json(res, 400, { error: 'invalid json' }));
       return;
     }
-    if (req.url === '/simulate' && req.method === 'POST') {
+    if (req.url === '/api/local/chat' && req.method === 'POST') {
+    readBody(req).then(async (body) => {
+      const text = String(body?.text ?? '').trim();
+      if (!text) return json(res, 400, { error: 'text required' });
+      if (!ctx.localChat?.send) return json(res, 503, { error: 'local chat unavailable' });
+      const result = await ctx.localChat.send(text);
+      json(res, 200, result);
+    }).catch((error) => json(res, 500, { error: String(error?.message ?? error) }));
+    return;
+  }
+  if (req.url === '/simulate' && req.method === 'POST') {
       let raw = '';
       req.on('data', (chunk) => {
         raw += chunk;

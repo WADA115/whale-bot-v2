@@ -44,6 +44,7 @@ import { createCapabilities } from './runtime/capabilities.js';
 import { createMetrics } from './runtime/metrics.js';
 import { createLiveGroup } from './runtime/live-group.js';
 import { createWorldObserver } from './runtime/world-observer.js';
+import { createLocalChat } from './runtime/local-chat.js';
 import { acquireRuntimeLock } from './runtime/lock.js';
 import { createMindStore } from './mind/store.js';
 import { createDaydream } from './mind/daydream.js';
@@ -463,7 +464,7 @@ ${task.result}`);
       sender: message.senderName || message.userId || '',
       text: message.text || (message.images?.length ? '[图片]' : ''), at: Date.now()
     });
-    if (message.text) contacts.remember({ id: message.userId, name: message.senderName, key: message.key, text: message.text });
+    if (message.text && !message.local) contacts.remember({ id: message.userId, name: message.senderName, key: message.key, text: message.text });
     if (message.replyTo) {
       try { message.quoted = await gateway.getMessage(message.replyTo); } catch {}
     }
@@ -484,7 +485,7 @@ ${task.result}`);
       }
     }
     mind.touchContact();
-    const decision = decide({ message, config, selfId: gateway.selfId });
+    const decision = message.local ? { handle: true, reason: 'local' } : decide({ message, config, selfId: gateway.selfId });
     if (!decision.handle && !message.dryRun) {
       logger.debug('message.skipped', { key: message.key, reason: decision.reason, text: String(message.text ?? '').slice(0, 60) });
       return;
@@ -492,6 +493,8 @@ ${task.result}`);
     inboundSeq.set(message.key, (inboundSeq.get(message.key) || 0) + 1);
     actors.enqueue(message.key, message);
   }
+
+  const localChat = createLocalChat({ gateway, dispatch: dispatchMessage, logger });
 
   gateway.on('message', (payload) => {
     dispatchMessage(gateway.normalize(payload)).catch((error) => logger.warn('message.dispatch_failed', { error: String(error?.message ?? error) }));
@@ -580,6 +583,7 @@ ${task.result}`);
     metrics: metricsText,
     metricsJson: metricsState,
     dispatch: dispatchMessage,
+    localChat,
     capabilities,
     shutdownToken,
     shutdown: () => shutdownHandler?.()
