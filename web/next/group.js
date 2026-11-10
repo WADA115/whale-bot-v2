@@ -111,7 +111,6 @@ async function poll() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '连接失败');
     setConn(true);
-    if (roomStatus) roomStatus.textContent = '';
     roomTitle.textContent = data.room?.name || session.roomName || '房间';
     inviteCode.value = session.invite || '';
     updateMembers(data.members || []);
@@ -216,7 +215,7 @@ async function sendMessage(event, media = []) {
     if (!res.ok) throw new Error(data.error || '发送失败');
     if (data.message) appendMessage(data.message);
   } catch (error) {
-    formStatus.textContent = String(error.message || error);
+    if (roomStatus) roomStatus.textContent = String(error.message || error);
   }
 }
 
@@ -239,11 +238,13 @@ async function uploadRoomMedia(file, kind = 'image') {
 }
 
 async function sendRoomFile(file, kind = 'image') {
+  if (roomStatus) roomStatus.textContent = kind === 'voice' ? '正在发送语音…' : '正在发送图片…';
   try {
     const media = await uploadRoomMedia(file, kind);
     if (media) await sendMessage(null, [media]);
+    if (roomStatus) roomStatus.textContent = '';
   } catch (error) {
-    formStatus.textContent = String(error.message || error);
+    if (roomStatus) roomStatus.textContent = String(error.message || error);
   }
 }
 
@@ -281,7 +282,7 @@ let groupRecorder = null;
 let groupChunks = [];
 let groupRecording = false;
 async function startGroupVoice() {
-  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { formStatus.textContent = '这个窗口不能录音。'; return; }
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { if (roomStatus) roomStatus.textContent = '这个窗口不能录音。'; return; }
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg'].find((type) => MediaRecorder.isTypeSupported(type)) || '';
   groupChunks = [];
@@ -296,7 +297,7 @@ async function startGroupVoice() {
     const blob = new Blob(groupChunks, { type: groupRecorder?.mimeType || 'audio/webm' });
     groupChunks = [];
     groupRecorder = null;
-    if (blob.size < 800) { formStatus.textContent = '太短了。'; return; }
+    if (blob.size < 800) { if (roomStatus) roomStatus.textContent = '太短了。'; return; }
     await sendRoomFile(new File([blob], 'voice.webm', { type: blob.type || 'audio/webm' }), 'voice');
   };
   groupRecorder.start();
@@ -304,10 +305,11 @@ async function startGroupVoice() {
   $('#groupVoice')?.classList.add('recording');
   const button = $('#groupVoice');
   if (button) button.textContent = '停止';
+  if (roomStatus) roomStatus.textContent = '录音中… 再点一下停止';
 }
 $('#groupVoice')?.addEventListener('click', async () => {
   if (groupRecording) { try { groupRecorder?.stop(); } catch {} return; }
-  try { await startGroupVoice(); } catch (error) { formStatus.textContent = String(error.message || error); groupRecording = false; }
+  try { await startGroupVoice(); } catch (error) { if (roomStatus) roomStatus.textContent = String(error.message || error); groupRecording = false; }
 });
 
 document.querySelectorAll('.mode').forEach((button) => {

@@ -1,6 +1,6 @@
 import { sanitizeReply } from '../core/reply.js';
 
-export function createRoomAI({ roomServer, textRouter, character, logger = null } = {}) {
+export function createRoomAI({ roomServer, textRouter, character, asr = null, mediaBase = 'http://127.0.0.1:3210', logger = null } = {}) {
   const card = character?.card || {};
   const name = String(card.name || '小鲸鱼').trim() || '小鲸鱼';
   const aliases = [name, '鱼鱼', '小鲸鱼', 'AI', 'ai'].filter(Boolean);
@@ -63,7 +63,20 @@ export function createRoomAI({ roomServer, textRouter, character, logger = null 
 
   function observe(room, message) {
     if (!room?.aiEnabled) return;
-    queue = queue.then(() => respond(room, message)).catch(() => {});
+    queue = queue.then(async () => {
+      let text = String(message?.text || '');
+      if (!text && asr && Array.isArray(message?.media)) {
+        const voice = message.media.find((item) => item?.kind === 'voice' && item?.url);
+        if (voice) {
+          try {
+            const heard = await asr.transcribe([{ type: 'record', data: { url: `${mediaBase}${voice.url}` } }]);
+            text = String(heard || '').trim();
+          } catch {}
+        }
+      }
+      if (!text) return;
+      await respond(room, { ...message, text });
+    }).catch(() => {});
   }
 
   return { observe, greet, name };

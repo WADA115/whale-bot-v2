@@ -509,7 +509,7 @@ ${task.result}`);
     onAIEnabled: (room) => roomAI?.greet(room),
     logger
   });
-  roomAI = createRoomAI({ roomServer, textRouter, character, logger });
+  roomAI = createRoomAI({ roomServer, textRouter, character, asr, logger });
   roomServer.start().catch(() => {});
   const localChat = createLocalChat({ gateway, dispatch: dispatchMessage, media: mediaLibrary, history: localHistory, logger });
 
