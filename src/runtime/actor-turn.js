@@ -465,6 +465,20 @@ export function createActorTurn({
         }
       }
     } : null;
+    const readDiaryTool = diary ? {
+      type: 'function',
+      function: {
+        name: 'read_diary',
+        description: '你想细看某一篇日记时用。可以按日期，也可以按你记得的词找。不要每轮都读，想回忆时再读。',
+        parameters: {
+          type: 'object',
+          properties: {
+            date: { type: 'string', description: '日期，例如 2026-11-10；不记得就不传' },
+            query: { type: 'string', description: '你记得的一个词或一句话；不记得就不传' }
+          }
+        }
+      }
+    } : null;
     const momentTool = moments ? {
       type: 'function',
       function: {
@@ -584,7 +598,12 @@ export function createActorTurn({
   const globalContext = conversationLog?.format?.({ excludeKey: key, limit: 12, redactPrivate: current.kind === 'group' }) || '';
   const contactText = contacts?.describe?.(current.userId) || '';
   const momentText = moments?.text?.(3) || '';
-  const diaryText = diary?.recent?.(2)?.map?.((x) => x.text).join('\n') || '';
+  const diaryEntries = diary?.list?.() ?? [];
+  const diaryIndexText = diaryEntries.slice(-12).map((item) => {
+    const d = item.date ? String(item.date) : new Date(Number(item.at) || Date.now()).toLocaleDateString('sv-SE');
+    const first = String(item.text || '').replace(/\s+/g, ' ').slice(0, 60);
+    return `${d} · ${first}`;
+  }).join('\n');
   const milestoneText = milestones?.recent?.(4)?.map?.((x) => x.what).join(' / ') || '';
   const memorySummaryText = current.kind === 'private' ? (memorySummary?.read?.() || '') : '';
   const hour = new Date().getHours();
@@ -634,7 +653,7 @@ export function createActorTurn({
       globalContext ? `其他会话里刚发生的（只是背景，让你别像两个人；不要在别的群或私聊里复述私事）：\n${globalContext}` : '',
       contactText ? `你记得这个人：${contactText}` : '',
       momentText ? `你之前还会想起：\n${momentText}` : '',
-      diaryText ? `你之前自己写下的：\n${diaryText}` : '',
+          diaryIndexText ? `你的日记目录（想细看哪篇就用 read_diary 自己挑）：\n${diaryIndexText}` : '',
       milestoneText ? `你们之间发生过：${milestoneText}` : '',
       memorySummaryText ? `你整理过的旧事：\n${memorySummaryText}` : '',
       deniedText || '',
@@ -660,7 +679,7 @@ export function createActorTurn({
       result = textRouter.generateWithTools
         ? await textRouter.generateWithTools({
           ...prompt,
-          tools: [...biliTools, ...(knowledgeTool ? [knowledgeTool] : []), ...(permissionTool ? [permissionTool] : []), ...(askOwnerTool ? [askOwnerTool] : []), ...(forgetTool ? [forgetTool] : []), ...(confideTool ? [confideTool] : []), ...(milestoneTool ? [milestoneTool] : []), ...(diaryTool ? [diaryTool] : []), ...(momentTool ? [momentTool] : []), ...(speakTool ? [speakTool] : []), ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
+          tools: [...biliTools, ...(knowledgeTool ? [knowledgeTool] : []), ...(permissionTool ? [permissionTool] : []), ...(askOwnerTool ? [askOwnerTool] : []), ...(forgetTool ? [forgetTool] : []), ...(confideTool ? [confideTool] : []), ...(milestoneTool ? [milestoneTool] : []), ...(diaryTool ? [diaryTool] : []), ...(readDiaryTool ? [readDiaryTool] : []), ...(momentTool ? [momentTool] : []), ...(speakTool ? [speakTool] : []), ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
           execute: async (name, args) => {
             if (name === 'look_group_history') return lookAtGroups();
             if (name === 'search_local') return runKnowledge(args);
@@ -678,6 +697,18 @@ export function createActorTurn({
             if (!what) return '没记。';
             milestones?.add?.({ what, who: String(current.senderName || current.userId || ''), key });
             return '记下了。';
+          }
+          if (name === 'read_diary') {
+            const date = String(args?.date ?? '').trim();
+            const query = String(args?.query ?? '').trim().toLowerCase();
+            let hits = diaryEntries.slice();
+            if (date) hits = hits.filter((item) => String(item.date || new Date(Number(item.at) || Date.now()).toLocaleDateString('sv-SE')) === date);
+            if (query) hits = hits.filter((item) => String(item.text || '').toLowerCase().includes(query));
+            if (!hits.length) return '日记里没有。';
+            return hits.slice(-6).map((item) => {
+              const d = item.date || new Date(Number(item.at) || Date.now()).toLocaleDateString('sv-SE');
+              return `${d}\n${item.text}`;
+            }).join('\n\n');
           }
           if (name === 'write_diary') {
             const text = String(args?.text ?? '').trim();
