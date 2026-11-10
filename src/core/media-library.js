@@ -1,4 +1,4 @@
-﻿import fs from 'node:fs';
+import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
@@ -15,6 +15,8 @@ function extFor(mime, name = '') {
   if (String(mime).includes('wav')) return '.wav';
   if (String(mime).includes('mpeg') || String(mime).includes('mp3')) return '.mp3';
   if (String(mime).includes('ogg') || String(mime).includes('opus')) return '.ogg';
+  if (String(mime).includes('webm')) return '.webm';
+  if (String(mime).includes('mp4')) return '.m4a';
   return '.bin';
 }
 

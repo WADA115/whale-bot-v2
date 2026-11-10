@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, nativeImage, shell, screen } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, shell, screen, session } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const net = require('node:net');
@@ -170,6 +170,10 @@ if (!gotLock) {
 } else {
   app.on('second-instance', () => { if (win) { win.show(); win.focus(); } });
   app.whenReady().then(() => {
+    session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+      callback(permission === 'media');
+    });
+    session.defaultSession.setPermissionCheckHandler((webContents, permission) => permission === 'media');
     createWindow();
     buildTray();
     app.on('activate', () => { if (win) win.show(); });

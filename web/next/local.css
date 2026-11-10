@@ -141,3 +141,31 @@ body {
 .bubble img { display: block; max-width: 220px; max-height: 220px; border-radius: 8px; margin-bottom: 6px; }
 .bubble audio { display: block; width: 220px; margin-top: 4px; }
 .composer { padding-top: 8px; border-top: 0; }
+
+.attach-hint { margin-left: 4px; color: #61718a; font-size: 10px; align-self: center; }
+.conversation { position: relative; }
+.sticker-panel {
+  position: absolute;
+  left: 0;
+  bottom: 96px;
+  width: min(360px, 100%);
+  padding: 12px;
+  background: rgba(9, 17, 31, .97);
+  border: 1px solid rgba(168, 198, 255, .16);
+  border-radius: 12px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.5);
+  z-index: 4;
+}
+.sticker-head { color: var(--muted); font-size: 11px; margin-bottom: 10px; }
+.sticker-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; max-height: 240px; overflow-y: auto; }
+.sticker-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 7px; cursor: pointer; border: 1px solid var(--line); }
+.sticker-grid img:hover { border-color: rgba(232,196,124,.5); }
+.sticker-empty { grid-column: 1 / -1; color: #61718a; font-size: 12px; padding: 14px 2px; }
+.attach.recording { color: #ffb4a8; border-color: rgba(255,120,100,.6); background: rgba(255,90,70,.08); }
+.drop-overlay {
+  position: fixed; inset: 0; display: none; place-items: center;
+  background: rgba(4, 8, 15, .72);
+  color: var(--gold); font-size: 16px; letter-spacing: .08em;
+  border: 2px dashed rgba(232,196,124,.45); z-index: 20;
+}
+.drop-overlay.show { display: grid; }

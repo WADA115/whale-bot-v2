@@ -50,11 +50,14 @@
       </div>
 
       <div class="attach-row">
-        <button type="button" class="attach" data-kind="image">图</button>
-        <button type="button" class="attach" data-kind="sticker">表情</button>
-        <button type="button" class="attach" data-kind="voice">语音</button>
+        <button type="button" class="attach" id="stickerToggle">表情</button>
+        <button type="button" class="attach" id="voiceToggle">说话</button>
+        <span class="attach-hint">可直接粘贴 / 拖入图片</span>
       </div>
-      <input type="file" id="filePick" hidden>
+      <div class="sticker-panel" id="stickerPanel" hidden>
+        <div class="sticker-head">你的表情</div>
+        <div class="sticker-grid" id="stickerGrid"></div>
+      </div>
 
       <form class="composer" id="chatForm">
         <textarea id="chatInput" rows="1" autocomplete="off" placeholder="说点什么……"></textarea>
@@ -64,6 +67,7 @@
     </section>
   </main>
 
+  <div class="drop-overlay" id="dropOverlay">松开，放进本地</div>
   <script src="./local.js"></script>
 </body>
 </html>
