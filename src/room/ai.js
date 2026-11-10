@@ -1,4 +1,4 @@
-﻿import { sanitizeReply } from '../core/reply.js';
+import { sanitizeReply } from '../core/reply.js';
 
 export function createRoomAI({ roomServer, textRouter, character, logger = null } = {}) {
   const card = character?.card || {};
@@ -48,10 +48,23 @@ export function createRoomAI({ roomServer, textRouter, character, logger = null 
     }
   }
 
+  async function greet(room) {
+    if (!room?.aiEnabled || !textRouter) return;
+    try {
+      const result = await textRouter.generate({
+        system: buildSystem(),
+        user: `你刚被房主放进「${room.name || '房间'}」。说一句，像刚进来，不要客服腔，不要解释自己是 AI。只写一句。`,
+        maxTokens: 400, temperature: 0.8
+      });
+      const reply = sanitizeReply(result?.text ?? '').trim().slice(0, 600);
+      if (reply) roomServer.sendAI(room.id, reply);
+    } catch (error) { logger?.warn('room.ai_greet_failed', { roomId: room?.id, error: String(error?.message ?? error) }); }
+  }
+
   function observe(room, message) {
     if (!room?.aiEnabled) return;
     queue = queue.then(() => respond(room, message)).catch(() => {});
   }
 
-  return { observe, name };
+  return { observe, greet, name };
 }

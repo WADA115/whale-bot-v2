@@ -86,3 +86,4 @@ body {
 
 .ai-toggle { padding: 6px 10px; color: var(--blue); background: transparent; border: 1px solid rgba(124,199,255,.3); border-radius: 7px; font: inherit; font-size: 10px; cursor: pointer; }
 .ai-toggle.on { color: var(--gold); border-color: rgba(232,196,124,.4); }
+.room-status { min-height: 14px; margin: 0; color: #d09b6a; font-size: 10px; }

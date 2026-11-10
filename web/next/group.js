@@ -8,6 +8,7 @@ const roomTitle = $('#roomTitle');
 const inviteCode = $('#inviteCode');
 const connState = $('#connState');
 const formStatus = $('#formStatus');
+const roomStatus = $('#roomStatus');
 const leaveRoom = $('#leaveRoom');
 const messageInput = $('#messageInput');
 let session = null;
@@ -110,6 +111,7 @@ async function poll() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '连接失败');
     setConn(true);
+    if (roomStatus) roomStatus.textContent = '';
     roomTitle.textContent = data.room?.name || session.roomName || '房间';
     inviteCode.value = session.invite || '';
     updateMembers(data.members || []);
@@ -121,7 +123,7 @@ async function poll() {
     for (const message of data.messages || []) appendMessage(message);
   } catch (error) {
     setConn(false, '连接断开');
-    if (formStatus) formStatus.textContent = String(error.message || error);
+    if (roomStatus) roomStatus.textContent = String(error.message || error);
   }
 }
 
@@ -136,6 +138,7 @@ function showRoom(info) {
   chatView.hidden = false;
   leaveRoom.hidden = false;
   roomTitle.textContent = info.roomName || '房间';
+  if (roomStatus) roomStatus.textContent = '';
   if (aiToggle) aiToggle.hidden = !info.host;
   if (aiToggle) aiToggle.textContent = info.aiEnabled ? 'AI 已开' : 'AI 加入';
   inviteCode.value = info.invite || '';

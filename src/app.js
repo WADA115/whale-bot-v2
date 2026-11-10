@@ -506,6 +506,7 @@ ${task.result}`);
     root: path.join(ROOT, 'state', 'rooms'),
     aiName: character.card.name || '小鲸鱼',
     onMessage: (room, message) => roomAI?.observe(room, message),
+    onAIEnabled: (room) => roomAI?.greet(room),
     logger
   });
   roomAI = createRoomAI({ roomServer, textRouter, character, logger });

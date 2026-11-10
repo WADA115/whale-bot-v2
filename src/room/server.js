@@ -68,7 +68,7 @@ function typeFor(file) {
   }[ext] || 'application/octet-stream';
 }
 
-export function createRoomServer({ port = 3210, root = 'state/rooms', hostName = '房主', aiName = '小鲸鱼', onMessage = null, logger = null } = {}) {
+export function createRoomServer({ port = 3210, root = 'state/rooms', hostName = '房主', aiName = '小鲸鱼', onMessage = null, onAIEnabled = null, logger = null } = {}) {
   const rooms = new Map();
   fs.mkdirSync(root, { recursive: true });
 
@@ -214,6 +214,7 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
           room.members.delete('ai');
         }
         persist(room);
+        if (room.aiEnabled && onAIEnabled) { try { onAIEnabled(room); } catch {} }
         return send(res, 200, { ok: true, enabled: room.aiEnabled });
       }
 
