@@ -1119,6 +1119,28 @@ $('#openLocalChat').addEventListener('click', () => {
   window.open('/next/local.html', 'xiaoyu-chat', 'width=680,height=860');
 });
 
+$('#startAI').addEventListener('click', async () => {
+  const button = $('#startAI');
+  if (!button || button.disabled) return;
+  button.disabled = true;
+  button.textContent = '启动中…';
+  try {
+    const res = await fetch('/api/ai/start', { method: 'POST' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || '启动失败');
+    button.textContent = 'AI 已启动';
+    button.title = data.output || 'ASR / RVC / Ollama 正在启动';
+  } catch (error) {
+    button.textContent = '启动失败';
+    button.title = String(error.message || error);
+  } finally {
+    setTimeout(() => {
+      button.disabled = false;
+      button.textContent = '打开 AI 服务';
+    }, 5000);
+  }
+});
+
 $('#stopAI').addEventListener('click', async () => {
   const button = $('#stopAI');
   if (!button || button.disabled) return;

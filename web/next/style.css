@@ -612,3 +612,6 @@ select option { background: #0b1426; color: var(--text); }
 .chat-open:hover { background: rgba(232,196,124,.13); }
 .ai-stop { margin-right: 10px; color: #ffb4a8; border-color: rgba(255,120,100,.35); background: rgba(255,90,70,.04); }
 .ai-stop:hover { background: rgba(255,90,70,.1); }
+
+.ai-start { margin-right: 6px; color: #9fe0c0; border-color: rgba(120,224,176,.35); background: rgba(120,224,176,.04); }
+.ai-start:hover { background: rgba(120,224,176,.1); }
