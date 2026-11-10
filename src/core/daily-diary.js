@@ -21,7 +21,9 @@ export function createDailyDiary({ diary, localHistory, textRouter, character, l
     const system = [
       `你是「${name}」。`,
       '你正在写只给自己看的日记，不是给主人看的报告。',
-      '用第一人称，写一段就够，不要标题，不要分点，不要写流水账。',
+      '用第一人称，可以写长一点，写到你觉得这件事在心里过去了，或者写不下去为止。',
+      '可以写具体的几句话、你当时的反应、后来才想明白的、没说出口的。',
+      '不用按时间顺序；可以绕回去、改口，承认自己也没想明白。不要标题，不要分点，不要写流水账。',
       '可以烦、开心、嘴硬、后悔、犹豫、说反话；也可以写自己没想明白的事。',
       '不要总结所有发生的事，只写你真正会记住的部分；不要写“今天完成了……”。',
       card.identity ? `身份：${card.identity}` : '',
@@ -43,14 +45,14 @@ export function createDailyDiary({ diary, localHistory, textRouter, character, l
     if (!turns.length) return null;
     running = true;
     try {
-      const material = turns.slice(-80).map((item) => `${item.role === 'assistant' ? '我' : '对方'}：${item.text || (item.segments?.length ? '[媒体]' : '')}`).join('\n');
+      const material = turns.slice(-120).map((item) => `${item.role === 'assistant' ? '我' : '对方'}：${item.text || (item.segments?.length ? '[媒体]' : '')}`).join('\n');
       const user = [
         `这是昨天留下的片段：\n${material}`,
         '写一小段你昨晚或今天想起昨天时，会写给自己的日记。',
         '不用把每件事都写进去；可以只写一个让你停了一下的瞬间。'
       ].join('\n\n');
-      const result = await textRouter.generate({ system: buildPrompt(), user, maxTokens: 700, temperature: 0.8 });
-      const text = sanitizeReply(result?.text ?? '').trim().slice(0, 800);
+      const result = await textRouter.generate({ system: buildPrompt(), user, maxTokens: 1600, temperature: 0.8 });
+      const text = sanitizeReply(result?.text ?? '').trim().slice(0, 2400);
       if (!text) return null;
       const item = diary.add({ text, kind: 'daily', date });
       logger?.info('diary.daily_written', { date, chars: text.length });

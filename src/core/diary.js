@@ -13,7 +13,7 @@ export function createDiary({ file = 'state/diary.json', limit = 80, logger = nu
   }
 
   function add({ text = '', at = Date.now(), kind = '', date = '' } = {}) {
-    const body = String(text ?? '').trim().slice(0, 800);
+    const body = String(text ?? '').trim().slice(0, 2400);
     if (!body) return null;
     const item = { text: body, at: Number(at) || Date.now(), kind: String(kind || ''), date: String(date || '') };
     list.push(item);
