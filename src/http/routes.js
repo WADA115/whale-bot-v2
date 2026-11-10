@@ -171,7 +171,23 @@ export function createPanelHandler(ctx) {
       }).catch(() => json(res, 400, { error: 'invalid json' }));
       return;
     }
-    if (req.url === '/api/voice/stop' && req.method === 'POST') {
+    if (req.url === '/api/ai/stop' && req.method === 'POST') {
+    try {
+      const script = path.join(ctx.root, 'scripts', 'stop-ai.ps1');
+      const child = spawn(POWERSHELL, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script], {
+        cwd: ctx.root, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe']
+      });
+      let output = '';
+      child.stdout.on('data', (chunk) => { output += String(chunk); });
+      child.stderr.on('data', (chunk) => { output += String(chunk); });
+      child.on('close', () => json(res, 200, { ok: true, message: 'AI 服务已关闭', output: output.trim() }));
+      child.on('error', (error) => json(res, 502, { error: String(error?.message ?? error) }));
+    } catch (error) {
+      json(res, 502, { error: String(error?.message ?? error) });
+    }
+    return;
+  }
+  if (req.url === '/api/voice/stop' && req.method === 'POST') {
       try {
         ctx.mansui?.stop?.();
         json(res, 200, { ok: true, message: '满穗语音服务已停止' });

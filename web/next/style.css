@@ -610,3 +610,5 @@ select option { background: #0b1426; color: var(--text); }
   cursor: pointer;
 }
 .chat-open:hover { background: rgba(232,196,124,.13); }
+.ai-stop { margin-right: 10px; color: #ffb4a8; border-color: rgba(255,120,100,.35); background: rgba(255,90,70,.04); }
+.ai-stop:hover { background: rgba(255,90,70,.1); }

@@ -1112,6 +1112,28 @@ $('#openLocalChat').addEventListener('click', () => {
   window.open('/next/local.html', 'xiaoyu-chat', 'width=680,height=860');
 });
 
+$('#stopAI').addEventListener('click', async () => {
+  const button = $('#stopAI');
+  if (!button || button.disabled) return;
+  button.disabled = true;
+  button.textContent = '关闭中…';
+  try {
+    const res = await fetch('/api/ai/stop', { method: 'POST' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || '关闭失败');
+    button.textContent = 'AI 已关';
+    button.title = data.output || 'ASR / RVC / Ollama / GPT-SoVITS 已停止';
+  } catch (error) {
+    button.textContent = '关闭失败';
+    button.title = String(error.message || error);
+  } finally {
+    setTimeout(() => {
+      button.disabled = false;
+      button.textContent = '释放 AI';
+    }, 4000);
+  }
+});
+
 $('#personaChatSend').addEventListener('click', personaChatSend);
 $('#personaDraft').addEventListener('click', personaDraft);
 $('#personaRefine').addEventListener('click', personaRefine);
