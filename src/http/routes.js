@@ -6,6 +6,7 @@ import { json, text, sendFile, readBody, readLogTail, v1Get, publicConfig, apply
 const POWERSHELL = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
 
 const TYPES = {
+  '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.png': 'image/png',
@@ -673,7 +674,13 @@ export function createPanelHandler(ctx) {
       }).catch(() => json(res, 400, { error: 'invalid json' }));
       return;
     }
-    if (req.url === '/api/local/chat' && req.method === 'POST') {
+    if (req.url === '/api/local/history' && req.method === 'GET') {
+    const scene = ctx.character?.scenes?.get?.('private:local');
+    const turns = (scene?.turns ?? []).slice(-24).map((turn) => ({ role: turn.role, text: turn.text }));
+    json(res, 200, { ok: true, turns });
+    return;
+  }
+  if (req.url === '/api/local/chat' && req.method === 'POST') {
     readBody(req).then(async (body) => {
       const text = String(body?.text ?? '').trim();
       if (!text) return json(res, 400, { error: 'text required' });

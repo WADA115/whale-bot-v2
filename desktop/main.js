@@ -119,6 +119,22 @@ function createWindow() {
     win.hide();
   });
   win.webContents.setWindowOpenHandler(({ url }) => {
+    try {
+      const base = new URL(PANEL);
+      const target = new URL(url);
+      if (target.origin === base.origin) {
+        return {
+          action: 'allow',
+          overrideBrowserWindowOptions: {
+            width: 680, height: 860, minWidth: 420, minHeight: 560,
+            title: '和小鲸鱼说话',
+            backgroundColor: '#060b14',
+            autoHideMenuBar: true,
+            webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true }
+          }
+        };
+      }
+    } catch {}
     if (/^https?:/i.test(url)) shell.openExternal(url);
     return { action: 'deny' };
   });
@@ -139,6 +155,7 @@ function buildTray() {
   tray.setToolTip('小鲸鱼');
   const menu = Menu.buildFromTemplate([
     { label: '显示面板', click: () => { if (win) { win.show(); win.focus(); } } },
+    { label: '和小鲸鱼说话', click: () => { if (win) { win.show(); win.webContents.executeJavaScript("window.open('/next/local.html','xiaoyu-chat','width=680,height=860')"); } } },
     { label: '隐藏到托盘', click: () => { if (win) win.hide(); } },
     { type: 'separator' },
     { label: '退出', click: () => { quitting = true; app.quit(); } }

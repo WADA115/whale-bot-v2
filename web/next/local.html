@@ -1,0 +1,62 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>和小鲸鱼说话</title>
+  <link rel="stylesheet" href="./local.css">
+</head>
+<body>
+  <div class="ambient" aria-hidden="true">
+    <div class="glow glow-a"></div>
+    <div class="glow glow-b"></div>
+    <div class="grain"></div>
+  </div>
+
+  <main class="shell">
+    <aside class="presence">
+      <div class="avatar-wrap">
+        <img src="../assets/xiaoshen/avatar.png" alt="小鲸鱼">
+        <span class="online"></span>
+      </div>
+      <p class="eyebrow">LOCAL</p>
+      <h1>小鲸鱼</h1>
+      <p class="sub">本地对话 · 不走 QQ</p>
+      <div class="presence-note">
+        <span>她现在只在这台机器上。</span>
+        <span>没有群，没有转发，没有外人。</span>
+      </div>
+      <div class="presence-foot">DESKTOP ONLY</div>
+    </aside>
+
+    <section class="conversation">
+      <header class="chat-head">
+        <div>
+          <p class="eyebrow">DIRECT</p>
+          <h2>直接和她说</h2>
+        </div>
+        <div class="status"><span class="dot"></span><span>本地</span></div>
+      </header>
+
+      <div class="chat-log" id="chatLog" aria-live="polite">
+        <div class="empty" id="chatEmpty">
+          <span>还没有说话。</span>
+          <span>她不在这里演客服。</span>
+        </div>
+      </div>
+
+      <div class="typing" id="typing" hidden>
+        <span></span><span></span><span></span>
+      </div>
+
+      <form class="composer" id="chatForm">
+        <textarea id="chatInput" rows="1" autocomplete="off" placeholder="说点什么……"></textarea>
+        <button id="chatSend" type="submit">发送</button>
+      </form>
+      <p class="chat-status" id="chatStatus"></p>
+    </section>
+  </main>
+
+  <script src="./local.js"></script>
+</body>
+</html>
