@@ -48,6 +48,7 @@ import { createLocalChat } from './runtime/local-chat.js';
 import { createMediaLibrary } from './core/media-library.js';
 import { createLocalHistory } from './core/local-history.js';
 import { createRoomServer } from './room/server.js';
+import { createRoomAI } from './room/ai.js';
 import { acquireRuntimeLock } from './runtime/lock.js';
 import { createMindStore } from './mind/store.js';
 import { createDaydream } from './mind/daydream.js';
@@ -499,7 +500,15 @@ ${task.result}`);
 
   const mediaLibrary = createMediaLibrary({ root: path.join(ROOT, 'state', 'media'), logger });
   const localHistory = createLocalHistory({ file: path.join(ROOT, 'state', 'local-history.json'), logger });
-  const roomServer = createRoomServer({ port: Number(config.room?.port) || 3210, root: path.join(ROOT, 'state', 'rooms'), logger });
+  let roomAI = null;
+  const roomServer = createRoomServer({
+    port: Number(config.room?.port) || 3210,
+    root: path.join(ROOT, 'state', 'rooms'),
+    aiName: character.card.name || '小鲸鱼',
+    onMessage: (room, message) => roomAI?.observe(room, message),
+    logger
+  });
+  roomAI = createRoomAI({ roomServer, textRouter, character, logger });
   roomServer.start().catch(() => {});
   const localChat = createLocalChat({ gateway, dispatch: dispatchMessage, media: mediaLibrary, history: localHistory, logger });
 

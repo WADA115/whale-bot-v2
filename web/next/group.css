@@ -83,3 +83,6 @@ body {
 .msg .text audio { display: block; width: 240px; margin-top: 4px; }
 .drop-overlay { position: fixed; inset: 0; display: none; place-items: center; background: rgba(4,8,15,.72); color: var(--gold); font-size: 16px; border: 2px dashed rgba(232,196,124,.45); z-index: 20; }
 .drop-overlay.show { display: grid; }
+
+.ai-toggle { padding: 6px 10px; color: var(--blue); background: transparent; border: 1px solid rgba(124,199,255,.3); border-radius: 7px; font: inherit; font-size: 10px; cursor: pointer; }
+.ai-toggle.on { color: var(--gold); border-color: rgba(232,196,124,.4); }

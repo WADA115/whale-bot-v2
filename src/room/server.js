@@ -68,7 +68,7 @@ function typeFor(file) {
   }[ext] || 'application/octet-stream';
 }
 
-export function createRoomServer({ port = 3210, root = 'state/rooms', hostName = '房主', logger = null } = {}) {
+export function createRoomServer({ port = 3210, root = 'state/rooms', hostName = '房主', aiName = '小鲸鱼', onMessage = null, logger = null } = {}) {
   const rooms = new Map();
   fs.mkdirSync(root, { recursive: true });
 
@@ -79,7 +79,7 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
     try {
       fs.writeFileSync(fileFor(room.id), JSON.stringify({
         id: room.id, name: room.name, token: room.token, hostName: room.hostName,
-        createdAt: room.createdAt, messages: room.messages,
+        createdAt: room.createdAt, aiEnabled: Boolean(room.aiEnabled), messages: room.messages,
         members: [...room.members.values()]
       }, null, 2) + '\n', 'utf8');
     } catch (error) { logger?.warn('room.persist_failed', { roomId: room.id, error: String(error?.message ?? error) }); }
@@ -94,6 +94,7 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
         const room = {
           id: String(data.id), name: String(data.name || '房间'), token: String(data.token),
           hostName: String(data.hostName || hostName), createdAt: Number(data.createdAt) || Date.now(),
+          aiEnabled: Boolean(data.aiEnabled),
           messages: Array.isArray(data.messages) ? data.messages.slice(-MAX_MESSAGES) : [],
           members: new Map((Array.isArray(data.members) ? data.members : []).map((m) => [String(m.id), {
             id: String(m.id), name: String(m.name || '成员'), host: Boolean(m.host),
@@ -140,7 +141,7 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
         const token = crypto.randomBytes(6).toString('hex');
         const clientId = String(body.clientId || crypto.randomUUID());
         const memberName = String(body.memberName || hostName).trim().slice(0, 24) || hostName;
-        const room = { id: roomId, name, token, hostName: memberName, createdAt: Date.now(), messages: [], members: new Map() };
+        const room = { id: roomId, name, token, hostName: memberName, createdAt: Date.now(), aiEnabled: false, messages: [], members: new Map() };
         room.members.set(clientId, { id: clientId, name: memberName, host: true, joinedAt: Date.now(), lastSeen: Date.now() });
         rooms.set(roomId, room);
         persist(room);
@@ -175,7 +176,8 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
         return send(res, 200, {
           ok: true,
           room: { id: room.id, name: room.name, hostName: room.hostName },
-          members: [...room.members.values()].map((m) => ({ id: m.id, name: m.name, host: m.host, lastSeen: m.lastSeen })),
+          aiEnabled: Boolean(room.aiEnabled),
+          members: [...room.members.values()].map((m) => ({ id: m.id, name: m.name, host: m.host, ai: Boolean(m.ai), lastSeen: m.lastSeen })),
           messages,
           addresses: lanAddresses(),
           port
@@ -199,6 +201,22 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
         return send(res, 200, { ok: true, media: { kind, url: `/room-media/${room.id}/media/${file}`, mime: String(body.mime || '') } });
       }
 
+      if (req.method === 'POST' && url.pathname === '/api/room/ai') {
+        const body = await readJson(req);
+        const room = rooms.get(String(body.roomId || ''));
+        if (!room || room.token !== String(body.token || '')) return send(res, 403, { error: '邀请码无效' });
+        const member = room.members.get(String(body.clientId || ''));
+        if (!member?.host) return send(res, 403, { error: '只有房主能开关 AI' });
+        room.aiEnabled = Boolean(body.enabled);
+        if (room.aiEnabled) {
+          room.members.set('ai', { id: 'ai', name: aiName, host: false, ai: true, joinedAt: Date.now(), lastSeen: Date.now() });
+        } else {
+          room.members.delete('ai');
+        }
+        persist(room);
+        return send(res, 200, { ok: true, enabled: room.aiEnabled });
+      }
+
       if (req.method === 'POST' && url.pathname === '/api/room/send') {
         const body = await readJson(req);
         const room = rooms.get(String(body.roomId || ''));
@@ -219,6 +237,7 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
         room.messages.push(message);
         if (room.messages.length > MAX_MESSAGES) room.messages.splice(0, room.messages.length - MAX_MESSAGES);
         persist(room);
+        if (onMessage) { try { onMessage(room, message); } catch {} }
         return send(res, 200, { ok: true, message });
       }
 
@@ -236,6 +255,17 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
       });
     },
     close() { try { server.close(); } catch {} },
+    sendAI(roomId, text) {
+      const room = rooms.get(String(roomId));
+      if (!room || !room.aiEnabled) return null;
+      const body = String(text || '').trim().slice(0, 2000);
+      if (!body) return null;
+      const message = { id: crypto.randomUUID(), at: Date.now(), clientId: 'ai', name: aiName, text: body, media: [], ai: true };
+      room.messages.push(message);
+      if (room.messages.length > MAX_MESSAGES) room.messages.splice(0, room.messages.length - MAX_MESSAGES);
+      persist(room);
+      return message;
+    },
     rooms
   };
 }

@@ -93,6 +93,10 @@ function updateMembers(members = []) {
       const badge = document.createElement('small');
       badge.textContent = '房主';
       row.append(badge);
+    } else if (member.ai) {
+      const badge = document.createElement('small');
+      badge.textContent = 'AI';
+      row.append(badge);
     }
     memberList.append(row);
   }
@@ -109,6 +113,11 @@ async function poll() {
     roomTitle.textContent = data.room?.name || session.roomName || '房间';
     inviteCode.value = session.invite || '';
     updateMembers(data.members || []);
+    if (aiToggle) {
+      aiToggle.hidden = !session.host;
+      aiToggle.textContent = data.aiEnabled ? 'AI 已开' : 'AI 加入';
+      aiToggle.classList.toggle('on', Boolean(data.aiEnabled));
+    }
     for (const message of data.messages || []) appendMessage(message);
   } catch (error) {
     setConn(false, '连接断开');
@@ -127,6 +136,8 @@ function showRoom(info) {
   chatView.hidden = false;
   leaveRoom.hidden = false;
   roomTitle.textContent = info.roomName || '房间';
+  if (aiToggle) aiToggle.hidden = !info.host;
+  if (aiToggle) aiToggle.textContent = info.aiEnabled ? 'AI 已开' : 'AI 加入';
   inviteCode.value = info.invite || '';
   updateMembers(info.members || []);
   startPolling();
