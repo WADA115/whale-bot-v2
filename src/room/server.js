@@ -1,9 +1,12 @@
-﻿import http from 'node:http';
+import http from 'node:http';
 import os from 'node:os';
+import path from 'node:path';
+import fs from 'node:fs';
 import crypto from 'node:crypto';
 
-const MAX_BODY = 1_000_000;
+const MAX_BODY = 24_000_000;
 const MAX_MESSAGES = 500;
+const MAX_MEDIA = 6;
 
 function lanAddresses() {
   const out = [];
@@ -15,13 +18,13 @@ function lanAddresses() {
   return [...new Set(out)];
 }
 
-function readJson(req) {
+function readJson(req, maxBytes = MAX_BODY) {
   return new Promise((resolve, reject) => {
     let size = 0;
     const chunks = [];
     req.on('data', (chunk) => {
       size += chunk.length;
-      if (size > MAX_BODY) { reject(new Error('body too large')); req.destroy(); return; }
+      if (size > maxBytes) { reject(new Error('body too large')); req.destroy(); return; }
       chunks.push(chunk);
     });
     req.on('end', () => {
@@ -45,8 +48,65 @@ function send(res, code, data) {
   res.end(body);
 }
 
-export function createRoomServer({ port = 3210, hostName = '房主', logger = null } = {}) {
+function extFor(mime) {
+  if (String(mime).includes('png')) return '.png';
+  if (String(mime).includes('webp')) return '.webp';
+  if (String(mime).includes('gif')) return '.gif';
+  if (String(mime).includes('webm')) return '.webm';
+  if (String(mime).includes('ogg') || String(mime).includes('opus')) return '.ogg';
+  if (String(mime).includes('wav')) return '.wav';
+  if (String(mime).includes('mpeg') || String(mime).includes('mp3')) return '.mp3';
+  return '.jpg';
+}
+
+function typeFor(file) {
+  const ext = path.extname(file).toLowerCase();
+  return {
+    '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+    '.webp': 'image/webp', '.gif': 'image/gif',
+    '.webm': 'audio/webm', '.ogg': 'audio/ogg', '.wav': 'audio/wav', '.mp3': 'audio/mpeg'
+  }[ext] || 'application/octet-stream';
+}
+
+export function createRoomServer({ port = 3210, root = 'state/rooms', hostName = '房主', logger = null } = {}) {
   const rooms = new Map();
+  fs.mkdirSync(root, { recursive: true });
+
+  function fileFor(roomId) { return path.join(root, `${roomId}.json`); }
+  function mediaDir(roomId) { return path.join(root, roomId, 'media'); }
+
+  function persist(room) {
+    try {
+      fs.writeFileSync(fileFor(room.id), JSON.stringify({
+        id: room.id, name: room.name, token: room.token, hostName: room.hostName,
+        createdAt: room.createdAt, messages: room.messages,
+        members: [...room.members.values()]
+      }, null, 2) + '\n', 'utf8');
+    } catch (error) { logger?.warn('room.persist_failed', { roomId: room.id, error: String(error?.message ?? error) }); }
+  }
+
+  function load() {
+    try {
+      for (const file of fs.readdirSync(root)) {
+        if (!file.endsWith('.json')) continue;
+        const data = JSON.parse(fs.readFileSync(path.join(root, file), 'utf8'));
+        if (!data?.id || !data?.token) continue;
+        const room = {
+          id: String(data.id), name: String(data.name || '房间'), token: String(data.token),
+          hostName: String(data.hostName || hostName), createdAt: Number(data.createdAt) || Date.now(),
+          messages: Array.isArray(data.messages) ? data.messages.slice(-MAX_MESSAGES) : [],
+          members: new Map((Array.isArray(data.members) ? data.members : []).map((m) => [String(m.id), {
+            id: String(m.id), name: String(m.name || '成员'), host: Boolean(m.host),
+            joinedAt: Number(m.joinedAt) || Date.now(), lastSeen: Number(m.lastSeen) || Date.now()
+          }]))
+        };
+        rooms.set(room.id, room);
+      }
+      logger?.info('room.loaded', { count: rooms.size });
+    } catch (error) { logger?.warn('room.load_failed', { error: String(error?.message ?? error) }); }
+  }
+  load();
+
   const server = http.createServer(async (req, res) => {
     if (req.method === 'OPTIONS') {
       res.writeHead(204, { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type' });
@@ -55,6 +115,24 @@ export function createRoomServer({ port = 3210, hostName = '房主', logger = nu
     }
     try {
       const url = new URL(req.url, `http://${req.headers.host || '127.0.0.1'}`);
+      if (req.method === 'GET' && url.pathname.startsWith('/room-media/')) {
+        const rel = url.pathname.slice('/room-media/'.length);
+        const file = path.resolve(root, rel);
+        const base = path.resolve(root);
+        if (!file.startsWith(base + path.sep)) return send(res, 403, { error: 'forbidden' });
+        try {
+          const body = fs.readFileSync(file);
+          res.writeHead(200, {
+            'content-type': typeFor(file),
+            'content-length': body.length,
+            'access-control-allow-origin': '*',
+            'cache-control': 'no-cache'
+          });
+          res.end(body);
+        } catch { send(res, 404, { error: 'not found' }); }
+        return;
+      }
+
       if (req.method === 'POST' && url.pathname === '/api/room/create') {
         const body = await readJson(req);
         const name = String(body.name || '').trim().slice(0, 40) || '新房间';
@@ -65,6 +143,7 @@ export function createRoomServer({ port = 3210, hostName = '房主', logger = nu
         const room = { id: roomId, name, token, hostName: memberName, createdAt: Date.now(), messages: [], members: new Map() };
         room.members.set(clientId, { id: clientId, name: memberName, host: true, joinedAt: Date.now(), lastSeen: Date.now() });
         rooms.set(roomId, room);
+        persist(room);
         const addresses = lanAddresses();
         const invite = addresses[0] ? `${addresses[0]}:${port}#${roomId}#${token}` : `127.0.0.1:${port}#${roomId}#${token}`;
         logger?.info('room.created', { roomId, name });
@@ -79,6 +158,7 @@ export function createRoomServer({ port = 3210, hostName = '房主', logger = nu
         const name = String(body.name || '').trim().slice(0, 24) || `客人${room.members.size + 1}`;
         const existing = room.members.get(clientId);
         room.members.set(clientId, { id: clientId, name: existing?.name || name, host: Boolean(existing?.host), joinedAt: existing?.joinedAt || Date.now(), lastSeen: Date.now() });
+        persist(room);
         logger?.info('room.joined', { roomId: room.id, name });
         return send(res, 200, { ok: true, roomId: room.id, name: room.name, hostName: room.hostName, member: room.members.get(clientId), addresses: lanAddresses() });
       }
@@ -102,6 +182,23 @@ export function createRoomServer({ port = 3210, hostName = '房主', logger = nu
         });
       }
 
+      if (req.method === 'POST' && url.pathname === '/api/room/media') {
+        const body = await readJson(req);
+        const room = rooms.get(String(body.roomId || ''));
+        if (!room || room.token !== String(body.token || '')) return send(res, 403, { error: '邀请码无效' });
+        const member = room.members.get(String(body.clientId || ''));
+        if (!member) return send(res, 403, { error: '不在房间' });
+        const kind = ['image', 'sticker', 'voice'].includes(String(body.kind)) ? String(body.kind) : 'image';
+        const buffer = Buffer.from(String(body.data || ''), 'base64');
+        if (!buffer.length) return send(res, 400, { error: '空文件' });
+        if (buffer.length > 18 * 1024 * 1024) return send(res, 413, { error: '文件太大' });
+        fs.mkdirSync(mediaDir(room.id), { recursive: true });
+        const hash = crypto.createHash('sha256').update(buffer).digest('hex').slice(0, 24);
+        const file = `${hash}${extFor(String(body.mime || ''))}`;
+        fs.writeFileSync(path.join(mediaDir(room.id), file), buffer);
+        return send(res, 200, { ok: true, media: { kind, url: `/room-media/${room.id}/media/${file}`, mime: String(body.mime || '') } });
+      }
+
       if (req.method === 'POST' && url.pathname === '/api/room/send') {
         const body = await readJson(req);
         const room = rooms.get(String(body.roomId || ''));
@@ -109,10 +206,19 @@ export function createRoomServer({ port = 3210, hostName = '房主', logger = nu
         const member = room.members.get(String(body.clientId || ''));
         if (!member) return send(res, 403, { error: '不在房间' });
         const text = String(body.text || '').trim().slice(0, 2000);
-        if (!text) return send(res, 400, { error: '空消息' });
-        const message = { id: crypto.randomUUID(), at: Date.now(), clientId: member.id, name: member.name, text };
+        const media = (Array.isArray(body.media) ? body.media : []).slice(0, MAX_MEDIA).filter((item) => {
+          const url = String(item?.url || '');
+          return /^\/room-media\/[^/]+\/media\/[^/]+$/.test(url);
+        }).map((item) => ({
+          kind: ['image', 'sticker', 'voice'].includes(String(item.kind)) ? String(item.kind) : 'image',
+          url: String(item.url),
+          mime: String(item.mime || '')
+        }));
+        if (!text && !media.length) return send(res, 400, { error: '空消息' });
+        const message = { id: crypto.randomUUID(), at: Date.now(), clientId: member.id, name: member.name, text, media };
         room.messages.push(message);
         if (room.messages.length > MAX_MESSAGES) room.messages.splice(0, room.messages.length - MAX_MESSAGES);
+        persist(room);
         return send(res, 200, { ok: true, message });
       }
 
@@ -126,7 +232,7 @@ export function createRoomServer({ port = 3210, hostName = '房主', logger = nu
     start() {
       return new Promise((resolve) => {
         server.once('error', (error) => { logger?.warn('room.listen_failed', { error: String(error?.message ?? error) }); resolve(false); });
-        server.listen(port, '0.0.0.0', () => { logger?.info('room.listening', { port }); resolve(true); });
+        server.listen(port, '0.0.0.0', () => { logger?.info('room.listening', { port, rooms: rooms.size }); resolve(true); });
       });
     },
     close() { try { server.close(); } catch {} },

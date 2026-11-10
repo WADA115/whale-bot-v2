@@ -75,3 +75,11 @@ body {
   .invite-box { display: none; }
   .chat-view { padding: 14px; }
 }
+
+.group-attach { display: flex; align-items: center; gap: 10px; padding: 8px 0 0; color: #61718a; font-size: 10px; }
+.group-attach button { padding: 4px 10px; color: #9fb0c6; background: transparent; border: 1px solid var(--line); border-radius: 999px; font: inherit; font-size: 10px; cursor: pointer; }
+.group-attach button.recording { color: #ffb4a8; border-color: rgba(255,120,100,.6); }
+.msg .text img { display: block; max-width: 240px; max-height: 220px; border-radius: 8px; margin-bottom: 5px; }
+.msg .text audio { display: block; width: 240px; margin-top: 4px; }
+.drop-overlay { position: fixed; inset: 0; display: none; place-items: center; background: rgba(4,8,15,.72); color: var(--gold); font-size: 16px; border: 2px dashed rgba(232,196,124,.45); z-index: 20; }
+.drop-overlay.show { display: grid; }

@@ -499,7 +499,7 @@ ${task.result}`);
 
   const mediaLibrary = createMediaLibrary({ root: path.join(ROOT, 'state', 'media'), logger });
   const localHistory = createLocalHistory({ file: path.join(ROOT, 'state', 'local-history.json'), logger });
-  const roomServer = createRoomServer({ port: Number(config.room?.port) || 3210, logger });
+  const roomServer = createRoomServer({ port: Number(config.room?.port) || 3210, root: path.join(ROOT, 'state', 'rooms'), logger });
   roomServer.start().catch(() => {});
   const localChat = createLocalChat({ gateway, dispatch: dispatchMessage, media: mediaLibrary, history: localHistory, logger });
 

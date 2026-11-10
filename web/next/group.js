@@ -1,4 +1,4 @@
-﻿const $ = (sel) => document.querySelector(sel);
+const $ = (sel) => document.querySelector(sel);
 const landing = $('#landing');
 const chatView = $('#chatView');
 const messagesEl = $('#messages');
@@ -37,6 +37,13 @@ function fmtTime(at) {
   return new Date(Number(at) || Date.now()).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 }
 
+function resolveMedia(url) {
+  const raw = String(url || '');
+  if (!raw) return '';
+  if (/^https?:/i.test(raw)) return raw;
+  return `${session?.base || ''}${raw}`;
+}
+
 function appendMessage(msg) {
   if (!msg || lastMessageIds.has(msg.id)) return;
   lastMessageIds.add(msg.id);
@@ -49,6 +56,20 @@ function appendMessage(msg) {
   const text = document.createElement('div');
   text.className = 'text';
   text.textContent = String(msg.text || '');
+  for (const media of msg.media || []) {
+    if (media.kind === 'voice') {
+      const audio = document.createElement('audio');
+      audio.controls = true;
+      audio.src = resolveMedia(media.url);
+      text.append(audio);
+    } else {
+      const img = document.createElement('img');
+      img.src = resolveMedia(media.url);
+      img.alt = media.kind === 'sticker' ? '[表情]' : '[图片]';
+      text.append(img);
+    }
+  }
+  if (!text.childNodes.length) return;
   const time = document.createElement('div');
   time.className = 'time';
   time.textContent = fmtTime(msg.at);
@@ -166,16 +187,16 @@ async function joinRoom() {
   }
 }
 
-async function sendMessage(event) {
+async function sendMessage(event, media = []) {
   event?.preventDefault();
   const text = messageInput.value.trim();
-  if (!text || !session) return;
+  if ((!text && !media.length) || !session) return;
   messageInput.value = '';
   messageInput.style.height = 'auto';
   try {
     const res = await fetch(`${session.base}/api/room/send`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ roomId: session.roomId, token: session.token, clientId: session.clientId, text })
+      body: JSON.stringify({ roomId: session.roomId, token: session.token, clientId: session.clientId, text, media })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '发送失败');
@@ -184,6 +205,96 @@ async function sendMessage(event) {
     formStatus.textContent = String(error.message || error);
   }
 }
+
+async function uploadRoomMedia(file, kind = 'image') {
+  if (!session) return null;
+  if (file.size > 18 * 1024 * 1024) throw new Error('文件太大');
+  const data = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
+    reader.onerror = () => reject(reader.error || new Error('读取失败'));
+    reader.readAsDataURL(file);
+  });
+  const res = await fetch(`${session.base}/api/room/media`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ roomId: session.roomId, token: session.token, clientId: session.clientId, kind, data, mime: file.type || '', name: file.name || '' })
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error || '上传失败');
+  return body.media;
+}
+
+async function sendRoomFile(file, kind = 'image') {
+  try {
+    const media = await uploadRoomMedia(file, kind);
+    if (media) await sendMessage(null, [media]);
+  } catch (error) {
+    formStatus.textContent = String(error.message || error);
+  }
+}
+
+document.addEventListener('paste', async (event) => {
+  const items = [...(event.clipboardData?.items || [])];
+  const file = items.find((item) => item.type.startsWith('image/'))?.getAsFile();
+  if (!file) return;
+  event.preventDefault();
+  await sendRoomFile(file, 'image');
+});
+
+let groupDragDepth = 0;
+document.addEventListener('dragenter', (event) => {
+  event.preventDefault();
+  groupDragDepth += 1;
+  $('#groupDrop')?.classList.add('show');
+});
+document.addEventListener('dragover', (event) => event.preventDefault());
+document.addEventListener('dragleave', (event) => {
+  event.preventDefault();
+  groupDragDepth = Math.max(0, groupDragDepth - 1);
+  if (!groupDragDepth) $('#groupDrop')?.classList.remove('show');
+});
+document.addEventListener('drop', async (event) => {
+  event.preventDefault();
+  groupDragDepth = 0;
+  $('#groupDrop')?.classList.remove('show');
+  const file = event.dataTransfer?.files?.[0];
+  if (!file) return;
+  const kind = file.type.startsWith('audio/') || /\.(wav|mp3|ogg|m4a|amr|webm)$/i.test(file.name) ? 'voice' : 'image';
+  await sendRoomFile(file, kind);
+});
+
+let groupRecorder = null;
+let groupChunks = [];
+let groupRecording = false;
+async function startGroupVoice() {
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { formStatus.textContent = '这个窗口不能录音。'; return; }
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg'].find((type) => MediaRecorder.isTypeSupported(type)) || '';
+  groupChunks = [];
+  groupRecorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+  groupRecorder.ondataavailable = (event) => { if (event.data?.size) groupChunks.push(event.data); };
+  groupRecorder.onstop = async () => {
+    for (const track of stream.getTracks()) track.stop();
+    groupRecording = false;
+    const button = $('#groupVoice');
+    button?.classList.remove('recording');
+    if (button) button.textContent = '说话';
+    const blob = new Blob(groupChunks, { type: groupRecorder?.mimeType || 'audio/webm' });
+    groupChunks = [];
+    groupRecorder = null;
+    if (blob.size < 800) { formStatus.textContent = '太短了。'; return; }
+    await sendRoomFile(new File([blob], 'voice.webm', { type: blob.type || 'audio/webm' }), 'voice');
+  };
+  groupRecorder.start();
+  groupRecording = true;
+  $('#groupVoice')?.classList.add('recording');
+  const button = $('#groupVoice');
+  if (button) button.textContent = '停止';
+}
+$('#groupVoice')?.addEventListener('click', async () => {
+  if (groupRecording) { try { groupRecorder?.stop(); } catch {} return; }
+  try { await startGroupVoice(); } catch (error) { formStatus.textContent = String(error.message || error); groupRecording = false; }
+});
 
 document.querySelectorAll('.mode').forEach((button) => {
   button.addEventListener('click', () => {

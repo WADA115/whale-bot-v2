@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
@@ -60,6 +60,11 @@
 
       <div class="messages" id="messages"></div>
 
+      <div class="group-attach">
+        <button id="groupVoice" type="button">说话</button>
+        <span>可直接粘贴 / 拖入图片</span>
+      </div>
+
       <form class="composer" id="composer">
         <textarea id="messageInput" rows="1" placeholder="说点什么……"></textarea>
         <button type="submit">发送</button>
@@ -73,6 +78,7 @@
     </aside>
   </main>
 
+  <div class="drop-overlay" id="groupDrop">松开，发到房间</div>
   <script src="./group.js"></script>
 </body>
 </html>
