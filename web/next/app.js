@@ -1108,6 +1108,10 @@ async function personaChatSend() {
   }
 }
 
+$('#openGroupChat').addEventListener('click', () => {
+  window.open('/next/group.html', 'xiaoyu-group', 'width=1100,height=820');
+});
+
 $('#openLocalChat').addEventListener('click', () => {
   window.open('/next/local.html', 'xiaoyu-chat', 'width=680,height=860');
 });

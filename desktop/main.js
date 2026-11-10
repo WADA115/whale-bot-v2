@@ -99,6 +99,7 @@ function updateTrayMenu() {
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: '显示面板', click: () => { if (win) { win.show(); win.focus(); } } },
     { label: unread ? `和小鲸鱼说话（${unread}）` : '和小鲸鱼说话', click: showChat },
+    { label: '群聊', click: () => { if (win) { win.show(); win.webContents.executeJavaScript("window.open('/next/group.html','xiaoyu-group','width=1100,height=820')"); } } },
     { label: '隐藏到托盘', click: () => { if (win) win.hide(); } },
     { type: 'separator' },
     { label: '退出', click: () => { quitting = true; app.quit(); } }
@@ -205,10 +206,13 @@ function createWindow() {
   win.setTitle('小鲸鱼');
   win.webContents.on('page-title-updated', (event) => { event.preventDefault(); win.setTitle('小鲸鱼'); });
   win.webContents.on('did-create-window', (child) => {
-    chatWindow = child;
-    child.on('closed', () => { chatWindow = null; });
-    child.on('focus', clearUnread);
-    child.on('show', clearUnread);
+    child.webContents.once('did-finish-load', () => {
+      if (!String(child.webContents.getURL()).includes('/next/local.html')) return;
+      chatWindow = child;
+      child.on('closed', () => { chatWindow = null; });
+      child.on('focus', clearUnread);
+      child.on('show', clearUnread);
+    });
   });
   win.once('ready-to-show', () => { win.show(); win.focus(); });
   win.on('resize', saveState);

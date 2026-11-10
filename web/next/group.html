@@ -1,0 +1,78 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>小鲸鱼群聊</title>
+  <link rel="stylesheet" href="./group.css">
+</head>
+<body>
+  <div class="group-bg" aria-hidden="true"><i></i><i></i></div>
+
+  <header class="group-top">
+    <div class="brand">
+      <img src="../assets/xiaoshen/avatar.png" alt="">
+      <div><strong>小鲸鱼</strong><span>PRIVATE ROOMS</span></div>
+    </div>
+    <div class="top-actions">
+      <button id="leaveRoom" type="button" hidden>离开房间</button>
+      <span class="conn" id="connState"><i></i>未连接</span>
+    </div>
+  </header>
+
+  <main class="group-main">
+    <section class="landing" id="landing">
+      <p class="eyebrow">ROOM</p>
+      <h1>开一个房间</h1>
+      <p class="lede">只有拿到邀请码的人能进。没有大厅，没有推荐。</p>
+
+      <div class="mode-switch">
+        <button class="mode active" data-mode="create" type="button">开房</button>
+        <button class="mode" data-mode="join" type="button">加入</button>
+      </div>
+
+      <div class="form-card" id="createPane">
+        <label>你的名字<input id="hostName" maxlength="24" placeholder="房主"></label>
+        <label>房间名<input id="roomName" maxlength="40" placeholder="新房间"></label>
+        <button class="primary" id="createRoom" type="button">开房</button>
+      </div>
+
+      <div class="form-card" id="joinPane" hidden>
+        <label>你的名字<input id="guestName" maxlength="24" placeholder="客人"></label>
+        <label>邀请码<input id="inviteInput" placeholder="IP:端口#房间号#邀请码"></label>
+        <button class="primary" id="joinRoom" type="button">加入</button>
+      </div>
+
+      <p class="form-status" id="formStatus"></p>
+    </section>
+
+    <section class="chat-view" id="chatView" hidden>
+      <header class="room-head">
+        <div>
+          <p class="eyebrow">ROOM</p>
+          <h1 id="roomTitle">房间</h1>
+        </div>
+        <div class="invite-box">
+          <input id="inviteCode" readonly>
+          <button id="copyInvite" type="button">复制邀请</button>
+        </div>
+      </header>
+
+      <div class="messages" id="messages"></div>
+
+      <form class="composer" id="composer">
+        <textarea id="messageInput" rows="1" placeholder="说点什么……"></textarea>
+        <button type="submit">发送</button>
+      </form>
+    </section>
+
+    <aside class="members" id="membersPane">
+      <div class="members-head">成员 <span id="memberCount">0</span></div>
+      <div id="memberList"></div>
+      <p class="members-hint">房主在线时房间才可用。</p>
+    </aside>
+  </main>
+
+  <script src="./group.js"></script>
+</body>
+</html>
