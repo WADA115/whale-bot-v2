@@ -213,7 +213,7 @@ async function sendMessage(event, media = []) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '发送失败');
-    if (data.message) appendMessage(data.message);
+    if (data.message) { appendMessage(data.message); if (roomStatus) roomStatus.textContent = ''; }
   } catch (error) {
     if (roomStatus) roomStatus.textContent = String(error.message || error);
   }

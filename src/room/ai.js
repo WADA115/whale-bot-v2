@@ -29,7 +29,7 @@ export function createRoomAI({ roomServer, textRouter, character, asr = null, me
   async function respond(room, message) {
     if (!room?.aiEnabled || !textRouter) return;
     if (message?.clientId === 'ai' || message?.ai) return;
-    if (!addressed(message)) return;
+    if (!String(message?.text || '').trim()) return;
     const recent = (room.messages || []).slice(-18).map((item) => `${item.name || '成员'}：${item.text || '[媒体]'}`).join('\n');
     const user = [
       `房间：${room.name}`,
