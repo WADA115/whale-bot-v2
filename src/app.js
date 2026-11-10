@@ -47,6 +47,7 @@ import { createWorldObserver } from './runtime/world-observer.js';
 import { createLocalChat } from './runtime/local-chat.js';
 import { createMediaLibrary } from './core/media-library.js';
 import { createLocalHistory } from './core/local-history.js';
+import { createDailyDiary } from './core/daily-diary.js';
 import { createRoomServer } from './room/server.js';
 import { createRoomAI } from './room/ai.js';
 import { acquireRuntimeLock } from './runtime/lock.js';
@@ -520,6 +521,9 @@ ${task.result}`);
     return stickerImportJob;
   }
   const localHistory = createLocalHistory({ file: path.join(ROOT, 'state', 'local-history.json'), logger });
+  const dailyDiary = createDailyDiary({ diary, localHistory, textRouter, character, logger });
+  setTimeout(() => dailyDiary.maybeWrite().catch(() => {}), 6000).unref?.();
+  setInterval(() => dailyDiary.maybeWrite().catch(() => {}), 30 * 60 * 1000).unref?.();
   let roomAI = null;
   const roomServer = createRoomServer({
     port: Number(config.room?.port) || 3210,

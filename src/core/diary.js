@@ -12,10 +12,10 @@ export function createDiary({ file = 'state/diary.json', limit = 80, logger = nu
     catch (error) { logger?.warn('diary.write_failed', { error: String(error?.message ?? error) }); }
   }
 
-  function add({ text = '', at = Date.now() } = {}) {
+  function add({ text = '', at = Date.now(), kind = '', date = '' } = {}) {
     const body = String(text ?? '').trim().slice(0, 800);
     if (!body) return null;
-    const item = { text: body, at: Number(at) || Date.now() };
+    const item = { text: body, at: Number(at) || Date.now(), kind: String(kind || ''), date: String(date || '') };
     list.push(item);
     list = list.slice(-limit);
     persist();
