@@ -16,6 +16,7 @@ const TYPES = {
   '.mp3': 'audio/mpeg',
   '.ogg': 'audio/ogg',
   '.m4a': 'audio/mp4',
+  '.webm': 'audio/webm',
   '.amr': 'audio/amr',
   '.webp': 'image/webp',
   '.svg': 'image/svg+xml',

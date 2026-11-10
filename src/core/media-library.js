@@ -106,6 +106,7 @@ export function createMediaLibrary({ root = 'state/media', logger = null, maxByt
     } else {
       buffer = fs.readFileSync(raw);
     }
+    if (!type) type = kind === 'voice' ? 'audio/wav' : 'image/jpeg';
     return addBuffer({ scope, kind, buffer, mime: type, name, desc, origin: origin || raw });
   }
 
