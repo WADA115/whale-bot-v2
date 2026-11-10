@@ -330,6 +330,31 @@ messageInput.addEventListener('input', () => {
 messageInput.addEventListener('keydown', (event) => {
   if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }
 });
+$('#aiToggle')?.addEventListener('click', async () => {
+  if (!session?.host || !aiToggle) return;
+  aiToggle.disabled = true;
+  try {
+    const res = await fetch(`${session.base}/api/room/ai`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        roomId: session.roomId,
+        token: session.token,
+        clientId: session.clientId,
+        enabled: !aiToggle.classList.contains('on')
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'AI 开关失败');
+    aiToggle.textContent = data.enabled ? 'AI 已开' : 'AI 加入';
+    aiToggle.classList.toggle('on', Boolean(data.enabled));
+    await poll();
+  } catch (error) {
+    if (roomStatus) roomStatus.textContent = String(error.message || error);
+  } finally {
+    aiToggle.disabled = false;
+  }
+});
+
 $('#copyInvite').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText(inviteCode.value); $('#copyInvite').textContent = '已复制'; setTimeout(() => { $('#copyInvite').textContent = '复制邀请'; }, 1400); } catch {}
 });
