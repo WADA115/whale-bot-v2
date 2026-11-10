@@ -87,3 +87,17 @@ body {
 .ai-toggle { padding: 6px 10px; color: var(--blue); background: transparent; border: 1px solid rgba(124,199,255,.3); border-radius: 7px; font: inherit; font-size: 10px; cursor: pointer; }
 .ai-toggle.on { color: var(--gold); border-color: rgba(232,196,124,.4); }
 .room-status { min-height: 14px; margin: 0; color: #d09b6a; font-size: 10px; }
+
+.chat-view { position: relative; }
+.group-sticker-panel {
+  position: absolute; left: 18px; bottom: 96px; width: min(390px, calc(100% - 36px));
+  max-height: 320px; padding: 12px; overflow: hidden;
+  background: rgba(9,17,31,.97); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.5); z-index: 5;
+}
+.group-sticker-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; max-height: 245px; overflow-y: auto; }
+.group-sticker-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 7px; cursor: pointer; border: 1px solid var(--line); }
+.group-sticker-grid img:hover { border-color: rgba(232,196,124,.5); }
+.group-sticker-empty { grid-column: 1 / -1; color: #61718a; font-size: 11px; padding: 10px 2px; }
+.sticker-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 11px; margin-bottom: 10px; }
+.import-stickers { padding: 3px 8px; color: var(--gold); background: transparent; border: 1px solid rgba(232,196,124,.3); border-radius: 6px; font: inherit; font-size: 9px; cursor: pointer; }

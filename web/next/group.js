@@ -9,6 +9,10 @@ const inviteCode = $('#inviteCode');
 const connState = $('#connState');
 const formStatus = $('#formStatus');
 const roomStatus = $('#roomStatus');
+const groupSticker = $('#groupSticker');
+const groupStickerPanel = $('#groupStickerPanel');
+const groupStickerGrid = $('#groupStickerGrid');
+const groupImportStickers = $('#groupImportStickers');
 const leaveRoom = $('#leaveRoom');
 const messageInput = $('#messageInput');
 let session = null;
@@ -310,6 +314,80 @@ async function startGroupVoice() {
 $('#groupVoice')?.addEventListener('click', async () => {
   if (groupRecording) { try { groupRecorder?.stop(); } catch {} return; }
   try { await startGroupVoice(); } catch (error) { if (roomStatus) roomStatus.textContent = String(error.message || error); groupRecording = false; }
+});
+
+async function loadGroupStickers() {
+  if (!groupStickerGrid) return;
+  groupStickerGrid.textContent = '读取中…';
+  try {
+    const res = await fetch('/api/media/list?scope=user', { cache: 'no-store' });
+    const data = await res.json();
+    const items = (data.items || []).filter((item) => item.kind === 'sticker' || item.kind === 'image');
+    groupStickerGrid.replaceChildren();
+    if (!items.length) {
+      const hint = document.createElement('div');
+      hint.className = 'group-sticker-empty';
+      hint.textContent = '还没有表情。先导入 QQ 表情。';
+      groupStickerGrid.append(hint);
+      return;
+    }
+    for (const item of items) {
+      const img = document.createElement('img');
+      img.src = item.url;
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.alt = item.name || '表情';
+      img.title = item.name || '表情';
+      img.addEventListener('click', async () => {
+        groupStickerPanel.hidden = true;
+        try {
+          const res = await fetch(item.url);
+          const blob = await res.blob();
+          const file = new File([blob], item.name || 'sticker.jpg', { type: item.mime || blob.type || 'image/jpeg' });
+          await sendRoomFile(file, item.kind === 'sticker' ? 'sticker' : 'image');
+        } catch (error) {
+          if (roomStatus) roomStatus.textContent = String(error.message || error);
+        }
+      });
+      groupStickerGrid.append(img);
+    }
+  } catch (error) {
+    groupStickerGrid.textContent = String(error.message || error);
+  }
+}
+
+groupSticker?.addEventListener('click', async () => {
+  if (!groupStickerPanel) return;
+  const show = groupStickerPanel.hidden;
+  groupStickerPanel.hidden = !show;
+  if (show) await loadGroupStickers();
+});
+
+groupImportStickers?.addEventListener('click', async () => {
+  const button = groupImportStickers;
+  button.disabled = true;
+  button.textContent = '导入中…';
+  try {
+    const res = await fetch('/api/stickers/import-qq', { method: 'POST' });
+    if (!res.ok) throw new Error('导入失败');
+    for (let i = 0; i < 10; i += 1) {
+      await new Promise((r) => setTimeout(r, 1500));
+      await loadGroupStickers();
+      if (i >= 2) break;
+    }
+    button.textContent = '已导入';
+  } catch (error) {
+    if (roomStatus) roomStatus.textContent = String(error.message || error);
+    button.textContent = '导入失败';
+  } finally {
+    setTimeout(() => { button.disabled = false; button.textContent = '导入 QQ 表情'; }, 3500);
+  }
+});
+
+document.addEventListener('click', (event) => {
+  if (!groupStickerPanel || groupStickerPanel.hidden) return;
+  if (groupStickerPanel.contains(event.target) || groupSticker?.contains(event.target)) return;
+  groupStickerPanel.hidden = true;
 });
 
 document.querySelectorAll('.mode').forEach((button) => {
