@@ -10,6 +10,7 @@ const stickerToggle = $('#stickerToggle');
 const stickerPanel = $('#stickerPanel');
 const stickerGrid = $('#stickerGrid');
 const voiceToggle = $('#voiceToggle');
+const screenLook = $('#screenLook');
 const dropOverlay = $('#dropOverlay');
 let busy = false;
 let recorder = null;
@@ -333,6 +334,23 @@ $('#importQQStickers')?.addEventListener('click', async () => {
     status.textContent = String(error.message || error);
   } finally {
     setTimeout(() => { button.disabled = false; button.textContent = '导入 QQ 表情'; }, 4000);
+  }
+});
+
+screenLook?.addEventListener('click', async () => {
+  if (!screenLook || screenLook.disabled) return;
+  screenLook.disabled = true;
+  status.textContent = '正在看一眼屏幕…';
+  try {
+    const res = await fetch('/api/screen/capture', { method: 'POST' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || '截屏失败');
+    status.textContent = '';
+    await submit([{ kind: 'image', url: data.item.url }]);
+  } catch (error) {
+    status.textContent = String(error.message || error);
+  } finally {
+    screenLook.disabled = false;
   }
 });
 

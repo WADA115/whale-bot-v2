@@ -48,6 +48,7 @@ import { createLocalChat } from './runtime/local-chat.js';
 import { createMediaLibrary } from './core/media-library.js';
 import { createLocalHistory } from './core/local-history.js';
 import { createDailyDiary } from './core/daily-diary.js';
+import { createScreen } from './core/screen.js';
 import { createRoomServer } from './room/server.js';
 import { createRoomAI } from './room/ai.js';
 import { acquireRuntimeLock } from './runtime/lock.js';
@@ -283,6 +284,12 @@ ${task.result}`);
     file: path.join(ROOT, 'state', 'permissions.json'),
     logger
   });
+  const screen = createScreen({
+    root: path.join(ROOT, 'state'),
+    scriptPath: path.join(ROOT, 'scripts', 'capture-screen.ps1'),
+    powershell: path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'),
+    logger
+  });
   const actorTurn = createActorTurn({
     config,
     character,
@@ -294,6 +301,7 @@ ${task.result}`);
     tasks,
     taskExecutor,
     visionRouter,
+    screen,
     asr,
     tts,
     rvc,
@@ -627,6 +635,7 @@ ${task.result}`);
     localChat,
     localHistory,
     mediaLibrary,
+    screen,
     importQQStickers,
     capabilities,
     shutdownToken,

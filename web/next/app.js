@@ -1119,6 +1119,40 @@ $('#openLocalChat').addEventListener('click', () => {
   window.open('/next/local.html', 'xiaoyu-chat', 'width=680,height=860');
 });
 
+async function loadScreenMode() {
+  const button = $('#screenMode');
+  if (!button) return;
+  try {
+    const res = await fetch('/api/screen', { cache: 'no-store' });
+    const data = await res.json();
+    const on = Boolean(data.enabled);
+    button.textContent = `屏幕权限：${on ? '开' : '关'}`;
+    button.classList.toggle('on', on);
+  } catch {}
+}
+
+$('#screenMode').addEventListener('click', async () => {
+  const button = $('#screenMode');
+  if (!button) return;
+  button.disabled = true;
+  try {
+    const on = !button.classList.contains('on');
+    const res = await fetch('/api/screen', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ enabled: on })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '切换失败');
+    button.textContent = `屏幕权限：${data.enabled ? '开' : '关'}`;
+    button.classList.toggle('on', Boolean(data.enabled));
+  } catch (error) {
+    button.title = String(error.message || error);
+  } finally {
+    button.disabled = false;
+  }
+});
+loadScreenMode();
+
 $('#startAI').addEventListener('click', async () => {
   const button = $('#startAI');
   if (!button || button.disabled) return;

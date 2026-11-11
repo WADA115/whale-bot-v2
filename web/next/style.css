@@ -615,3 +615,6 @@ select option { background: #0b1426; color: var(--text); }
 
 .ai-start { margin-right: 6px; color: #9fe0c0; border-color: rgba(120,224,176,.35); background: rgba(120,224,176,.04); }
 .ai-start:hover { background: rgba(120,224,176,.1); }
+
+.screen-mode { margin-right: 6px; color: #9fb0c6; border-color: rgba(168,198,255,.25); background: transparent; }
+.screen-mode.on { color: #ffd9a8; border-color: rgba(255,190,110,.45); background: rgba(255,190,110,.06); }

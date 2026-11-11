@@ -724,6 +724,28 @@ export function createPanelHandler(ctx) {
     json(res, 200, { ok: true, turns });
     return;
   }
+  if (req.url === '/api/screen' && req.method === 'GET') {
+    json(res, 200, { ok: true, enabled: Boolean(ctx.screen?.isEnabled?.()) });
+    return;
+  }
+
+  if (req.url === '/api/screen' && req.method === 'POST') {
+    readBody(req).then((body) => {
+      const enabled = ctx.screen?.setEnabled?.(Boolean(body?.enabled)) ?? false;
+      json(res, 200, { ok: true, enabled });
+    }).catch(() => json(res, 400, { error: 'invalid json' }));
+    return;
+  }
+
+  if (req.url === '/api/screen/capture' && req.method === 'POST') {
+    Promise.resolve().then(async () => {
+      if (!ctx.screen?.capture || !ctx.mediaLibrary) throw new Error('screen unavailable');
+      const file = await ctx.screen.capture();
+      const item = ctx.mediaLibrary.addFile({ scope: 'user', kind: 'image', file, mime: 'image/png', name: 'screen.png', origin: 'screen' });
+      json(res, 200, { ok: true, item });
+    }).catch((error) => json(res, 500, { error: String(error?.message ?? error) }));
+    return;
+  }
   if (req.url === '/api/stickers/import-qq' && req.method === 'POST') {
     if (!ctx.importQQStickers) return json(res, 503, { error: 'sticker import unavailable' });
     ctx.importQQStickers().catch((error) => logger?.warn('stickers.import_failed', { error: String(error?.message ?? error) }));
