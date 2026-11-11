@@ -618,3 +618,4 @@ select option { background: #0b1426; color: var(--text); }
 
 .screen-mode { margin-right: 6px; color: #9fb0c6; border-color: rgba(168,198,255,.25); background: transparent; }
 .screen-mode.on { color: #ffd9a8; border-color: rgba(255,190,110,.45); background: rgba(255,190,110,.06); }
+.screen-cont { margin-right: 6px; color: #d3b4ff; border-color: rgba(190,150,255,.3); background: transparent; }`n.screen-cont.on { color: #f0d6ff; border-color: rgba(220,170,255,.5); background: rgba(200,140,255,.06); }

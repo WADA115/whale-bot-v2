@@ -725,14 +725,15 @@ export function createPanelHandler(ctx) {
     return;
   }
   if (req.url === '/api/screen' && req.method === 'GET') {
-    json(res, 200, { ok: true, enabled: Boolean(ctx.screen?.isEnabled?.()) });
+    json(res, 200, { ok: true, enabled: Boolean(ctx.screen?.isEnabled?.()), continuous: Boolean(ctx.screen?.isContinuous?.()) });
     return;
   }
 
   if (req.url === '/api/screen' && req.method === 'POST') {
     readBody(req).then((body) => {
-      const enabled = ctx.screen?.setEnabled?.(Boolean(body?.enabled)) ?? false;
-      json(res, 200, { ok: true, enabled });
+      if (body?.enabled !== undefined) ctx.screen?.setEnabled?.(Boolean(body.enabled));
+      if (body?.continuous !== undefined) ctx.screen?.setContinuous?.(Boolean(body.continuous));
+      json(res, 200, { ok: true, enabled: Boolean(ctx.screen?.isEnabled?.()), continuous: Boolean(ctx.screen?.isContinuous?.()) });
     }).catch(() => json(res, 400, { error: 'invalid json' }));
     return;
   }

@@ -1121,18 +1121,26 @@ $('#openLocalChat').addEventListener('click', () => {
 
 async function loadScreenMode() {
   const button = $('#screenMode');
+  const continuous = $('#screenContinuous');
   if (!button) return;
   try {
     const res = await fetch('/api/screen', { cache: 'no-store' });
     const data = await res.json();
     const on = Boolean(data.enabled);
+    const cont = Boolean(data.continuous);
     button.textContent = `屏幕权限：${on ? '开' : '关'}`;
     button.classList.toggle('on', on);
+    if (continuous) {
+      continuous.hidden = !on;
+      continuous.textContent = `持续看：${cont ? '开' : '关'}`;
+      continuous.classList.toggle('on', cont);
+    }
   } catch {}
 }
 
 $('#screenMode').addEventListener('click', async () => {
   const button = $('#screenMode');
+  const continuous = $('#screenContinuous');
   if (!button) return;
   button.disabled = true;
   try {
@@ -1145,6 +1153,32 @@ $('#screenMode').addEventListener('click', async () => {
     if (!res.ok) throw new Error(data.error || '切换失败');
     button.textContent = `屏幕权限：${data.enabled ? '开' : '关'}`;
     button.classList.toggle('on', Boolean(data.enabled));
+    if (continuous) {
+      continuous.hidden = !data.enabled;
+      continuous.textContent = `持续看：${data.continuous ? '开' : '关'}`;
+      continuous.classList.toggle('on', Boolean(data.continuous));
+    }
+  } catch (error) {
+    button.title = String(error.message || error);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$('#screenContinuous').addEventListener('click', async () => {
+  const button = $('#screenContinuous');
+  if (!button || button.hidden) return;
+  button.disabled = true;
+  try {
+    const on = !button.classList.contains('on');
+    const res = await fetch('/api/screen', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ continuous: on })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '切换失败');
+    button.textContent = `持续看：${data.continuous ? '开' : '关'}`;
+    button.classList.toggle('on', Boolean(data.continuous));
   } catch (error) {
     button.title = String(error.message || error);
   } finally {

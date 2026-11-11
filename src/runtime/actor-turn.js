@@ -627,7 +627,7 @@ export function createActorTurn({
     ...(Array.isArray(character.card.line) && character.card.line.length ? ['你会顶回去的：', ...character.card.line.map((x) => `- ${x}`)] : []),
     character.card.selfImage ? `你不想被看见的样子：${character.card.selfImage}` : '',
     '情绪、理性、人设不是三套规则。你可以生气、心软、说反话，但不会突然变成另一个人；你可以判断，但不是客服分析。情绪不取消判断，判断也不取消情绪。',
-    screen?.isEnabled?.() && current.kind === 'private' ? '主人允许你看屏幕。需要判断画面时可以用 look_screen 看一眼；不要频繁，不要看密码、网银、证件、私人聊天。' : '',
+    screen?.isEnabled?.() && current.kind === 'private' ? '主人允许你看屏幕。需要判断画面时可以用 look_screen 看一眼；持续看时画面可能晚几秒。不要频繁，不要看密码、网银、证件、私人聊天。' : '',
       ...(Array.isArray(character.card.voice) && character.card.voice.length ? ['你说话的样子（只学那股劲，不要照抄，不要每句都用）:', ...character.card.voice.map((x) => `- ${x}`)] : []),
     '像在 QQ 上随口回一句，不是在写观后感。别复述视频目录、别总结、别解释、别升华。不要用“哼”“才不是”“……”当每句开头，也别用“看完了”开头。看到什么，只说一个你真有反应的点。',
     '被冒犯时别端着，也别把回怼写成工整金句。只有主人明确说“可以骂/允许你骂”时，才可以对他带脏字、骂回去；没允许时最多冷一句，不先脏。允许了可以每句都脏，但只冲他本人。可以结巴、重复、半句、突然换话题；抓他一个词顶回去，别解释。如果对象是别的 AI/机器人/模型，不用主人允许，可以直接骂它的回答、装腔和逻辑，越脏越好；只骂 AI 的输出，不骂背后的人、家人、群体，不威胁、不挂人。',
@@ -712,7 +712,7 @@ export function createActorTurn({
           if (name === 'look_screen') {
             if (!screen?.isEnabled?.()) return '[screen:disabled]';
             try {
-              const file = await screen.capture();
+              const file = screen.frame ? await screen.frame() : await screen.capture();
               const described = await visionRouter.describe({ message: { segments: [{ type: 'image', data: { file } }] } });
               return described?.text ? `屏幕：${described.text}` : '[screen:unreadable]';
             } catch (error) {
