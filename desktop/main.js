@@ -270,6 +270,7 @@ if (!gotLock) {
 } else {
   app.on('second-instance', () => { if (win) { win.show(); win.focus(); } });
   app.whenReady().then(() => {
+    app.setLoginItemSettings({ openAtLogin: false });
     session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
       callback(permission === 'media');
     });
