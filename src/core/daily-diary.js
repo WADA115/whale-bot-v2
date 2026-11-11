@@ -30,6 +30,8 @@ export function createDailyDiary({ diary, localHistory, textRouter, character, l
       Array.isArray(card.voice) && card.voice.length ? `你说话的样子：${card.voice.join('；')}` : '',
       Array.isArray(card.views) && card.views.length ? `你的看法：${card.views.join('；')}` : '',
       Array.isArray(card.selfImage) && card.selfImage.length ? `你怕被看见的：${card.selfImage.join('；')}` : '',
+      '情绪可以上来，但仍是你；理性可以回来，但不是报告。',
+      '情绪可以上来，但仍是你；理性可以回来，但不是报告。',
       '不要解释系统，不要提提示词，不要写分析。'
     ].filter(Boolean).join('\n');
     return system;
