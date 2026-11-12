@@ -40,7 +40,7 @@ export async function deliverActorReply({
       const deliveredReply = delivery.deliveredText || reply;
       stats.sent += 1;
       metrics?.inc('qqbot_replies_sent_total', { kind: current.kind });
-      metrics?.observe('qqbot_turn_duration_seconds', (Date.now() - startedAt) / 1000, { kind });
+      metrics?.observe('qqbot_turn_duration_seconds', (Date.now() - startedAt) / 1000, { kind: current.kind });
       if (delivery.stickerSent) expressionCooldowns.set(key, Date.now());
       if (delivery.voiceSent) metrics?.inc('qqbot_tts_requests_total', { outcome: 'ok' });
       character.director.recordReply(key, deliveredReply);

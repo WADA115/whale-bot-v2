@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createActorTurn } from '../src/runtime/actor-turn.js';
 
-function setup({ textRouter = null, config: configOverride = {}, message = null, visionRouter = null, contacts = null, asr = null } = {}) {
+function setup({ textRouter = null, config: configOverride = {}, message = null, visionRouter = null, contacts = null, asr = null, groupCooldownMs = 0 } = {}) {
   const logs = [];
   const sent = [];
   const writes = [];
@@ -17,11 +17,13 @@ function setup({ textRouter = null, config: configOverride = {}, message = null,
   const story = { self: '# 我\n\n测试', relationship: '# 我们', now: '# 此刻\n\n在听', episodes: [] };
   const character = {
     card,
-    director: { observe: () => ({ respond: true }), recordReply: () => {} },
+    director: { observe: (msg) => { observedKind = msg?.kind; return { respond: true }; }, recordReply: () => {} },
     scenes: { get: () => ({ turns: [{ role: 'user', text: '在吗' }] }) },
-    groupCooldownMs: 0
+    groupCooldownMs
   };
   const diary = { add: (entry) => writes.push(entry), list: () => [] };
+  let observedKind = '';
+  const groupCooldowns = new Map();
   const onTurn = createActorTurn({
     config,
     character,
@@ -56,7 +58,7 @@ function setup({ textRouter = null, config: configOverride = {}, message = null,
     stickers: [],
     gateway: { selfId: '0', sendText: async (_kind, _id, text) => { sent.push(text); }, sendMessage: async () => {} },
     logger: { info: (event) => logs.push(event), warn: (event) => logs.push(event), error: (event) => logs.push(event) },
-    groupCooldowns: new Map(),
+    groupCooldowns,
     expressionCooldowns: new Map(),
     stats: { sent: 0, imageCount: 0 },
     metrics: { inc() {}, observe() {} },
@@ -69,7 +71,9 @@ function setup({ textRouter = null, config: configOverride = {}, message = null,
     run: () => onTurn('private:1', [message || { kind: 'private', id: '1', userId: '1', text: '在吗', images: [], voices: [], at: [] }]),
     logs,
     sent,
-    writes
+    writes,
+    groupCooldowns,
+    get observedKind() { return observedKind; }
   };
 }
 
@@ -155,4 +159,30 @@ test('actor 模型失败不会假装发送', async () => {
   await h.run();
   assert.ok(h.logs.includes('turn.model_failed'));
   assert.deepEqual(h.sent, []);
+});
+test('群聊冷却会阻止连续第二条回复', async () => {
+  const h = setup({
+    groupCooldownMs: 60_000,
+    message: { kind: 'group', id: '2', userId: '1', text: '在吗', images: [], voices: [], at: [] }
+  });
+  await h.run();
+  assert.equal(h.groupCooldowns.size, 1, 'cooldown-map-size kind=' + h.observedKind);
+  await h.run();
+  assert.deepEqual(h.sent, ['在。']);
+  assert.ok(h.logs.includes('character.group_cooldown'));
+});
+
+test('actor 支持一轮多个工具调用', async () => {
+  const h = setup({
+    textRouter: {
+      generateWithTools: async ({ execute }) => {
+        await execute('write_diary', { text: '第一笔' });
+        await execute('write_diary', { text: '第二笔' });
+        return { text: '写了两笔。', provider: 'stub' };
+      }
+    }
+  });
+  await h.run();
+  assert.deepEqual(h.writes.map((x) => x.text), ['第一笔', '第二笔']);
+  assert.deepEqual(h.sent, ['写了两笔。']);
 });
