@@ -82,7 +82,7 @@ export function createMediaLibrary({ root = 'state/media', logger = null, maxByt
     indexes[scope].push(item);
     while (indexes[scope].length > 600) {
       const old = indexes[scope].shift();
-      try { fs.rmSync(path.join(base, scope, path.basename(String(old?.file || ''))), { force: true }); } catch {}
+      try { fs.rmSync(path.join(base, scope, path.basename(String(old?.file || ''))), { force: true }); } catch { /* best-effort */ }
     }
     persist(scope);
     logger?.info('media.added', { scope, kind, bytes: buffer.length });
@@ -163,7 +163,7 @@ export function createMediaLibrary({ root = 'state/media', logger = null, maxByt
     const index = indexes[scope].findIndex((x) => x.id === id || x.file === id);
     if (index < 0) return false;
     const [item] = indexes[scope].splice(index, 1);
-    try { fs.rmSync(path.join(base, scope, item.file), { force: true }); } catch {}
+    try { fs.rmSync(path.join(base, scope, item.file), { force: true }); } catch { /* best-effort */ }
     persist(scope);
     return true;
   }

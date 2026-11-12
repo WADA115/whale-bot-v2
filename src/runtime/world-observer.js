@@ -37,10 +37,10 @@ export function createWorldObserver({
     const out = [];
     try {
       for (const item of await bilibili.dynamics()) out.push(`${item.author}：${item.title}`);
-    } catch {}
+    } catch { /* best-effort */ }
     try {
       for (const item of await bilibili.history()) out.push(`${item.author}：${item.title}`);
-    } catch {}
+    } catch { /* best-effort */ }
     return out;
   }
 

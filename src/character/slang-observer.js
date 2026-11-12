@@ -116,7 +116,7 @@ export function createSlangObserver({
     } catch (error) {
       logger?.warn('slang.db_write_failed', { error: String(error?.message ?? error) });
     } finally {
-      try { db?.close(); } catch {}
+      try { db?.close(); } catch { /* best-effort */ }
     }
   }
 
@@ -244,7 +244,7 @@ export function createSlangObserver({
           } else {
             enriched.worth = false;
           }
-        } catch {}
+        } catch { /* best-effort */ }
         logger?.info('slang.researched', { term, meaning: clean(enriched.meaning, 80), source: Boolean(source) });
         researched.push({ ...enriched, source });
       }

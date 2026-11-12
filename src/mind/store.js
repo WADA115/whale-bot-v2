@@ -255,6 +255,6 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     return writePresence({ lastQzoneAt: Date.now(), qzoneDay: new Date().toISOString().slice(0, 10), lastContactAt: Date.now() });
   }
 
-  try { syncCard(card); } catch {}
+  try { syncCard(card); } catch { /* best-effort */ }
   return { ensure, read, writeSection, appendUndercurrent, appendHeld, appendSeen, noteRead, readReads, setPendingRead, peekPendingRead, touchContact, touchThought, readPresence, beginSession, heartbeat, markShutdown, peekWake, takeWake, canReach, noteReach, canQzone, noteQzone, noteImage, noteVoice, takeVoice, syncCard, base };
 }

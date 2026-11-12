@@ -39,7 +39,7 @@ function renderToday() {
   ].join('');
   const now = nowText();
   $('#todayNow').textContent = now;
-  $('#todayPlan').textContent = now.includes('打算') ? now.split('打算').slice(-1)[0].replace(/^[\s:：]*/, '') : '没有特别的打算。';
+  $('#todayPlan').textContent = now.includes('打算') ? now.split('打算').slice(-1)[0].replace(/^[\s:：]*/, '') : '';
   $('#todayScenes').innerHTML = scenes.length
     ? scenes.slice(0, 5).map(([key, item]) => `<div class="scene-item">${esc(item.recent || '')}<small>${esc(key)}</small></div>`).join('')
     : '<p class="muted">还没有对话。</p>';

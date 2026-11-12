@@ -83,7 +83,7 @@ export function createDraw({
       logger?.info('draw.rendered', { file: outFile, shapes: spec.shapes.length });
       return { file: outFile, shapes: spec.shapes.length };
     } finally {
-      try { fs.rmSync(specFile, { force: true }); } catch {}
+      try { fs.rmSync(specFile, { force: true }); } catch { /* best-effort */ }
     }
   }
 

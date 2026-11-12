@@ -47,7 +47,7 @@ export function handleBiliRoutes({ ctx, req, res, json, readBody }) {
         title = item.title || title;
         owner = item.owner || owner;
         text = String(item.desc || '').trim();
-      } catch {}
+      } catch { /* best-effort */ }
       if (!title) return json(res, 400, { error: 'title required' });
       const header = [title, bvid, owner].filter(Boolean).join('｜');
       const line = text ? `${header}\n${text.slice(0, 2500)}` : header;

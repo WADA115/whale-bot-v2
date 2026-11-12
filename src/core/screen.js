@@ -44,9 +44,9 @@ export function createScreen({ root = 'state', scriptPath = '', powershell = 'po
         .map((name) => ({ name, at: fs.statSync(path.join(outDir, name)).mtimeMs }))
         .sort((a, b) => a.at - b.at);
       for (const item of files.slice(0, Math.max(0, files.length - keep))) {
-        try { fs.rmSync(path.join(outDir, item.name), { force: true }); } catch {}
+        try { fs.rmSync(path.join(outDir, item.name), { force: true }); } catch { /* best-effort */ }
       }
-    } catch {}
+    } catch { /* best-effort */ }
   }
 
   async function capture() {

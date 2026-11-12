@@ -74,6 +74,7 @@ export function createToolExecutor({ lookAtGroups, runKnowledge, config, gateway
             const why = String(args?.why ?? '').trim();
             const ask = String(args?.ask ?? '').trim();
             if (!what) return '没说想做什么。';
+            if (!ask) return '没有 ask，未发送。';
             const owner = String(config.allow?.private?.[0] || '');
             if (!permissions || (current.kind !== 'group' && !owner)) return '没有可请求的人。';
             const ownerKey = owner ? `private:${owner}` : '';
@@ -81,8 +82,7 @@ export function createToolExecutor({ lookAtGroups, runKnowledge, config, gateway
             const req = permissions.request({ what, why, key, keys });
             if (!req) return '没记下来。';
             try {
-              const line = ask || `我想${what}。${why ? `因为${why}。` : ''}`;
-              const text = `${line}\n默认都开；想加/减时间或关掉私聊/群聊，直接说。\n行不行直接说；拿不准就带上 ${req.id}`;
+              const text = ask;
               if (current.kind === 'group') {
                 await gateway.sendMessage('group', current.id, [{ type: 'text', data: { text } }]);
                 if (owner) await gateway.sendMessage('private', owner, [{ type: 'text', data: { text } }]);

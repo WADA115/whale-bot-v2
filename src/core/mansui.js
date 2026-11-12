@@ -28,7 +28,7 @@ export function createMansui({
   async function isUp() {
     return await new Promise((resolve) => {
       const socket = net.connect({ host: '127.0.0.1', port: 9880 });
-      const done = (v) => { try { socket.destroy(); } catch {} resolve(v); };
+      const done = (v) => { try { socket.destroy(); } catch { /* best-effort */ } resolve(v); };
       socket.setTimeout(1200);
       socket.once('connect', () => done(true));
       socket.once('timeout', () => done(false));
@@ -68,7 +68,7 @@ export function createMansui({
     if (!server) return;
     const pid = server.pid;
     server = null;
-    try { spawn('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' }); } catch {}
+    try { spawn('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' }); } catch { /* best-effort */ }
     logger?.info('mansui.stopped', { pid, reason });
   }
 

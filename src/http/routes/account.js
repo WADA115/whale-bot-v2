@@ -143,7 +143,7 @@ export function handleAccountRoutes({ ctx, req, res, json, readBody, pathname })
         if (ctx.character.cardFile && fs.existsSync(ctx.character.cardFile)) fs.copyFileSync(ctx.character.cardFile, `${ctx.character.cardFile}.bak`);
         if (ctx.character.cardFile) fs.writeFileSync(ctx.character.cardFile, JSON.stringify(card, null, 2) + '\n', 'utf8');
         ctx.character.card = card;
-        try { ctx.mind?.syncCard?.(card); } catch {}
+        try { ctx.mind?.syncCard?.(card); } catch { /* best-effort */ }
         logger.info('character.card_updated', { file: ctx.character.cardFile });
         return json(res, 200, { ok: true, card });
       }).catch(() => json(res, 400, { error: 'invalid json' }));

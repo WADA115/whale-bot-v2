@@ -158,7 +158,7 @@ export function createAutonomy({ config, bili, gateway, logger = null, stateFile
     const now = Date.now();
     if (!canNotify(owner, now)) return [];
     const item = fresh[0];
-    const text = `刷到一个：${item.title}${item.url ? `\n${item.url}` : ''}`;
+    const text = `${item.title}${item.url ? `\n${item.url}` : ''}`;
     try {
       await gateway.sendText('private', owner, text);
       state.count += 1;

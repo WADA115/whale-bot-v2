@@ -81,7 +81,7 @@ export function handleOpsRoutes({ ctx, config, req, res, json, readBody }) {
           cwd: ctx.root, stdio: 'ignore', windowsHide: true
         });
         child.unref();
-        setTimeout(() => { try { ctx.gateway.reopen?.() ?? ctx.gateway.connect(); } catch {} }, 2500);
+        setTimeout(() => { try { ctx.gateway.reopen?.() ?? ctx.gateway.connect(); } catch { /* best-effort */ } }, 2500);
         json(res, 200, { ok: true, message: '网关启动已提交' });
       } catch (error) {
         json(res, 502, { error: String(error?.message ?? error) });
@@ -94,7 +94,7 @@ export function handleOpsRoutes({ ctx, config, req, res, json, readBody }) {
           cwd: ctx.root, stdio: 'ignore', windowsHide: true
         });
         child.unref();
-        try { ctx.gateway.close(); } catch {}
+        try { ctx.gateway.close(); } catch { /* best-effort */ }
         json(res, 200, { ok: true, message: '网关关闭已提交' });
       } catch (error) {
         json(res, 502, { error: String(error?.message ?? error) });

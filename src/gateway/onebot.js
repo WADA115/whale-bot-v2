@@ -104,7 +104,7 @@ export class OneBotGateway extends EventEmitter {
 
     ws.addEventListener('error', () => {
       this.log?.warn('gateway.socket_error', {});
-      try { ws.close(); } catch {}
+      try { ws.close(); } catch { /* best-effort */ }
     });
   }
 
@@ -192,6 +192,6 @@ export class OneBotGateway extends EventEmitter {
     this.closed = true;
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     this.reconnectTimer = null;
-    try { this.ws?.close(); } catch {}
+    try { this.ws?.close(); } catch { /* best-effort */ }
   }
 }

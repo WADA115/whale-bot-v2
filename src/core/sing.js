@@ -79,7 +79,7 @@ export function createSing({
       logger?.info('sing.rendered', { chars: chars.length, bytes: fs.statSync(mp3Out).size });
       return { file: mp3Out, chars: chars.length };
     } finally {
-      try { fs.rmSync(work, { recursive: true, force: true }); } catch {}
+      try { fs.rmSync(work, { recursive: true, force: true }); } catch { /* best-effort */ }
     }
   }
 

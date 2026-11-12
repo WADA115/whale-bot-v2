@@ -120,7 +120,7 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
         rooms.set(room.id, room);
       } catch (error) {
         const corrupt = `${source}.corrupt-${Date.now()}`;
-        try { fs.renameSync(source, corrupt); } catch {}
+        try { fs.renameSync(source, corrupt); } catch { /* best-effort */ }
         logger?.warn('room.load_file_failed', { file, corrupt, error: String(error?.message ?? error) });
       }
     }
@@ -296,7 +296,7 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
         server.listen(port, '0.0.0.0', () => { logger?.info('room.listening', { port, rooms: rooms.size }); resolve(true); });
       });
     },
-    close() { try { server.close(); } catch {} },
+    close() { try { server.close(); } catch { /* best-effort */ } },
     sendAI(roomId, text) {
       const room = rooms.get(String(roomId));
       if (!room || !room.aiEnabled) return null;

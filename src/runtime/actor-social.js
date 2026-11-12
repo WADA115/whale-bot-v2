@@ -39,7 +39,7 @@ export function buildSocialTools({ knowledge, tts, mansui, permissions, current,
             why: { type: 'string', description: '为什么现在需要做，给系统看' },
             ask: { type: 'string', description: '你真正发给主人的话，用平时的语气，别写权限请求或编号' }
           },
-          required: ['what', 'why']
+          required: ['what', 'why', 'ask']
         }
       }
     } : null;

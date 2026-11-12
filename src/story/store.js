@@ -44,7 +44,7 @@ function atomicWrite(file, text) {
   try {
     fs.renameSync(tmp, file);
   } catch {
-    try { fs.rmSync(file, { force: true }); } catch {}
+    try { fs.rmSync(file, { force: true }); } catch { /* best-effort */ }
     fs.renameSync(tmp, file);
   }
 }
@@ -122,8 +122,8 @@ export function createStoryStore({ root, logger = null } = {}) {
       fs.writeFileSync(fd, JSON.stringify({ pid: process.pid, at: new Date().toISOString() }), 'utf8');
       return await fn(dir);
     } finally {
-      try { fs.closeSync(fd); } catch {}
-      try { fs.rmSync(lock, { force: true }); } catch {}
+      try { fs.closeSync(fd); } catch { /* best-effort */ }
+      try { fs.rmSync(lock, { force: true }); } catch { /* best-effort */ }
     }
   }
 
@@ -245,7 +245,7 @@ export function createStoryStore({ root, logger = null } = {}) {
 
   async function forgetPerson(key, personId) {
     return withLock(key, (dir) => {
-      try { fs.rmSync(personFile(dir, personId), { force: true }); } catch {}
+      try { fs.rmSync(personFile(dir, personId), { force: true }); } catch { /* best-effort */ }
       bumpMeta(dir, 'person:forget');
       return true;
     });

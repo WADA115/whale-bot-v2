@@ -38,7 +38,7 @@ export function createDaydream({
     for (const groupId of (config?.character?.privateOnly ? [] : (config?.allow?.groups || []))) {
       let label = liveGroup?.name(`group:${groupId}`) || '';
       if (!label) {
-        try { label = (await readGroupHistory({ gateway, groupId })).groupName || ''; } catch {}
+        try { label = (await readGroupHistory({ gateway, groupId })).groupName || ''; } catch { /* best-effort */ }
       }
       out.push({ label: label || '一个群', kind: 'group', id: String(groupId) });
     }

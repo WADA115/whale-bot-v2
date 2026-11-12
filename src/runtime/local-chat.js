@@ -110,7 +110,7 @@ export function createLocalChat({ gateway, dispatch, media = null, history = nul
         const url = String(attachment?.url || '');
         if (!url) continue;
         let absolute = url;
-        try { absolute = new URL(url, base).href; } catch {}
+        try { absolute = new URL(url, base).href; } catch { /* best-effort */ }
         if (kind === 'voice') segments.push({ type: 'record', data: { url: absolute } });
         else segments.push({ type: 'image', data: { file: absolute } });
       }

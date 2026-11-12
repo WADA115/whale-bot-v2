@@ -1,4 +1,4 @@
-﻿import fs from 'node:fs';
+import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
@@ -31,13 +31,13 @@ export function acquireRuntimeLock({ file, logger = null } = {}) {
           try {
             const current = readLock(file);
             if (current?.token === token) fs.writeFileSync(file, JSON.stringify({ pid: process.pid, at: Date.now(), token }));
-          } catch {}
+          } catch { /* best-effort */ }
         },
         release: () => {
           try {
             const current = readLock(file);
             if (!current || current.token === token) fs.rmSync(file, { force: true });
-          } catch {}
+          } catch { /* best-effort */ }
         }
       };
     } catch (error) {
@@ -48,7 +48,7 @@ export function acquireRuntimeLock({ file, logger = null } = {}) {
         logger?.warn('runtime.already_running', { pid: existing.pid });
         return { ok: false, pid: existing.pid, release: () => {} };
       }
-      try { fs.rmSync(file, { force: true }); } catch {}
+      try { fs.rmSync(file, { force: true }); } catch { /* best-effort */ }
     }
   }
   logger?.warn('runtime.lock_failed', {});

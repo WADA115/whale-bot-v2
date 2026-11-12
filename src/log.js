@@ -14,7 +14,7 @@ export function createLogger({ dir, level = 'info', maxBytes = 8 * 1024 * 1024 }
       if (fs.statSync(file).size < maxBytes) return;
       const stamp = new Date().toISOString().replace(/[:.]/g, '-');
       fs.renameSync(file, path.join(dir, `v2-${stamp}.jsonl`));
-    } catch {}
+    } catch { /* best-effort */ }
   }
 
   function write(levelName, event, fields = {}) {
@@ -27,7 +27,7 @@ export function createLogger({ dir, level = 'info', maxBytes = 8 * 1024 * 1024 }
     try {
       rotate();
       fs.appendFileSync(file, line + '\n', 'utf8');
-    } catch {}
+    } catch { /* best-effort */ }
     return record;
   }
 

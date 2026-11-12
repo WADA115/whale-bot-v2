@@ -12,7 +12,7 @@ function parseCookies(url) {
     for (const [key, value] of parsed.searchParams) {
       if (['SESSDATA', 'bili_jct', 'DedeUserID', 'DedeUserID__ckMd5', 'sid'].includes(key)) out[key] = value;
     }
-  } catch {}
+  } catch { /* best-effort */ }
   return out;
 }
 
@@ -22,7 +22,7 @@ function parseSetCookie(headers) {
   let list = [];
   try {
     list = typeof headers?.getSetCookie === 'function' ? headers.getSetCookie() : [headers?.get?.('set-cookie')].filter(Boolean);
-  } catch {}
+  } catch { /* best-effort */ }
   for (const line of list) {
     const pair = String(line).split(';')[0];
     const index = pair.indexOf('=');
@@ -219,7 +219,7 @@ export function createBilibili({ file, logger = null, fetchImpl = fetch } = {}) 
             source = 'subtitle';
           }
         }
-      } catch {}
+      } catch { /* best-effort */ }
     }
     if (!text) text = String(v.desc ?? '').trim();
     const description = String(v.desc ?? '').trim();

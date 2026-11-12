@@ -79,7 +79,7 @@ async function shrinkImage(image, { ffmpegPath, timeoutMs = 15000 } = {}) {
   } catch {
     return image;
   } finally {
-    try { fs.rmSync(dir, { recursive: true, force: true }); } catch {}
+    try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* best-effort */ }
   }
 }
 

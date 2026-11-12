@@ -10,7 +10,7 @@ export function atomicWriteFile(file, data, { encoding = 'utf8', mode = undefine
     fs.writeFileSync(tmp, data, { encoding, mode });
     fs.renameSync(tmp, file);
   } catch (error) {
-    try { fs.rmSync(tmp, { force: true }); } catch {}
+    try { fs.rmSync(tmp, { force: true }); } catch { /* best-effort */ }
     throw error;
   }
 }

@@ -79,7 +79,7 @@ export function createAsr({
       try {
         await run(ffmpegPath, [...base, '-af', filter, out], timeoutMs);
         return out;
-      } catch {}
+      } catch { /* best-effort */ }
     }
     await run(ffmpegPath, [...base, out], timeoutMs);
     return out;
@@ -87,7 +87,7 @@ export function createAsr({
 
   function cleanup(files) {
     for (const file of files) {
-      try { fs.rmSync(file, { force: true }); } catch {}
+      try { fs.rmSync(file, { force: true }); } catch { /* best-effort */ }
     }
   }
 

@@ -175,9 +175,7 @@ export async function main(argv = process.argv.slice(2)) {
       if (config.mode !== 'live' || !connected) return;
       const [kind, id] = String(task.key || '').split(':');
       if (!['private', 'group'].includes(kind) || !id) return;
-      await gateway.sendText(kind, id, `任务做完了。
-
-${task.result}`);
+      await gateway.sendText(kind, id, String(task.result));
       logger.info('task.sent', { id: task.id, kind });
     }
   });
@@ -259,7 +257,7 @@ ${task.result}`);
   const mind = createMindStore({ root: path.join(ROOT, 'state', 'mind'), character, logger });
   const session = mind.beginSession();
   logger.info('mind.session', { woke: Boolean(session.wake), gap: session.gap });
-  const heartbeat = setInterval(() => { try { mind.heartbeat(); } catch {} }, 60 * 1000);
+  const heartbeat = setInterval(() => { try { mind.heartbeat(); } catch { /* best-effort */ } }, 60 * 1000);
   heartbeat.unref?.();
   const conversationLog = createConversationLog({ limit: 80 });
   const contacts = createContacts({ file: path.join(ROOT, 'state', 'contacts.json'), logger });
@@ -483,7 +481,7 @@ ${task.result}`);
     });
     if (message.text && !message.local) contacts.remember({ id: message.userId, name: message.senderName, key: message.key, text: message.text });
     if (message.replyTo) {
-      try { message.quoted = await gateway.getMessage(message.replyTo); } catch {}
+      try { message.quoted = await gateway.getMessage(message.replyTo); } catch { /* best-effort */ }
     }
     const ownerId = String(config.allow?.private?.[0] || '');
     if (message.kind === 'private' && String(message.id) === ownerId) {
@@ -672,8 +670,8 @@ ${task.result}`);
 
   const shutdown = () => {
     logger.info('app.shutdown', {});
-    try { mind.markShutdown(); } catch {}
-    try { runtimeLock.release(); } catch {}
+    try { mind.markShutdown(); } catch { /* best-effort */ }
+    try { runtimeLock.release(); } catch { /* best-effort */ }
     gateway.close();
     slangObserver.stop();
     knowledge?.close();
