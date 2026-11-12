@@ -20,3 +20,5 @@ desktop/e*.err
 desktop/debug.log
 
 desktop/dist/
+
+art/
