@@ -41,3 +41,7 @@ import './actor-executor.test.mjs';
 import './actor-reply.test.mjs';
 import './actor-toolset.test.mjs';
 import './actor-inbound.test.mjs';
+import './atomic.test.mjs';
+import './permissions-scope.test.mjs';
+import './routes-smoke.test.mjs';
+import './watchdog.test.mjs';

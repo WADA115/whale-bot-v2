@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { durationWord } from './time.js';
+import { atomicWriteFile } from '../runtime/atomic.js';
 
 const FILES = ['self.md', 'worldview.md', 'now.md', 'undercurrent.md', 'unfinished.md', 'seen.md', 'held.md'];
 
@@ -10,7 +11,7 @@ function readText(file) {
 
 function writeText(file, text) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, String(text ?? '').trim() + '\n', 'utf8');
+  atomicWriteFile(file, String(text ?? '').trim() + '\n');
 }
 
 function capText(text, maxChars = 12000) {

@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { atomicWriteJson } from '../runtime/atomic.js';
 
 export function createMilestones({ file = 'state/milestones.json', limit = 120, logger = null } = {}) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -8,7 +9,7 @@ export function createMilestones({ file = 'state/milestones.json', limit = 120, 
   if (!Array.isArray(list)) list = [];
 
   function persist() {
-    try { fs.writeFileSync(file, JSON.stringify(list, null, 2) + '\n', 'utf8'); }
+    try { atomicWriteJson(file, list); }
     catch (error) { logger?.warn('milestones.write_failed', { error: String(error?.message ?? error) }); }
   }
 

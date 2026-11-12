@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { atomicWriteJson } from '../runtime/atomic.js';
 
 const SCOPES = new Set(['her', 'user']);
 const KINDS = new Set(['image', 'sticker', 'voice']);
@@ -39,7 +40,7 @@ export function createMediaLibrary({ root = 'state/media', logger = null, maxByt
 
   function persist(scope) {
     try {
-      fs.writeFileSync(path.join(base, scope, 'index.json'), JSON.stringify(indexes[scope], null, 2) + '\n', 'utf8');
+      atomicWriteJson(path.join(base, scope, 'index.json'), indexes[scope]);
     } catch (error) { logger?.warn('media.index_failed', { scope, error: String(error?.message ?? error) }); }
   }
 

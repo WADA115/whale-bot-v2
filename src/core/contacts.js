@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { atomicWriteJson } from '../runtime/atomic.js';
 
 function normalizeNotes(notes) {
   return (Array.isArray(notes) ? notes : []).map((n) => {
@@ -15,7 +16,7 @@ export function createContacts({ file = 'state/contacts.json', logger = null } =
   if (!data || typeof data !== 'object' || Array.isArray(data)) data = {};
 
   function persist() {
-    try { fs.writeFileSync(file, JSON.stringify(data, null, 2) + '\n', 'utf8'); }
+    try { atomicWriteJson(file, data); }
     catch (error) { logger?.warn('contacts.write_failed', { error: String(error?.message ?? error) }); }
   }
 

@@ -67,6 +67,12 @@ async function claimLock() {
 
 if (!await claimLock()) process.exit(0);
 
+if (process.env.WATCHDOG_DRY === '1') {
+  log('watchdog dry hold');
+  await new Promise((resolve) => setTimeout(resolve, Number(process.env.WATCHDOG_HOLD_MS) || 1500));
+  process.exit(0);
+}
+
 function touchLock() {
   try { fs.writeFileSync(lockFile, JSON.stringify({ pid: process.pid, at: Date.now() }), 'utf8'); } catch {}
 }

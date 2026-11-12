@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { atomicWriteJson } from '../runtime/atomic.js';
 
 export function createDiary({ file = 'state/diary.json', limit = 80, logger = null } = {}) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -8,7 +9,7 @@ export function createDiary({ file = 'state/diary.json', limit = 80, logger = nu
   if (!Array.isArray(list)) list = [];
 
   function persist() {
-    try { fs.writeFileSync(file, JSON.stringify(list, null, 2) + '\n', 'utf8'); }
+    try { atomicWriteJson(file, list); }
     catch (error) { logger?.warn('diary.write_failed', { error: String(error?.message ?? error) }); }
   }
 

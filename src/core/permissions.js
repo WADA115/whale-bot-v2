@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { atomicWriteJson } from '../runtime/atomic.js';
 import crypto from 'node:crypto';
 
 export function createPermissions({ file = 'state/permissions.json', ttlMs = 30 * 60 * 1000, logger = null } = {}) {
@@ -9,7 +10,7 @@ export function createPermissions({ file = 'state/permissions.json', ttlMs = 30 
   if (!Array.isArray(list)) list = [];
 
   function persist() {
-    try { fs.writeFileSync(file, JSON.stringify(list, null, 2) + '\n', 'utf8'); }
+    try { atomicWriteJson(file, list); }
     catch (error) { logger?.warn('permissions.write_failed', { error: String(error?.message ?? error) }); }
   }
 

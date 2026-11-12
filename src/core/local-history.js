@@ -1,5 +1,6 @@
-﻿import fs from 'node:fs';
+import fs from 'node:fs';
 import path from 'node:path';
+import { atomicWriteJson } from '../runtime/atomic.js';
 
 export function createLocalHistory({ file = 'state/local-history.json', limit = 200, logger = null } = {}) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -8,7 +9,7 @@ export function createLocalHistory({ file = 'state/local-history.json', limit = 
   if (!Array.isArray(list)) list = [];
 
   function persist() {
-    try { fs.writeFileSync(file, JSON.stringify(list, null, 2) + '\n', 'utf8'); }
+    try { atomicWriteJson(file, list); }
     catch (error) { logger?.warn('local_history.write_failed', { error: String(error?.message ?? error) }); }
   }
 
