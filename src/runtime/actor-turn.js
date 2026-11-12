@@ -1,21 +1,10 @@
-import { routeIncoming } from '../character/ingress.js';
-import { buildNarrativePrompt } from '../story/prompt.js';
 import { shadowReply } from '../core/reply.js';
-import { chooseSticker } from '../character/expression.js';
 import { matchSlang } from '../character/slang.js';
 import { buildNotices } from './notices.js';
-
-export function canUseBiliWrite({ kind = '', key = '', permissions = null } = {}) {
-  return createWriteGate({ kind, key, permissions }).canUse();
-}
-
 import { selectRelevantSlices } from '../story/retrieval.js';
-import { sendHumanReply } from './speech.js';
-import { shouldReflect } from '../story/reflect.js';
-import { readGroupHistory } from './group-history.js';
 import { createWriteGate } from './write-gate.js';
 import { buildActorSystem } from './actor-prompt.js';
-import { buildBiliTools, runBiliAction } from './actor-bili.js';
+import { buildBiliTools } from './actor-bili.js';
 import { buildCreativeTools } from './actor-creative.js';
 import { buildSocialTools } from './actor-social.js';
 import { buildMemoryTools } from './actor-memory.js';
@@ -28,6 +17,10 @@ import { readMediaContext } from './actor-media.js';
 import { buildToolset } from './actor-toolset.js';
 import { generateActorReply } from './actor-model.js';
 import { selectCurrentMessage } from './actor-inbound.js';
+
+export function canUseBiliWrite({ kind = '', key = '', permissions = null } = {}) {
+  return createWriteGate({ kind, key, permissions }).canUse();
+}
 
 export function createActorTurn({
   config,
@@ -206,7 +199,7 @@ export function createActorTurn({
       const text = turn.role === 'assistant' ? raw.split(/(?<=[。！？!?])/)[0].slice(0, 80) : raw.slice(0, 180);
       return `${label}：${text}`;
     }).filter((line) => line.length > 3).join('\n');
-    const { chatNotes, chatUser } = buildChatContext({ historyText, current, groupFact, pendingRead, wantsSeen, mindState, wantsMemory, groupHistory, reference, slangBlock, globalContext, contactText, momentText, diaryIndexText, milestoneText, memorySummaryText, deniedText, imageDesc, imagePending, voiceDesc, voicePending, pendingVoice, wake, text });
+    const { chatNotes, chatUser } = buildChatContext({ historyText, current, groupFact, pendingRead, wantsSeen, mindState, wantsMemory, groupHistory, slangBlock, globalContext, contactText, momentText, diaryIndexText, milestoneText, memorySummaryText, deniedText, imageDesc, imagePending, voiceDesc, voicePending, pendingVoice, wake, text });
     const userBudget = Math.max(2000, Number(config.actor?.maxPromptChars) || 16000);
     const boundedUser = chatUser.length > userBudget ? `${chatUser.slice(0, userBudget).trimEnd()}\n…` : chatUser;
     if (boundedUser.length !== chatUser.length) logger.info('character.prompt_clipped', { key, before: chatUser.length, after: boundedUser.length });

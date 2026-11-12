@@ -53,6 +53,7 @@ import { createScreen } from './core/screen.js';
 import { createRoomServer } from './room/server.js';
 import { createRoomAI } from './room/ai.js';
 import { acquireRuntimeLock } from './runtime/lock.js';
+import { ignoreError } from './runtime/safe.js';
 import { createMindStore } from './mind/store.js';
 import { createDaydream } from './mind/daydream.js';
 
@@ -670,8 +671,8 @@ export async function main(argv = process.argv.slice(2)) {
 
   const shutdown = () => {
     logger.info('app.shutdown', {});
-    try { mind.markShutdown(); } catch { /* best-effort */ }
-    try { runtimeLock.release(); } catch { /* best-effort */ }
+    ignoreError(() => mind.markShutdown());
+    ignoreError(() => runtimeLock.release());
     gateway.close();
     slangObserver.stop();
     knowledge?.close();

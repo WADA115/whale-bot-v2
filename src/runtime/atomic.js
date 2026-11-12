@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { ignoreError } from './safe.js';
 
 export function atomicWriteFile(file, data, { encoding = 'utf8', mode = undefined } = {}) {
   const dir = path.dirname(file);
@@ -10,7 +11,7 @@ export function atomicWriteFile(file, data, { encoding = 'utf8', mode = undefine
     fs.writeFileSync(tmp, data, { encoding, mode });
     fs.renameSync(tmp, file);
   } catch (error) {
-    try { fs.rmSync(tmp, { force: true }); } catch { /* best-effort */ }
+    ignoreError(() => fs.rmSync(tmp, { force: true }));
     throw error;
   }
 }

@@ -6,10 +6,11 @@ function untrusted(label, value) {
 
 export function buildChatContext({
   historyText, current, groupFact, pendingRead, wantsSeen, mindState, wantsMemory,
-  groupHistory, reference, slangBlock, globalContext, contactText, momentText,
+  groupHistory, slangBlock, globalContext, contactText, momentText,
   diaryIndexText, milestoneText, memorySummaryText, deniedText, imageDesc,
   imagePending, voiceDesc, voicePending, pendingVoice, wake, text
-}) {    const chatNotes = [
+}) {
+  const chatNotes = [
       historyText ? `刚才聊的：\n${historyText}` : '',
       current.quoted ? untrusted('引用', `${current.quoted.senderName || '对方'}：${current.quoted.text || '[非文字消息]'}`) : '',
       groupFact || '',
@@ -18,7 +19,6 @@ export function buildChatContext({
       wantsMemory && mindState?.unfinished ? `没想完的：\n${mindState.unfinished.slice(-500)}` : '',
       wantsMemory && mindState?.undercurrent ? `暗流：\n${mindState.undercurrent.split('\n').slice(-5).join('\n')}` : '',
       untrusted('群历史', groupHistory),
-      untrusted('资料引用', reference),
       untrusted('黑话', slangBlock),
       globalContext ? untrusted('其他会话', globalContext) : '',
       contactText ? `你记得这个人：${contactText}` : '',

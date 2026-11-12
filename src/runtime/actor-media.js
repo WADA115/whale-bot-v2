@@ -37,7 +37,6 @@ export async function readMediaContext({ current, config, visionRouter, visionLi
         logger.warn('vision.failed', { key, error: String(error?.message ?? error) });
       }
     }
-    let reference = '';
     let voiceDesc = '';
     let voicePending = false;
     if (current.voices?.length && asr) {

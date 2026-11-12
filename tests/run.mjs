@@ -45,3 +45,4 @@ import './atomic.test.mjs';
 import './permissions-scope.test.mjs';
 import './routes-smoke.test.mjs';
 import './watchdog.test.mjs';
+import './actor-turn.test.mjs';
