@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
+import { atomicWriteJson } from '../runtime/atomic.js';
 
 const MAX_BODY = 24_000_000;
 const MAX_MESSAGES = 500;
@@ -83,16 +84,13 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
 
   function persist(room) {
     const target = fileFor(room.id);
-    const tmp = `${target}.tmp-${process.pid}-${Date.now()}`;
     try {
-      fs.writeFileSync(tmp, JSON.stringify({
+      atomicWriteJson(target, {
         id: room.id, name: room.name, token: room.token, hostName: room.hostName,
         createdAt: room.createdAt, aiEnabled: Boolean(room.aiEnabled), messages: room.messages,
         members: [...room.members.values()]
-      }, null, 2) + '\n', 'utf8');
-      fs.renameSync(tmp, target);
+      });
     } catch (error) {
-      try { fs.rmSync(tmp, { force: true }); } catch {}
       logger?.warn('room.persist_failed', { roomId: room.id, error: String(error?.message ?? error) });
     }
   }

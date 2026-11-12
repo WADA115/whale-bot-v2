@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { atomicWriteJson } from '../runtime/atomic.js';
 
 function dayKey() {
   return new Date().toLocaleDateString('sv-SE');
@@ -38,13 +39,9 @@ export function createAutonomy({ config, bili, gateway, logger = null, stateFile
 
   function saveNow() {
     if (!stateFile) return;
-    const tmp = `${stateFile}.tmp-${process.pid}-${Date.now()}`;
     try {
-      fs.mkdirSync(path.dirname(stateFile), { recursive: true });
-      fs.writeFileSync(tmp, JSON.stringify(state, null, 2), 'utf8');
-      fs.renameSync(tmp, stateFile);
+      atomicWriteJson(stateFile, state);
     } catch (error) {
-      try { fs.rmSync(tmp, { force: true }); } catch {}
       logger?.warn('autonomy.save_failed', { error: String(error?.message ?? error) });
     }
   }

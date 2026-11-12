@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { publicConfig, applyConfigPatch } from '../helpers.js';
+import { atomicWriteFile } from '../../runtime/atomic.js';
 
 export function handleConfigRoutes({ ctx, config, logger, req, res, json, readBody }) {
     if (req.url === '/api/config' && req.method === 'GET') {
@@ -33,9 +34,7 @@ export function handleConfigRoutes({ ctx, config, logger, req, res, json, readBo
             const stamp = new Date().toISOString().replace(/[:.]/g, '-');
             fs.copyFileSync(ctx.configPath, `${ctx.configPath}.bak-settings-${stamp}`);
           }
-          const tmp = `${ctx.configPath}.tmp-${process.pid}-${Date.now()}`;
-          fs.writeFileSync(tmp, JSON.stringify(safe, null, 2) + '\n', 'utf8');
-          fs.renameSync(tmp, ctx.configPath);
+          atomicWriteFile(ctx.configPath, JSON.stringify(safe, null, 2) + '\n');
           logger.info('config.updated_from_panel', { file: path.basename(ctx.configPath) });
           return json(res, 200, { ok: true, restartRequired: true, config: publicConfig(config, ctx.configPath) });
         } catch (error) {

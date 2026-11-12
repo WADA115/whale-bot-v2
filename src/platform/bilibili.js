@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { atomicWriteFile } from '../runtime/atomic.js';
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) qq-bridge-v2';
 const BASE = 'https://passport.bilibili.com/x/passport-login/web';
@@ -50,17 +51,12 @@ export function createBilibili({ file, logger = null, fetchImpl = fetch } = {}) 
 
   function save() {
     if (!file) return;
-    const tmp = `${file}.tmp-${process.pid}-${Date.now()}`;
     try {
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      fs.writeFileSync(tmp, JSON.stringify(data, null, 2), { encoding: 'utf8', mode: 0o600 });
-      fs.renameSync(tmp, file);
+      atomicWriteFile(file, JSON.stringify(data, null, 2), { mode: 0o600 });
     } catch (error) {
-      try { fs.rmSync(tmp, { force: true }); } catch {}
       logger?.warn('bilibili.save_failed', { error: String(error?.message ?? error) });
     }
   }
-
   async function json(url, options = {}) {
     const res = await fetchImpl(url, {
       ...options,
