@@ -8,6 +8,7 @@ import { createMediaLibrary } from '../src/core/media-library.js';
 import { createScreen } from '../src/core/screen.js';
 import { createRoomAI } from '../src/room/ai.js';
 import { createPermissions } from '../src/core/permissions.js';
+import { createLocalChat } from '../src/runtime/local-chat.js';
 
 test('room-media 不能读取房间状态文件', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'room-media-'));
@@ -19,6 +20,15 @@ test('room-media 不能读取房间状态文件', async () => {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ name: 'security', memberName: 'host', clientId: 'host-1' })
     }).then((res) => res.json());
+    const upload = await fetch(`http://127.0.0.1:${port}/api/room/media`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ roomId: created.roomId, token: created.token, clientId: 'host-1', memberSecret: created.memberSecret, kind: 'image', mime: 'image/png', data: Buffer.from('fake-image').toString('base64') })
+    }).then((res) => res.json());
+    assert.match(upload.media.url, /\?token=/);
+    const noMediaToken = await fetch(`http://127.0.0.1:${port}${upload.media.url.replace(/\?token=.*$/, '')}`);
+    assert.equal(noMediaToken.status, 403);
+    const withMediaToken = await fetch(`http://127.0.0.1:${port}${upload.media.url}`);
+    assert.equal(withMediaToken.status, 200);
     const status = await fetch(`http://127.0.0.1:${port}/room-media/${created.roomId}.json`);
     assert.ok([403, 404].includes(status.status), 'room state must not be readable');
     const traversal = await fetch(`http://127.0.0.1:${port}/room-media/${created.roomId}/media/..%2F..%2F${created.roomId}.json`);
@@ -131,4 +141,16 @@ test('媒体索引裁剪时删除旧文件', () => {
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+test('本地聊天超时返回且无 active 时不再假装成功', async () => {
+  const gateway = { selfId: '1', sendText: async () => ({ ok: true }), sendMessage: async () => ({ ok: true }) };
+  const chat = createLocalChat({ gateway, dispatch: async () => {}, timeoutMs: 50 });
+  const started = Date.now();
+  const result = await chat.send('在吗');
+  assert.equal(result.ok, true);
+  assert.equal(result.reply, '');
+  assert.ok(Date.now() - started < 1000);
+  const late = await gateway.sendText('private', 'local', '迟到的话');
+  assert.equal(late.ok, false);
+  assert.equal(late.reason, 'no-active-turn');
 });

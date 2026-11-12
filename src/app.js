@@ -1,5 +1,6 @@
 import http from 'node:http';
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { loadConfig, ROOT } from './config.js';
@@ -602,6 +603,7 @@ ${task.result}`);
   }
 
   let shutdownHandler = null;
+  const panelToken = crypto.randomBytes(24).toString('hex');
   const handler = createPanelHandler({
     root: ROOT,
     config,
@@ -636,6 +638,7 @@ ${task.result}`);
     screen,
     importQQStickers,
     capabilities,
+    panelToken,
     shutdownToken,
     shutdown: () => shutdownHandler?.()
   });

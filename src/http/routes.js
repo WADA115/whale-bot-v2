@@ -23,6 +23,17 @@ const TYPES = {
   '.ico': 'image/x-icon'
 };
 
+function sendPanelHtml(res, file, token) {
+  try {
+    const html = fs.readFileSync(file, 'utf8');
+    const script = `<script>window.__PANEL_TOKEN__=${JSON.stringify(String(token || ''))};(function(){const f=window.fetch.bind(window);window.fetch=function(input,init){let raw='';try{raw=typeof input==='string'?input:(input&&input.url)||String(input);}catch{}try{const u=new URL(raw,location.href);if(u.origin===location.origin&&u.pathname.startsWith('/api/')){const headers=new Headers((init&&init.headers)||{});headers.set('x-panel-token',window.__PANEL_TOKEN__);init=Object.assign({},init,{headers});}}catch{}return f(input,init);};})();</script>`;
+    const body = html.includes('</head>') ? html.replace('</head>', `${script}</head>`) : script + html;
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-length': Buffer.byteLength(body), 'cache-control': 'no-store' });
+    res.end(body);
+  } catch {
+    json(res, 404, { error: 'not found' });
+  }
+}
 export function personaFromText(raw, fallback = {}) {
   const value = String(raw ?? '');
   const match = value.match(/\{[\s\S]*\}/);
@@ -87,7 +98,7 @@ export function createPanelHandler(ctx) {
     const webRoot = path.join(ctx.root, 'web');
     const pathname = req.url.split('?')[0];
 
-    if (pathname.startsWith('/api/') && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    if (pathname.startsWith('/api/') && pathname !== '/api/shutdown') {
       const port = Number(config.healthPort) || 3201;
       const host = String(req.headers.host || '').toLowerCase();
       const allowedHosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`]);
@@ -97,11 +108,9 @@ export function createPanelHandler(ctx) {
       if (origin && !/^http:\/\/(127\.0\.0\.1|localhost):\d+$/i.test(origin)) return json(res, 403, { error: 'forbidden origin' });
       if (site === 'cross-site') return json(res, 403, { error: 'forbidden origin' });
     }
-    if (pathname === '/api/export' || pathname === '/api/character/export') {
-      const port = Number(config.healthPort) || 3201;
-      const host = String(req.headers.host || '').toLowerCase();
-      if (!new Set([`127.0.0.1:${port}`, `localhost:${port}`]).has(host)) return json(res, 403, { error: 'forbidden host' });
-      if (String(req.headers['sec-fetch-site'] || '') === 'cross-site') return json(res, 403, { error: 'forbidden origin' });
+    const needsPanelToken = pathname.startsWith('/api/') && pathname !== '/api/shutdown' && pathname !== '/api/local/history';
+    if (needsPanelToken && String(req.headers['x-panel-token'] || '') !== String(ctx.panelToken || '')) {
+      return json(res, 403, { error: 'missing panel token' });
     }
 
     if (pathname.startsWith('/media/')) {
@@ -117,14 +126,15 @@ export function createPanelHandler(ctx) {
       return;
     }
     if (pathname === '/next/') {
-      sendFile(res, path.join(webRoot, 'next', 'index.html'), TYPES['.html'] || 'text/html; charset=utf-8');
+      sendPanelHtml(res, path.join(webRoot, 'next', 'index.html'), ctx.panelToken);
       return;
     }
     if (req.url.startsWith('/next/') || req.url.startsWith('/assets/')) {
       const rel = req.url.startsWith('/next/') ? req.url.slice('/next/'.length) : `assets/${req.url.slice('/assets/'.length)}`;
       const file = path.resolve(webRoot, rel.startsWith('assets/') ? rel : path.join('next', rel));
-      if (!file.startsWith(webRoot)) return json(res, 403, { error: 'forbidden' });
-      sendFile(res, file, TYPES[path.extname(file)] || 'application/octet-stream');
+      if (!file.startsWith(webRoot + path.sep)) return json(res, 403, { error: 'forbidden' });
+      if (path.extname(file).toLowerCase() === '.html') sendPanelHtml(res, file, ctx.panelToken);
+      else sendFile(res, file, TYPES[path.extname(file)] || 'application/octet-stream');
       return;
     }
     if (pathname === '/legacy' || pathname === '/') {

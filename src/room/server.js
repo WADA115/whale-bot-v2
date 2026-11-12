@@ -145,6 +145,9 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
           return send(res, 403, { error: 'forbidden' });
         }
         const roomId = parts[0];
+        if (rooms.get(roomId)?.token !== String(url.searchParams.get('token') || '')) {
+          return send(res, 403, { error: 'forbidden' });
+        }
         const base = path.resolve(mediaDir(roomId));
         const file = path.resolve(base, path.basename(parts[2]));
         if (!file.startsWith(base + path.sep)) return send(res, 403, { error: 'forbidden' });
@@ -238,7 +241,7 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
         const hash = crypto.createHash('sha256').update(buffer).digest('hex').slice(0, 24);
         const file = `${hash}${extFor(String(body.mime || ''))}`;
         fs.writeFileSync(path.join(mediaDir(room.id), file), buffer);
-        return send(res, 200, { ok: true, media: { kind, url: `/room-media/${room.id}/media/${file}`, mime: String(body.mime || '') } });
+        return send(res, 200, { ok: true, media: { kind, url: `/room-media/${room.id}/media/${file}?token=${encodeURIComponent(room.token)}`, mime: String(body.mime || '') } });
       }
 
       if (req.method === 'POST' && url.pathname === '/api/room/ai') {
@@ -267,7 +270,7 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
         const text = String(body.text || '').trim().slice(0, 2000);
         const media = (Array.isArray(body.media) ? body.media : []).slice(0, MAX_MEDIA).filter((item) => {
           const url = String(item?.url || '');
-          return /^\/room-media\/[^/]+\/media\/[^/]+$/.test(url);
+          return /^\/room-media\/[^/]+\/media\/[^/]+(?:\?[^#]*)?$/.test(url);
         }).map((item) => ({
           kind: ['image', 'sticker', 'voice'].includes(String(item.kind)) ? String(item.kind) : 'image',
           url: String(item.url),
