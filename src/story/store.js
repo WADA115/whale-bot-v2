@@ -59,9 +59,9 @@ export function createStoryStore({ root, logger = null } = {}) {
     fs.mkdirSync(path.join(dir, 'episodes'), { recursive: true });
     fs.mkdirSync(path.join(dir, 'chapters'), { recursive: true });
     const files = {
-      'self.md': card ? selfFromCard(card) : '# 我\n\n我还不知道自己是谁。\n',
-      'relationship.md': '# 我们\n\n还不熟。\n',
-      'now.md': '# 此刻\n\n没什么特别想的，先听他说。\n',
+      'self.md': card ? selfFromCard(card) : '# 我\n\n',
+      'relationship.md': '# 我们\n\n',
+      'now.md': '# 此刻\n\n',
       'life.md': '',
       'world.md': ''
     };

@@ -23,7 +23,7 @@ function stripHeadings(text) {
 }
 
 function nowText() {
-  if (!story?.now) return '没什么特别想的，先听他说。';
+  if (!story?.now) return '';
   return stripHeadings(story.now);
 }
 
@@ -49,7 +49,7 @@ function renderToday() {
     : '<p class="muted">还没有被写下来的事。</p>';
   const speechLines = now.split('\n').map((x) => x.trim()).filter((x) => x && !/^(此刻|心里|猜|打算)$/.test(x));
   const speech = speechLines.slice(0, 2).join(' ');
-  $('#speech').textContent = speech.length > 60 ? speech.slice(0, 60) + '…' : speech || '在。';
+  $('#speech').textContent = speech.length > 60 ? speech.slice(0, 60) + '…' : speech || '';
 }
 
 function renderCharacter() {

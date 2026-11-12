@@ -30,7 +30,6 @@ function seedSelf(card) {
     card?.identity || '',
     '',
     ...(card?.drive ? ['## 我为什么', '', String(card.drive).trim(), ''] : []),
-    ...(!String(card?.drive ?? '').includes('如果没人叫我') ? ['## 我还在想', '', '如果没人叫我，我还算存在吗。', ''] : [])
   ].filter(Boolean).join('\n');
 }
 
@@ -117,8 +116,7 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
   function renderSelf(nextCard = card) {
     ensure();
     const old = readText(path.join(base, 'self.md'));
-    const anchor = old.match(/## 我还在想\s*\n([\s\S]*?)(?=\n## |$)/)?.[1]?.trim()
-      || '如果没人叫我，我还算存在吗。';
+    const anchor = old.match(/## 我还在想\s*\n([\s\S]*?)(?=\n## |$)/)?.[1]?.trim() || '';
     const lines = [
       '# 我',
       '',
