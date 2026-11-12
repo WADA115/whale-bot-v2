@@ -5,6 +5,10 @@ import { chooseSticker } from '../character/expression.js';
 import { matchSlang } from '../character/slang.js';
 import { buildNotices } from './notices.js';
 
+export function canUseBiliWrite({ kind = '', key = '', permissions = null } = {}) {
+  return kind === 'private' && Boolean(permissions?.active?.(key)?.length);
+}
+
 function untrusted(label, value) {
   const text = String(value ?? '').trim();
   if (!text) return '';
@@ -287,7 +291,7 @@ export function createActorTurn({
       if (!blocks.length) return `你在这些群里：${[...new Set(names)].join('、') || '没有可读的群'}。这段时间没有读到原话。`;
       return `你在这些群里：${[...new Set(names)].join('、')}\n\n${blocks.join('\n\n')}`;
     };
-    const canWriteBili = current.kind === 'private' && Boolean(permissions?.active?.(key)?.length);
+    const canWriteBili = canUseBiliWrite({ kind: current.kind, key, permissions });
     const biliTools = bilibili ? [
       {
         type: 'function',
