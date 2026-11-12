@@ -4,12 +4,17 @@ import net from 'node:net';
 import { spawn } from 'node:child_process';
 import { ROOT } from '../src/config.js';
 
-const healthUrl = 'http://127.0.0.1:3201/healthz';
-const lockFile = path.join(ROOT, 'state', 'watchdog.lock');
-const logFile = path.join(ROOT, 'state', 'logs', 'watchdog.log');
-const snowHome = process.env.SNOWLUMA_DIR || 'E:\\新建文件夹 (3)';
-const asrPython = process.env.ASR_PY || 'E:\\AI\\ComfyUI\\venv\\Scripts\\python.exe';
-const asrScript = process.env.ASR_SCRIPT || 'E:\\deepseek_qq.bot\\qq-bridge\\src\\asr-server.py';
+const configFile = process.env.WATCHDOG_CONFIG || path.join(ROOT, 'state', 'watchdog.json');
+let fileConfig = {};
+try { fileConfig = JSON.parse(fs.readFileSync(configFile, 'utf8')); } catch {}
+const healthUrl = process.env.WATCHDOG_HEALTH_URL || fileConfig.healthUrl || 'http://127.0.0.1:3201/healthz';
+const lockFile = process.env.WATCHDOG_LOCK || fileConfig.lockFile || path.join(ROOT, 'state', 'watchdog.lock');
+const logFile = process.env.WATCHDOG_LOG || fileConfig.logFile || path.join(ROOT, 'state', 'logs', 'watchdog.log');
+const snowHome = process.env.SNOWLUMA_DIR || fileConfig.snowHome || 'E:\\新建文件夹 (3)';
+const asrPython = process.env.ASR_PY || fileConfig.asrPython || 'E:\\AI\\ComfyUI\\venv\\Scripts\\python.exe';
+const asrScript = process.env.ASR_SCRIPT || fileConfig.asrScript || 'E:\\deepseek_qq.bot\\qq-bridge\\src\\asr-server.py';
+const asrCwd = process.env.ASR_CWD || fileConfig.asrCwd || 'E:\\deepseek_qq.bot\\qq-bridge';
+const v2Root = process.env.WATCHDOG_V2_ROOT || fileConfig.v2Root || ROOT;
 fs.mkdirSync(path.dirname(logFile), { recursive: true });
 
 function log(message) {
@@ -99,7 +104,7 @@ async function ensureServices() {
       lastAsrStart = now;
       log('starting ASR');
       const child = spawn(asrPython, [asrScript, '--port', '3199'], {
-        cwd: 'E:\\deepseek_qq.bot\\qq-bridge',
+        cwd: asrCwd,
         detached: true,
         stdio: 'ignore',
         windowsHide: true
@@ -121,8 +126,8 @@ async function healthy() {
 
 function startChild() {
   log('starting v2 child');
-  const child = spawn(process.execPath, ['src/index.js'], {
-    cwd: ROOT,
+  const child = spawn(process.execPath, [path.join(v2Root, 'src', 'index.js')], {
+    cwd: v2Root,
     detached: true,
     stdio: 'ignore',
     windowsHide: true,
