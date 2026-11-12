@@ -92,7 +92,7 @@ export function createActorTurn({
     logger.info('actor.turn', {
       key,
       count: batch.length,
-      lastText: String(last?.text ?? '').slice(0, 80),
+      lastTextChars: String(last?.text ?? '').length,
       images: batch.reduce((n, m) => n + (m.images?.length ?? 0), 0),
       mode: config.mode,
       character: Boolean(character)
@@ -108,7 +108,7 @@ export function createActorTurn({
       if (route.kind !== 'social') {
         if (route.kind === 'task') {
           const task = tasks.add({ key, text: route.text, kind: route.kind, userId: msg.userId });
-          logger.info('ingress.task_queued', { key, id: task?.id ?? null, text: route.text.slice(0, 80) });
+          logger.info('ingress.task_queued', { key, id: task?.id ?? null, chars: route.text.length });
           if (task && config.character.taskAutoRun === true) {
             taskExecutor.runPending({ limit: 1 }).catch((error) => logger.warn('task.auto_run_failed', { error: String(error?.message ?? error) }));
           }
@@ -122,7 +122,7 @@ export function createActorTurn({
             }
           }
         } else {
-          logger.info('ingress.non_social', { key, kind: route.kind, text: String(msg?.text ?? '').slice(0, 80) });
+          logger.info('ingress.non_social', { key, kind: route.kind, chars: String(msg?.text ?? '').length });
         }
         continue;
       }
@@ -829,13 +829,13 @@ export function createActorTurn({
     const sticker = canExpression ? chooseSticker(text, stickers) : null;
     if (current.dryRun) {
       character.director.recordReply(key, reply);
-      logger.info('simulate.would_send', { key, kind: current.kind, provider: provider, text: reply, sticker: sticker?.desc ?? '' });
+      logger.info('simulate.would_send', { key, kind: current.kind, provider: provider, chars: reply.length, sticker: sticker?.desc ?? '' });
       return;
     }
     if (config.mode === 'shadow') {
       character.director.recordReply(key, reply);
       if (current.kind === 'group') groupCooldowns.set(key, Date.now());
-      logger.info('shadow.would_send', { key, provider: provider, text: reply, sticker: sticker?.desc ?? '' });
+      logger.info('shadow.would_send', { key, provider: provider, chars: reply.length, sticker: sticker?.desc ?? '' });
       return;
     }
     try {
@@ -871,7 +871,7 @@ export function createActorTurn({
           reply: deliveredReply
         }).catch((error) => logger.warn('story.editor_failed', { key, error: String(error?.message ?? error) }));
       }
-      logger.info('turn.sent', { key, provider: provider, chars: deliveredReply.length, preview: deliveredReply.slice(0, 80), interrupted: delivery.interrupted });
+      logger.info('turn.sent', { key, provider: provider, chars: deliveredReply.length, interrupted: delivery.interrupted });
     } catch (error) {
       metrics?.inc('qqbot_errors_total', { area: 'send' });
       logger.error('turn.send_failed', { key, error: String(error?.message ?? error) });

@@ -412,7 +412,7 @@ ${task.result}`);
       const parsed = JSON.parse(match[0]);
       if (parsed.decision === 'approve' || parsed.decision === 'deny') {
         const req = permissions.decide(parsed.id, parsed.decision === 'approve', key);
-        if (req) logger.info('permission.answered', { id: req.id, decision: parsed.decision, text: String(text).slice(0, 80) });
+        if (req) logger.info('permission.answered', { id: req.id, decision: parsed.decision, chars: String(text).length });
       }
       const addMinutes = Number(parsed.addMinutes) || 0;
       const setMinutes = Number(parsed.setMinutes) || 0;
@@ -497,7 +497,7 @@ ${task.result}`);
     mind.touchContact();
     const decision = message.local ? { handle: true, reason: 'local' } : decide({ message, config, selfId: gateway.selfId });
     if (!decision.handle && !message.dryRun) {
-      logger.debug('message.skipped', { key: message.key, reason: decision.reason, text: String(message.text ?? '').slice(0, 60) });
+      logger.debug('message.skipped', { key: message.key, reason: decision.reason, chars: String(message.text ?? '').length });
       return;
     }
     inboundSeq.set(message.key, (inboundSeq.get(message.key) || 0) + 1);
