@@ -173,7 +173,9 @@ export class OneBotGateway extends EventEmitter {
     const params = kind === 'group'
       ? { group_id: id, message }
       : { user_id: id, message };
-    return this.call(action, params);
+    const result = await this.call(action, params);
+    this.emit('sent', { kind, id: String(id), segments: message, result });
+    return result;
   }
 
   async getQzoneFeeds({ pageNum = 1, count = 5, cursor = '' } = {}) {

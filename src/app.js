@@ -273,13 +273,10 @@ ${task.result}`);
   memorySummary.refresh({ force: false }).catch(() => {});
   const summaryTimer = setInterval(() => memorySummary.refresh().catch(() => {}), 6 * 60 * 60 * 1000);
   summaryTimer.unref?.();
-  const gatewaySend = gateway.sendMessage.bind(gateway);
-  gateway.sendMessage = async (kind, id, segments) => {
-    const result = await gatewaySend(kind, id, segments);
+  gateway.on('sent', ({ kind, id, segments }) => {
     const text = (Array.isArray(segments) ? segments : []).filter((x) => x?.type === 'text').map((x) => String(x?.data?.text ?? '')).join(' ').trim();
     if (text) conversationLog.add({ key: `${kind}:${id}`, kind, id: String(id), sender: '我', text, at: Date.now() });
-    return result;
-  };
+  });
   const permissions = createPermissions({
     file: path.join(ROOT, 'state', 'permissions.json'),
     logger
@@ -533,15 +530,16 @@ ${task.result}`);
   setTimeout(() => dailyDiary.maybeWrite().catch(() => {}), 6000).unref?.();
   setInterval(() => dailyDiary.maybeWrite().catch(() => {}), 30 * 60 * 1000).unref?.();
   let roomAI = null;
+  const roomPort = Number(config.room?.port) || 3210;
   const roomServer = createRoomServer({
-    port: Number(config.room?.port) || 3210,
+    port: roomPort,
     root: path.join(ROOT, 'state', 'rooms'),
     aiName: character?.card?.name || '小鲸鱼',
     onMessage: (room, message) => roomAI?.observe(room, message),
     onAIEnabled: (room) => roomAI?.greet(room),
     logger
   });
-  roomAI = createRoomAI({ roomServer, textRouter, character, asr, logger });
+  roomAI = createRoomAI({ roomServer, textRouter, character, asr, mediaBase: `http://127.0.0.1:${roomPort}`, aliases: config.role?.aliases || [], logger });
   roomServer.start().catch(() => {});
   const localChat = createLocalChat({ gateway, dispatch: dispatchMessage, media: mediaLibrary, history: localHistory, logger });
 

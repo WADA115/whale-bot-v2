@@ -34,6 +34,7 @@ const demoStory = {
 
 let state = demo;
 let story = null;
+let offline = false;
 let activePage = 'today';
 
 function esc(value) {
@@ -62,6 +63,7 @@ async function getJson(url, fallback = null) {
 
 async function loadState() {
   const data = await getJson('/api/state');
+  offline = !data;
   if (data) state = data;
   renderChrome();
   renderToday();
@@ -80,9 +82,9 @@ async function loadState() {
 
 function renderChrome() {
   const status = state.status || {};
-  const connected = Boolean(status.connected);
-  $('#topStatus').innerHTML = `<span class="dot ${connected ? 'on' : ''}"></span><span>${connected ? '已连接' : '未连接'}</span>`;
-  $('#dockStatus').textContent = connected ? `${status.mode || ''} · 在线` : '等待连接';
+  const connected = Boolean(status.connected) && !offline;
+  $('#topStatus').innerHTML = `<span class="dot ${connected ? 'on' : ''}"></span><span>${offline ? '离线 · 示例数据' : connected ? '已连接' : '未连接'}</span>`;
+  $('#dockStatus').textContent = offline ? '离线，写操作已禁用' : connected ? `${status.mode || ''} · 在线` : '等待连接';
 }
 
 function stripHeadings(text) {

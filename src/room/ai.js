@@ -1,15 +1,15 @@
 import { sanitizeReply } from '../core/reply.js';
 
-export function createRoomAI({ roomServer, textRouter, character, asr = null, mediaBase = 'http://127.0.0.1:3210', maxQueue = 8, logger = null } = {}) {
+export function createRoomAI({ roomServer, textRouter, character, asr = null, mediaBase = 'http://127.0.0.1:3210', aliases = [], maxQueue = 8, logger = null } = {}) {
   const card = character?.card || {};
   const name = String(card.name || '小鲸鱼').trim() || '小鲸鱼';
-  const aliases = [name, '鱼鱼', '小鲸鱼', 'AI', 'ai'].filter(Boolean);
+  const aliasList = [...new Set([name, ...(Array.isArray(aliases) ? aliases : []), '鱼鱼', '小鲸鱼', 'AI', 'ai'].filter(Boolean))];
   const queues = new Map();
 
   function addressed(message) {
     const text = String(message?.text || '');
     if (!text) return false;
-    return aliases.some((alias) => text.includes(alias));
+    return aliasList.some((alias) => text.includes(alias));
   }
 
   function buildSystem() {
