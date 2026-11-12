@@ -15,10 +15,8 @@ function findRoot(start) {
   return '';
 }
 const packagedDir = process.env.PORTABLE_EXECUTABLE_DIR || path.dirname(app.getPath('exe'));
-const KNOWN_ROOT = 'E:\\deepseek_qq.bot\\qq-bridge-v2';
 const ROOT = process.env.QQ_BRIDGE_ROOT
   || findRoot(app.isPackaged ? packagedDir : path.dirname(__dirname))
-  || (fs.existsSync(path.join(KNOWN_ROOT, 'scripts', 'start-core.ps1')) ? KNOWN_ROOT : '')
   || path.dirname(__dirname);
 fs.appendFileSync(path.join(require('node:os').tmpdir(), 'xiaoyu-desktop.log'), 'root=' + ROOT + ' portable=' + (process.env.PORTABLE_EXECUTABLE_DIR || '') + '\n');
 const PANEL = process.env.QQ_BRIDGE_PANEL || 'http://127.0.0.1:3201/next/';

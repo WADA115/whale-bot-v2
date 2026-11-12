@@ -10,10 +10,11 @@ try { fileConfig = JSON.parse(fs.readFileSync(configFile, 'utf8')); } catch {}
 const healthUrl = process.env.WATCHDOG_HEALTH_URL || fileConfig.healthUrl || 'http://127.0.0.1:3201/healthz';
 const lockFile = process.env.WATCHDOG_LOCK || fileConfig.lockFile || path.join(ROOT, 'state', 'watchdog.lock');
 const logFile = process.env.WATCHDOG_LOG || fileConfig.logFile || path.join(ROOT, 'state', 'logs', 'watchdog.log');
-const snowHome = process.env.SNOWLUMA_DIR || fileConfig.snowHome || 'E:\\新建文件夹 (3)';
-const asrPython = process.env.ASR_PY || fileConfig.asrPython || 'E:\\AI\\ComfyUI\\venv\\Scripts\\python.exe';
-const asrScript = process.env.ASR_SCRIPT || fileConfig.asrScript || 'E:\\deepseek_qq.bot\\qq-bridge\\src\\asr-server.py';
-const asrCwd = process.env.ASR_CWD || fileConfig.asrCwd || 'E:\\deepseek_qq.bot\\qq-bridge';
+const v1Root = process.env.QQ_BRIDGE_V1_ROOT || fileConfig.v1Root || path.resolve(ROOT, '..', 'qq-bridge');
+const snowHome = process.env.SNOWLUMA_DIR || fileConfig.snowHome || '';
+const asrPython = process.env.ASR_PY || fileConfig.asrPython || path.join(v1Root, 'venv', 'Scripts', 'python.exe');
+const asrScript = process.env.ASR_SCRIPT || fileConfig.asrScript || path.join(v1Root, 'src', 'asr-server.py');
+const asrCwd = process.env.ASR_CWD || fileConfig.asrCwd || v1Root;
 const v2Root = process.env.WATCHDOG_V2_ROOT || fileConfig.v2Root || ROOT;
 fs.mkdirSync(path.dirname(logFile), { recursive: true });
 
@@ -85,7 +86,7 @@ let lastSnowStart = 0;
 let lastAsrStart = 0;
 async function ensureServices() {
   const now = Date.now();
-  if (process.env.GATEWAY_AUTOSTART === '1' && ((!await portOpen(3000)) || (!await portOpen(3001)))) {
+  if (snowHome && process.env.GATEWAY_AUTOSTART === '1' && ((!await portOpen(3000)) || (!await portOpen(3001)))) {
     if (now - lastSnowStart > 20000) {
       lastSnowStart = now;
       log('starting SnowLuma');
@@ -99,7 +100,7 @@ async function ensureServices() {
   child.unref();
     }
   }
-  if (!await portOpen(3199)) {
+  if (asrPython && asrScript && !await portOpen(3199)) {
     if (now - lastAsrStart > 20000) {
       lastAsrStart = now;
       log('starting ASR');

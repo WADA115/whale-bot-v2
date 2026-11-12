@@ -465,7 +465,13 @@ tests/                     离线测试
 npm test
 ```
 
-当前覆盖：
+当前测试：
+
+```text
+119 pass / 0 fail
+```
+
+覆盖：
 
 ```text
 actor 串行 / 合并 / 队列上限
