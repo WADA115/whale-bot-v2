@@ -472,7 +472,7 @@ npm test
 当前测试：
 
 ```text
-132 pass / 0 fail
+134 pass / 0 fail
 ```
 
 覆盖：

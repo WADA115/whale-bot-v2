@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createActorTurn } from '../src/runtime/actor-turn.js';
 
-function setup({ textRouter = null, config: configOverride = {}, message = null, visionRouter = null, contacts = null } = {}) {
+function setup({ textRouter = null, config: configOverride = {}, message = null, visionRouter = null, contacts = null, asr = null } = {}) {
   const logs = [];
   const sent = [];
   const writes = [];
@@ -34,7 +34,7 @@ function setup({ textRouter = null, config: configOverride = {}, message = null,
     taskExecutor: { runPending: async () => {} },
     visionRouter,
     screen: null,
-    asr: null,
+    asr,
     tts: null,
     rvc: null,
     mansui: null,
@@ -55,7 +55,7 @@ function setup({ textRouter = null, config: configOverride = {}, message = null,
     slang: [],
     stickers: [],
     gateway: { selfId: '0', sendText: async (_kind, _id, text) => { sent.push(text); }, sendMessage: async () => {} },
-    logger: { info: (event) => logs.push(event), warn: () => {}, error: () => {} },
+    logger: { info: (event) => logs.push(event), warn: (event) => logs.push(event), error: (event) => logs.push(event) },
     groupCooldowns: new Map(),
     expressionCooldowns: new Map(),
     stats: { sent: 0, imageCount: 0 },
@@ -134,4 +134,25 @@ test('actor 工具错误不会打断主回复', async () => {
   await h.run();
   assert.ok(h.logs.includes('character.actor_prompt'));
   assert.deepEqual(h.sent, ['没找到。']);
+});
+test('actor 语音会先走 ASR 再进入回合', async () => {
+  const h = setup({
+    asr: { transcribe: async () => '语音里的内容' },
+    message: {
+      kind: 'private', id: '1', userId: '1', text: '', at: [],
+      images: [], voices: [{ url: 'https://example.invalid/a.wav' }]
+    }
+  });
+  await h.run();
+  assert.ok(h.logs.includes('character.actor_prompt'));
+  assert.deepEqual(h.sent, ['在。']);
+});
+
+test('actor 模型失败不会假装发送', async () => {
+  const h = setup({
+    textRouter: { generate: async () => { throw new Error('model down'); } }
+  });
+  await h.run();
+  assert.ok(h.logs.includes('turn.model_failed'));
+  assert.deepEqual(h.sent, []);
 });
