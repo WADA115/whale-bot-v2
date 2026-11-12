@@ -75,6 +75,12 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
   function fileFor(roomId) { return path.join(root, `${roomId}.json`); }
   function mediaDir(roomId) { return path.join(root, roomId, 'media'); }
 
+  function memberFor(room, clientId, secret) {
+    const member = room?.members?.get(String(clientId || ''));
+    if (!member?.secret || String(secret || '') !== member.secret) return null;
+    return member;
+  }
+
   function persist(room) {
     try {
       fs.writeFileSync(fileFor(room.id), JSON.stringify({
@@ -98,7 +104,7 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
           messages: Array.isArray(data.messages) ? data.messages.slice(-MAX_MESSAGES) : [],
           members: new Map((Array.isArray(data.members) ? data.members : []).map((m) => [String(m.id), {
             id: String(m.id), name: String(m.name || '成员'), host: Boolean(m.host),
-            joinedAt: Number(m.joinedAt) || Date.now(), lastSeen: Number(m.lastSeen) || Date.now()
+            secret: String(m.secret || ''), joinedAt: Number(m.joinedAt) || Date.now(), lastSeen: Number(m.lastSeen) || Date.now()
           }]))
         };
         rooms.set(room.id, room);
@@ -146,14 +152,15 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
         const token = crypto.randomBytes(6).toString('hex');
         const clientId = String(body.clientId || crypto.randomUUID());
         const memberName = String(body.memberName || hostName).trim().slice(0, 24) || hostName;
+        const memberSecret = crypto.randomBytes(16).toString('hex');
         const room = { id: roomId, name, token, hostName: memberName, createdAt: Date.now(), aiEnabled: false, messages: [], members: new Map() };
-        room.members.set(clientId, { id: clientId, name: memberName, host: true, joinedAt: Date.now(), lastSeen: Date.now() });
+        room.members.set(clientId, { id: clientId, name: memberName, host: true, secret: memberSecret, joinedAt: Date.now(), lastSeen: Date.now() });
         rooms.set(roomId, room);
         persist(room);
         const addresses = lanAddresses();
         const invite = addresses[0] ? `${addresses[0]}:${port}#${roomId}#${token}` : `127.0.0.1:${port}#${roomId}#${token}`;
         logger?.info('room.created', { roomId, name });
-        return send(res, 200, { ok: true, roomId, token, invite, addresses, port, member: { id: clientId, name: memberName, host: true } });
+        return send(res, 200, { ok: true, roomId, token, memberSecret, invite, addresses, port, member: { id: clientId, name: memberName, host: true } });
       }
 
       if (req.method === 'POST' && url.pathname === '/api/room/join') {
@@ -163,18 +170,28 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
         const clientId = String(body.clientId || crypto.randomUUID());
         const name = String(body.name || '').trim().slice(0, 24) || `客人${room.members.size + 1}`;
         const existing = room.members.get(clientId);
-        room.members.set(clientId, { id: clientId, name: existing?.name || name, host: Boolean(existing?.host), joinedAt: existing?.joinedAt || Date.now(), lastSeen: Date.now() });
+        let member;
+        if (existing) {
+          if (!existing.secret || String(body.memberSecret || '') !== existing.secret) {
+            return send(res, 403, { error: '身份校验失败，请重新进房' });
+          }
+          existing.lastSeen = Date.now();
+          member = existing;
+        } else {
+          member = { id: clientId, name, host: false, secret: crypto.randomBytes(16).toString('hex'), joinedAt: Date.now(), lastSeen: Date.now() };
+          room.members.set(clientId, member);
+        }
         persist(room);
-        logger?.info('room.joined', { roomId: room.id, name });
-        return send(res, 200, { ok: true, roomId: room.id, name: room.name, hostName: room.hostName, member: room.members.get(clientId), addresses: lanAddresses() });
+        logger?.info('room.joined', { roomId: room.id, name: member.name });
+        return send(res, 200, { ok: true, roomId: room.id, name: room.name, hostName: room.hostName, memberSecret: member.secret, member: { id: member.id, name: member.name, host: member.host, ai: Boolean(member.ai) }, addresses: lanAddresses() });
       }
 
       if (req.method === 'GET' && url.pathname === '/api/room/state') {
         const room = rooms.get(String(url.searchParams.get('roomId') || ''));
         if (!room || room.token !== String(url.searchParams.get('token') || '')) return send(res, 403, { error: '邀请码无效' });
         const clientId = String(url.searchParams.get('clientId') || '');
-        const member = room.members.get(clientId);
-        if (!member) return send(res, 403, { error: '不在房间' });
+        const member = memberFor(room, clientId, url.searchParams.get('memberSecret') || '');
+        if (!member) return send(res, 403, { error: '身份校验失败' });
         member.lastSeen = Date.now();
         const since = Number(url.searchParams.get('since') || 0) || 0;
         const messages = room.messages.filter((m) => m.at > since);
@@ -193,8 +210,8 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
         const body = await readJson(req);
         const room = rooms.get(String(body.roomId || ''));
         if (!room || room.token !== String(body.token || '')) return send(res, 403, { error: '邀请码无效' });
-        const member = room.members.get(String(body.clientId || ''));
-        if (!member) return send(res, 403, { error: '不在房间' });
+        const member = memberFor(room, body.clientId, body.memberSecret);
+        if (!member) return send(res, 403, { error: '身份校验失败' });
         const kind = ['image', 'sticker', 'voice'].includes(String(body.kind)) ? String(body.kind) : 'image';
         const buffer = Buffer.from(String(body.data || ''), 'base64');
         if (!buffer.length) return send(res, 400, { error: '空文件' });
@@ -210,7 +227,7 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
         const body = await readJson(req);
         const room = rooms.get(String(body.roomId || ''));
         if (!room || room.token !== String(body.token || '')) return send(res, 403, { error: '邀请码无效' });
-        const member = room.members.get(String(body.clientId || ''));
+        const member = memberFor(room, body.clientId, body.memberSecret);
         if (!member?.host) return send(res, 403, { error: '只有房主能开关 AI' });
         room.aiEnabled = Boolean(body.enabled);
         if (room.aiEnabled) {
@@ -227,8 +244,8 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
         const body = await readJson(req);
         const room = rooms.get(String(body.roomId || ''));
         if (!room || room.token !== String(body.token || '')) return send(res, 403, { error: '邀请码无效' });
-        const member = room.members.get(String(body.clientId || ''));
-        if (!member) return send(res, 403, { error: '不在房间' });
+        const member = memberFor(room, body.clientId, body.memberSecret);
+        if (!member) return send(res, 403, { error: '身份校验失败' });
         const text = String(body.text || '').trim().slice(0, 2000);
         const media = (Array.isArray(body.media) ? body.media : []).slice(0, MAX_MEDIA).filter((item) => {
           const url = String(item?.url || '');

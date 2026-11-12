@@ -87,6 +87,17 @@ export function createPanelHandler(ctx) {
     const webRoot = path.join(ctx.root, 'web');
     const pathname = req.url.split('?')[0];
 
+    if (pathname.startsWith('/api/') && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+      const port = Number(config.healthPort) || 3201;
+      const host = String(req.headers.host || '').toLowerCase();
+      const allowedHosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`]);
+      const origin = String(req.headers.origin || '');
+      const site = String(req.headers['sec-fetch-site'] || '');
+      if (!allowedHosts.has(host)) return json(res, 403, { error: 'forbidden host' });
+      if (origin && !/^http:\/\/(127\.0\.0\.1|localhost):\d+$/i.test(origin)) return json(res, 403, { error: 'forbidden origin' });
+      if (site === 'cross-site') return json(res, 403, { error: 'forbidden origin' });
+    }
+
     if (pathname.startsWith('/media/')) {
       const rel = pathname.slice('/media/'.length);
       const file = path.resolve(path.join(ctx.root, 'state', 'media'), rel);

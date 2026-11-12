@@ -110,7 +110,7 @@ function updateMembers(members = []) {
 async function poll() {
   if (!session) return;
   try {
-    const url = `${session.base}/api/room/state?roomId=${encodeURIComponent(session.roomId)}&token=${encodeURIComponent(session.token)}&clientId=${encodeURIComponent(session.clientId)}&since=${lastAt}`;
+    const url = `${session.base}/api/room/state?roomId=${encodeURIComponent(session.roomId)}&token=${encodeURIComponent(session.token)}&clientId=${encodeURIComponent(session.clientId)}&memberSecret=${encodeURIComponent(session.memberSecret || '')}&since=${lastAt}`;
     const res = await fetch(url, { cache: 'no-store' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '连接失败');
@@ -163,7 +163,7 @@ async function createRoom() {
     if (!res.ok) throw new Error(data.error || '开房失败');
     const info = {
       base: 'http://127.0.0.1:3210',
-      roomId: data.roomId, token: data.token, clientId: clientId(),
+      roomId: data.roomId, token: data.token, clientId: clientId(), memberSecret: data.memberSecret,
       roomName, invite: data.invite, host: true,
       members: [{ id: clientId(), name, host: true }]
     };
@@ -187,12 +187,12 @@ async function joinRoom() {
     const base = `http://${host}:${port}`;
     const res = await fetch(`${base}/api/room/join`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ roomId, token, name, clientId: clientId() })
+      body: JSON.stringify({ roomId, token, name, clientId: clientId(), memberSecret: session?.roomId === roomId ? session.memberSecret : '' })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '加入失败');
     const info = {
-      base, roomId, token, clientId: clientId(),
+      base, roomId, token, clientId: clientId(), memberSecret: data.memberSecret,
       roomName: data.name || '房间', invite: raw, host: false,
       members: [data.member].filter(Boolean)
     };
@@ -213,7 +213,7 @@ async function sendMessage(event, media = []) {
   try {
     const res = await fetch(`${session.base}/api/room/send`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ roomId: session.roomId, token: session.token, clientId: session.clientId, text, media })
+      body: JSON.stringify({ roomId: session.roomId, token: session.token, clientId: session.clientId, memberSecret: session.memberSecret, text, media })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '发送失败');
@@ -234,7 +234,7 @@ async function uploadRoomMedia(file, kind = 'image') {
   });
   const res = await fetch(`${session.base}/api/room/media`, {
     method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ roomId: session.roomId, token: session.token, clientId: session.clientId, kind, data, mime: file.type || '', name: file.name || '' })
+    body: JSON.stringify({ roomId: session.roomId, token: session.token, clientId: session.clientId, memberSecret: session.memberSecret, kind, data, mime: file.type || '', name: file.name || '' })
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body.error || '上传失败');
@@ -420,6 +420,7 @@ $('#aiToggle')?.addEventListener('click', async () => {
         roomId: session.roomId,
         token: session.token,
         clientId: session.clientId,
+        memberSecret: session.memberSecret,
         enabled: !aiToggle.classList.contains('on')
       })
     });
@@ -457,4 +458,5 @@ const saved = localStorage.getItem('xiaoyu-room-name') || '';
 $('#hostName').value = saved;
 $('#guestName').value = saved;
 try { session = JSON.parse(localStorage.getItem('xiaoyu-room-session') || 'null'); } catch { session = null; }
-if (session?.roomId) showRoom(session);
+if (session?.roomId && session.memberSecret) showRoom(session);
+else if (session) saveSession(null);
