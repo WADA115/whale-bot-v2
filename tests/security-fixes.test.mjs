@@ -6,6 +6,7 @@ import path from 'node:path';
 import { createRoomServer } from '../src/room/server.js';
 import { createMediaLibrary } from '../src/core/media-library.js';
 import { createScreen } from '../src/core/screen.js';
+import { createRoomAI } from '../src/room/ai.js';
 
 test('room-media 不能读取房间状态文件', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'room-media-'));
@@ -48,4 +49,46 @@ test('屏幕权限关闭时 capture 拒绝', async () => {
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('addUrl 拒绝本地文件和本地面板 API', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'media-url-'));
+  try {
+    const media = createMediaLibrary({ root });
+    await assert.rejects(() => media.addUrl({ url: 'state/secrets.json' }), /local media path not allowed/);
+    await assert.rejects(() => media.addUrl({ url: 'http://127.0.0.1:3201/api/export' }), /private media url not allowed/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('房间坏 JSON 隔离且不阻止其它房间加载', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'room-corrupt-'));
+  const valid = { id: 'abc123', name: 'ok', token: 'token', hostName: 'host', createdAt: Date.now(), messages: [], members: [] };
+  fs.writeFileSync(path.join(root, 'abc123.json'), JSON.stringify(valid), 'utf8');
+  fs.writeFileSync(path.join(root, 'bad.json'), '{bad json', 'utf8');
+  const server = createRoomServer({ port: 34999, root });
+  try {
+    assert.equal(server.rooms.size, 1);
+    assert.ok(fs.readdirSync(root).some((name) => name.includes('.corrupt-')));
+  } finally {
+    server.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('房间 AI 队列满时丢弃新消息', async () => {
+  let calls = 0;
+  const ai = createRoomAI({
+    roomServer: { sendAI: () => null },
+    textRouter: { generate: async () => { calls += 1; await new Promise((r) => setTimeout(r, 40)); return { text: '嗯。' }; } },
+    character: { card: { name: '小鲸鱼' } },
+    maxQueue: 1
+  });
+  const room = { id: 'q1', aiEnabled: true, messages: [], name: 'q' };
+  ai.observe(room, { clientId: 'u', name: 'u', text: '一' });
+  ai.observe(room, { clientId: 'u', name: 'u', text: '二' });
+  ai.observe(room, { clientId: 'u', name: 'u', text: '三' });
+  await new Promise((r) => setTimeout(r, 120));
+  assert.equal(calls, 1);
 });

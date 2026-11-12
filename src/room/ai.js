@@ -1,10 +1,10 @@
 import { sanitizeReply } from '../core/reply.js';
 
-export function createRoomAI({ roomServer, textRouter, character, asr = null, mediaBase = 'http://127.0.0.1:3210', logger = null } = {}) {
+export function createRoomAI({ roomServer, textRouter, character, asr = null, mediaBase = 'http://127.0.0.1:3210', maxQueue = 8, logger = null } = {}) {
   const card = character?.card || {};
   const name = String(card.name || '小鲸鱼').trim() || '小鲸鱼';
   const aliases = [name, '鱼鱼', '小鲸鱼', 'AI', 'ai'].filter(Boolean);
-  let queue = Promise.resolve();
+  const queues = new Map();
 
   function addressed(message) {
     const text = String(message?.text || '');
@@ -63,7 +63,15 @@ export function createRoomAI({ roomServer, textRouter, character, asr = null, me
 
   function observe(room, message) {
     if (!room?.aiEnabled) return;
-    queue = queue.then(async () => {
+    const key = String(room.id);
+    const state = queues.get(key) || { chain: Promise.resolve(), pending: 0 };
+    queues.set(key, state);
+    if (state.pending >= maxQueue) {
+      logger?.warn('room.ai_queue_full', { roomId: key, pending: state.pending });
+      return;
+    }
+    state.pending += 1;
+    state.chain = state.chain.then(async () => {
       let text = String(message?.text || '');
       if (!text && asr && Array.isArray(message?.media)) {
         const voice = message.media.find((item) => item?.kind === 'voice' && item?.url);
@@ -71,12 +79,19 @@ export function createRoomAI({ roomServer, textRouter, character, asr = null, me
           try {
             const heard = await asr.transcribe([{ type: 'record', data: { url: `${mediaBase}${voice.url}` } }]);
             text = String(heard || '').trim();
-          } catch {}
+          } catch (error) {
+            logger?.warn('room.ai_asr_failed', { roomId: key, error: String(error?.message ?? error) });
+          }
         }
       }
       if (!text) return;
       await respond(room, { ...message, text });
-    }).catch(() => {});
+    }).catch((error) => {
+      logger?.warn('room.ai_queue_failed', { roomId: key, error: String(error?.message ?? error) });
+    }).finally(() => {
+      state.pending -= 1;
+      if (!state.pending) queues.delete(key);
+    });
   }
 
   return { observe, greet, name };

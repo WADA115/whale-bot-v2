@@ -82,21 +82,33 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
   }
 
   function persist(room) {
+    const target = fileFor(room.id);
+    const tmp = `${target}.tmp-${process.pid}-${Date.now()}`;
     try {
-      fs.writeFileSync(fileFor(room.id), JSON.stringify({
+      fs.writeFileSync(tmp, JSON.stringify({
         id: room.id, name: room.name, token: room.token, hostName: room.hostName,
         createdAt: room.createdAt, aiEnabled: Boolean(room.aiEnabled), messages: room.messages,
         members: [...room.members.values()]
       }, null, 2) + '\n', 'utf8');
-    } catch (error) { logger?.warn('room.persist_failed', { roomId: room.id, error: String(error?.message ?? error) }); }
+      fs.renameSync(tmp, target);
+    } catch (error) {
+      try { fs.rmSync(tmp, { force: true }); } catch {}
+      logger?.warn('room.persist_failed', { roomId: room.id, error: String(error?.message ?? error) });
+    }
   }
 
   function load() {
-    try {
-      for (const file of fs.readdirSync(root)) {
-        if (!file.endsWith('.json')) continue;
-        const data = JSON.parse(fs.readFileSync(path.join(root, file), 'utf8'));
-        if (!data?.id || !data?.token) continue;
+    let files = [];
+    try { files = fs.readdirSync(root); } catch (error) {
+      logger?.warn('room.load_failed', { error: String(error?.message ?? error) });
+      return;
+    }
+    for (const file of files) {
+      if (!file.endsWith('.json')) continue;
+      const source = path.join(root, file);
+      try {
+        const data = JSON.parse(fs.readFileSync(source, 'utf8'));
+        if (!data?.id || !data?.token) throw new Error('room file missing id/token');
         const room = {
           id: String(data.id), name: String(data.name || '房间'), token: String(data.token),
           hostName: String(data.hostName || hostName), createdAt: Number(data.createdAt) || Date.now(),
@@ -108,9 +120,13 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
           }]))
         };
         rooms.set(room.id, room);
+      } catch (error) {
+        const corrupt = `${source}.corrupt-${Date.now()}`;
+        try { fs.renameSync(source, corrupt); } catch {}
+        logger?.warn('room.load_file_failed', { file, corrupt, error: String(error?.message ?? error) });
       }
-      logger?.info('room.loaded', { count: rooms.size });
-    } catch (error) { logger?.warn('room.load_failed', { error: String(error?.message ?? error) }); }
+    }
+    logger?.info('room.loaded', { count: rooms.size });
   }
   load();
 
@@ -148,7 +164,9 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
       if (req.method === 'POST' && url.pathname === '/api/room/create') {
         const body = await readJson(req);
         const name = String(body.name || '').trim().slice(0, 40) || '新房间';
-        const roomId = crypto.randomBytes(3).toString('hex');
+        let roomId;
+        do { roomId = crypto.randomBytes(3).toString('hex'); }
+        while (rooms.has(roomId) || fs.existsSync(fileFor(roomId)));
         const token = crypto.randomBytes(6).toString('hex');
         const clientId = String(body.clientId || crypto.randomUUID());
         const memberName = String(body.memberName || hostName).trim().slice(0, 24) || hostName;

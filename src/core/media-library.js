@@ -101,12 +101,33 @@ export function createMediaLibrary({ root = 'state/media', logger = null, maxByt
       type = type || match[1];
       buffer = Buffer.from(match[2], 'base64');
     } else if (/^https?:/i.test(raw)) {
-      const res = await fetch(raw, { signal: AbortSignal.timeout(20000) });
+      const parsed = new URL(raw);
+      if (parsed.username || parsed.password) throw new Error('media url credentials not allowed');
+      const host = String(parsed.hostname || '').toLowerCase();
+      const loopback = host === '127.0.0.1' || host === 'localhost' || host === '[::1]' || host === '::1';
+      const privateHost = loopback
+        || host === '0.0.0.0'
+        || /^10\./.test(host)
+        || /^192\.168\./.test(host)
+        || /^169\.254\./.test(host)
+        || /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+      if (privateHost && !(loopback && parsed.pathname.startsWith('/media/'))) {
+        throw new Error('private media url not allowed');
+      }
+      const res = await fetch(raw, { signal: AbortSignal.timeout(20000), redirect: 'manual' });
+      if (res.status >= 300 && res.status < 400) throw new Error('media redirect not allowed');
       if (!res.ok) throw new Error(`media http ${res.status}`);
+      const declared = Number(res.headers.get('content-length') || 0);
+      if (declared > maxBytes) throw new Error('media too large');
       type = type || String(res.headers.get('content-type') || '').split(';')[0];
-      buffer = Buffer.from(await res.arrayBuffer());
+      const data = Buffer.from(await res.arrayBuffer());
+      if (data.length > maxBytes) throw new Error('media too large');
+      buffer = data;
     } else {
-      buffer = fs.readFileSync(raw);
+      const mediaRoot = path.resolve(base);
+      const resolved = path.resolve(raw);
+      if (!resolved.startsWith(mediaRoot + path.sep)) throw new Error('local media path not allowed');
+      buffer = fs.readFileSync(resolved);
     }
     if (!type) type = kind === 'voice' ? 'audio/wav' : 'image/jpeg';
     return addBuffer({ scope, kind, buffer, mime: type, name, desc, origin: origin || raw });
