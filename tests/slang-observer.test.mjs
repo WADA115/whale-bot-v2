@@ -67,3 +67,19 @@ test('图片和表情包会先过视觉再进黑话提取', async () => {
   await observer.flush();
   assert.equal(entries[0]?.term, '大肥鱼');
 });
+test('黑话提取模型卡住时按 timeout 返回', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'slang-timeout-'));
+  const observer = createSlangObserver({
+    file: path.join(dir, 'slang.json'),
+    entries: [],
+    search: async () => [],
+    textRouter: { generate: () => new Promise(() => {}) },
+    config: { batchSize: 5, intervalMs: 60_000, timeoutMs: 1000 }
+  });
+  for (let i = 0; i < 5; i += 1) {
+    observer.observe({ kind: 'group', key: 'group:1', id: '1', senderName: '群友', text: `卡住测试${i}` });
+  }
+  const started = Date.now();
+  await observer.flush();
+  assert.ok(Date.now() - started < 4000);
+});

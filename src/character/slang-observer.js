@@ -14,6 +14,21 @@ function parseTerms(text) {
   }
 }
 
+function withTimeout(promise, ms) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error('slang timeout'));
+    }, Math.max(1000, ms));
+    Promise.resolve(promise).then(
+      (value) => { if (settled) return; settled = true; clearTimeout(timer); resolve(value); },
+      (error) => { if (settled) return; settled = true; clearTimeout(timer); reject(error); }
+    );
+  });
+}
+
 function clean(value, max = 200) {
   return String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
 }
@@ -38,6 +53,7 @@ export function createSlangObserver({
   const batchSize = Math.max(5, Number(config.batchSize) || 20);
   const intervalMs = Math.max(60_000, Number(config.intervalMs) || 5 * 60 * 1000);
   const maxPerRun = Math.max(1, Number(config.maxPerRun) || 8);
+  const timeoutMs = Math.max(1000, Number(config.timeoutMs) || 15000);
   const pending = new Map();
   const imageQueue = [];
   let imageWorker = false;
@@ -127,7 +143,7 @@ export function createSlangObserver({
         let text = imageSummary(item.message);
         if (vision && item.message.images?.length) {
           try {
-            const described = await vision.describe({ message: item.message });
+            const described = await withTimeout(vision.describe({ message: item.message }), timeoutMs);
             const desc = clean(described?.text, 260);
             if (desc) text = `${text || '[图片]'} ${desc}`;
           } catch (error) {
@@ -160,12 +176,20 @@ export function createSlangObserver({
   }
 
   async function waitImages() {
-    while (imageWorker || imageQueue.length) await new Promise((resolve) => setTimeout(resolve, 20));
+    const deadline = Date.now() + timeoutMs;
+    while (imageWorker || imageQueue.length) {
+      if (Date.now() > deadline) { logger?.warn('slang.images_timeout', { queued: imageQueue.length }); break; }
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
   }
 
   async function flush() {
     if (imageWorker || imageQueue.length) await waitImages();
-    if (busy) { while (busy) await new Promise((r) => setTimeout(r, 20)); return; }
+    if (busy) {
+      const deadline = Date.now() + timeoutMs;
+      while (busy && Date.now() < deadline) await new Promise((r) => setTimeout(r, 20));
+      if (busy) { logger?.warn('slang.busy_timeout', {}); return; }
+    }
     if (!total || !textRouter) return;
     busy = true;
     const lines = pendingLines().slice(-24);
@@ -190,7 +214,7 @@ export function createSlangObserver({
         '只有确实值得记的黑话才 worth=true；不确定、无意义、口癖或发图顺口的字填 false。',
         '没有就输出 []。'
       ].filter(Boolean).join('\n');
-      const answer = await textRouter.generate({ system, user: '', maxTokens: 4000, temperature: 0.4 });
+      const answer = await withTimeout(textRouter.generate({ system, user: '', maxTokens: 4000, temperature: 0.4 }), timeoutMs);
       logger?.info('slang.flushed', { lines: lines.length, chars: String(answer?.text || '').length });
       const terms = parseTerms(answer?.text).slice(0, maxPerRun);
       const researched = [];
@@ -200,16 +224,16 @@ export function createSlangObserver({
         let enriched = { ...item };
         let source = '';
         try {
-          const hits = await search(`${term} 梗 意思 用法`, { limit: 4 });
+          const hits = await withTimeout(search(`${term} 梗 意思 用法`, { limit: 4 }), timeoutMs);
           if (hits.length) {
             source = hits.map((x) => x.url).filter(Boolean).join(' ');
             const snippets = hits.map((x) => `- ${x.title}：${x.snippet}`).join('\n');
-            const check = await textRouter.generate({
+            const check = await withTimeout(textRouter.generate({
               system: '你在核对 QQ 群黑话。根据群聊原句和网络搜索，判断这个词在群里的真实意思和用法。只有网络能解释、确实值得记的才 worth=true。只输出 JSON：{"meaning":"...","usage":"...","worth":true}，不要 Markdown，不要解释。',
               user: `词：${term}\n群里的原句：${lines.filter((x) => x.text.includes(term)).slice(0, 2).map((x) => x.text).join('\n')}\n网络搜索：\n${snippets}`,
               maxTokens: 1200,
               temperature: 0.3
-            });
+            }), timeoutMs);
             const match = String(check?.text || '').match(/\{[\s\S]*\}/);
             if (match) {
               const parsed = JSON.parse(match[0]);
