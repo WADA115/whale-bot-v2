@@ -31,7 +31,7 @@ function renderToday() {
   const status = state.status || {};
   const scenes = Object.entries(state.scenes || {});
   const latest = scenes[0]?.[1]?.recent || '';
-  $('#todayLede').textContent = latest ? `刚才：${latest}` : '先听她说。';
+  $('#todayLede').textContent = latest ? `刚才：${latest}` : '';
   $('#todayStatus').innerHTML = [
     `<span>模式 <b>${esc(status.mode || 'unknown')}</b></span>`,
     `<span>连接 <b>${status.connected ? '在线' : '离线'}</b></span>`,

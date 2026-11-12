@@ -1,3 +1,4 @@
+import { ok, fail } from './actor-result.js';
 export function buildBiliTools({ bilibili, canWriteBili }) {
     return bilibili ? [
       {
@@ -65,10 +66,10 @@ export async function runBiliAction({ name, args = {}, bilibili, mind, logger, k
           return [result.title, ...result.list.map((item) => `${item.rpid}｜${item.user}：${item.text.slice(0, 180)}`)].join('\n') || '没有评论。';
         }
         if (name === 'bili_reply_comment') {
-          if (!writeGate.consume('bili_reply_comment')) { logger.warn('bili.write_denied', { key }); return '没有私聊授权，不能对外发评论。'; }
+          if (!writeGate.consume('bili_reply_comment')) { logger.warn('bili.write_denied', { key }); return fail('denied'); }
           const result = await bilibili.replyComment({ bvid: args.bvid, rpid: args.rpid }, args.message);
           logger.info('bili.comment_replied', { bvid: result.bvid, rpid: result.rpid, chars: String(args.message || '').length });
-          return '回复发出去了。';
+          return ok('sent');
         }        if (name === 'bili_dynamics') {
           const list = await bilibili.dynamics();
           return list.slice(0, 12).map((item) => `${item.author}：${item.title}`).join('\n') || '没有关注动态。';
@@ -82,8 +83,8 @@ export async function runBiliAction({ name, args = {}, bilibili, mind, logger, k
           return list.slice(0, 12).map((item) => `${item.author}：${item.title}`).join('\n') || '没有观看历史。';
         }
       } catch (error) {
-        return '[action:read_failed]';
+        return fail('read_failed');
       }
-      return '没有这个动作。';
+      return fail('unknown_action');
     }
 

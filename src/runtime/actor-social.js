@@ -1,3 +1,4 @@
+import { ok, fail } from './actor-result.js';
 export function buildSocialTools({ knowledge, tts, mansui, permissions, current, config, logger, key }) {
     const knowledgeTool = knowledge ? {
       type: 'function',
@@ -14,7 +15,7 @@ export function buildSocialTools({ knowledge, tts, mansui, permissions, current,
     const runKnowledge = async (args = {}) => {
       const kb = knowledge.search(args.query, { limit: 3 });
       logger.info('knowledge.looked_up', { key, count: kb.lines.length });
-      return kb.lines.join('\n') || '资料里没有。';
+      return kb.lines.length ? kb.lines.join('\n') : fail('empty');
     };    const speakTool = (tts || mansui) ? {
       type: 'function',
       function: {

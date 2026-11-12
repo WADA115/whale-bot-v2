@@ -1,3 +1,4 @@
+import { ok, fail } from './actor-result.js';
 export function buildCreativeTools({ draw, sing, gateway, current, stats, logger, key }) {
     const drawTool = draw ? {
       type: 'function',
@@ -39,9 +40,9 @@ export function buildCreativeTools({ draw, sing, gateway, current, stats, logger
         await gateway.sendMessage(current.kind, current.id, [{ type: 'image', data: { file: result.file } }]);
         stats.imageCount += 1;
         logger.info('draw.sent', { key, file: result.file });
-        return '画好了，图已经发出去。';
+        return ok('sent_image');
       } catch (error) {
-        return '[action:draw_failed]';
+        return fail('draw_failed');
       }
     };
     const singTool = sing ? {
@@ -61,9 +62,9 @@ export function buildCreativeTools({ draw, sing, gateway, current, stats, logger
         const result = await sing.render({ lyrics: args.lyrics });
         await gateway.sendMessage(current.kind, current.id, [{ type: 'record', data: { file: result.file } }]);
         logger.info('sing.sent', { key, file: result.file });
-        return '唱好了，语音已经发出去。';
+        return ok('sent_voice');
       } catch (error) {
-        return '[action:sing_failed]';
+        return fail('sing_failed');
       }
     };
 

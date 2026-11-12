@@ -145,12 +145,12 @@ export function createModelRouter({ providers = [], logger = null, fetchImpl = f
                 const args = call.function?.arguments ? JSON.parse(call.function.arguments) : {};
                 result = await execute(call.function?.name, args);
               } catch (error) {
-                result = `读取失败：${String(error?.message ?? error)}`;
+                result = { ok: false, action: 'tool_error', error: String(error?.message ?? error) };
               }
               messages.push({
                 role: 'tool',
                 tool_call_id: String(call.id ?? ''),
-                content: String(result ?? '')
+                content: typeof result === 'string' ? result : JSON.stringify(result ?? null)
               });
             }
             continue;

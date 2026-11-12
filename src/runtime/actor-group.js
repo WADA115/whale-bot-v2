@@ -28,8 +28,8 @@ export function buildGroupTools({ current, config, liveGroup, gateway }) {
           if (lines.length) blocks.push(`${groupName || groupId}：\n${lines.join('\n')}`);
         }
       }
-      if (!blocks.length) return `你在这些群里：${[...new Set(names)].join('、') || '没有可读的群'}。这段时间没有读到原话。`;
-      return `你在这些群里：${[...new Set(names)].join('、')}\n\n${blocks.join('\n\n')}`;
+      if (!blocks.length) return { ok: false, action: 'empty', groups: [...new Set(names)] };
+      return { ok: true, groups: [...new Set(names)], text: blocks.join('\n\n') };
     };
 
   return { groupTool, lookAtGroups };

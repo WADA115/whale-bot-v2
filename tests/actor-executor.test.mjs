@@ -1,4 +1,4 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createToolExecutor } from '../src/runtime/actor-executor.js';
 
@@ -31,9 +31,9 @@ test('actor 工具执行器仍能写日记和忘记记忆', async () => {
     mind: null,
     writeGate: { consume: () => false }
   });
-  assert.equal(await execute('write_diary', { text: '留一笔' }), '写下来了。');
+  assert.equal((await execute('write_diary', { text: '留一笔' })).action, 'saved');
   assert.equal(writes[0].text, '留一笔');
-  assert.equal(await execute('forget_memory', { person: '2', text: '忘了' }), '忘了。');
+  assert.equal((await execute('forget_memory', { person: '2', text: '忘了' })).action, 'forgotten');
   assert.equal(forgotten[0].id, '2');
   assert.match(await execute('read_diary', { query: '今天' }), /今天的事/);
 });
