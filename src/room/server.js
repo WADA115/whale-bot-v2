@@ -257,7 +257,7 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
           room.members.delete('ai');
         }
         persist(room);
-        if (room.aiEnabled && onAIEnabled) { try { onAIEnabled(room); } catch {} }
+        if (room.aiEnabled && onAIEnabled) { try { onAIEnabled(room); } catch (error) { logger?.warn('room.ai_enabled_failed', { roomId: room.id, error: String(error?.message ?? error) }); } }
         return send(res, 200, { ok: true, enabled: room.aiEnabled });
       }
 
@@ -281,7 +281,7 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
         room.messages.push(message);
         if (room.messages.length > MAX_MESSAGES) room.messages.splice(0, room.messages.length - MAX_MESSAGES);
         persist(room);
-        if (onMessage) { try { onMessage(room, message); } catch {} }
+        if (onMessage) { try { onMessage(room, message); } catch (error) { logger?.warn('room.message_handler_failed', { roomId: room.id, error: String(error?.message ?? error) }); } }
         return send(res, 200, { ok: true, message });
       }
 

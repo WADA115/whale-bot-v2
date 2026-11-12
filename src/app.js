@@ -85,7 +85,7 @@ export async function main(argv = process.argv.slice(2)) {
   lockHeartbeat.unref?.();
   const shutdownTokenFile = path.join(ROOT, 'state', 'shutdown.token');
   let shutdownToken = '';
-  try { shutdownToken = fs.readFileSync(shutdownTokenFile, 'utf8').trim(); } catch {}
+  try { shutdownToken = fs.readFileSync(shutdownTokenFile, 'utf8').trim(); } catch (error) { logger.warn('shutdown_token.read_failed', { error: String(error?.message ?? error) }); }
   if (!shutdownToken) {
     shutdownToken = randomUUID();
     fs.mkdirSync(path.dirname(shutdownTokenFile), { recursive: true });
@@ -357,7 +357,7 @@ ${task.result}`);
     const groups = (config.allow?.groups || []).map(String);
     const markerFile = path.join(ROOT, 'state', 'slang-backfill.json');
     let marks = {};
-    try { marks = JSON.parse(fs.readFileSync(markerFile, 'utf8')); } catch {}
+    try { marks = JSON.parse(fs.readFileSync(markerFile, 'utf8')); } catch (error) { logger.warn('slang.marker_read_failed', { error: String(error?.message ?? error) }); }
     const now = Date.now();
     let changed = false;
     for (const groupId of groups) {
@@ -368,7 +368,9 @@ ${task.result}`);
         for (const raw of messages) {
           try {
             slangObserver.observe(gateway.normalize(raw));
-          } catch {}
+          } catch (error) {
+            logger.warn('slang.observe_failed', { error: String(error?.message ?? error) });
+          }
         }
         marks[groupId] = now;
         changed = true;
@@ -382,7 +384,9 @@ ${task.result}`);
       try {
         fs.mkdirSync(path.dirname(markerFile), { recursive: true });
         fs.writeFileSync(markerFile, JSON.stringify(marks, null, 2), 'utf8');
-      } catch {}
+      } catch (error) {
+        logger.warn('slang.marker_write_failed', { error: String(error?.message ?? error) });
+      }
     }
   }
   gateway.on('ready', (login) => {
@@ -607,10 +611,10 @@ ${task.result}`);
   let shutdownHandler = null;
   const panelTokenFile = path.join(ROOT, 'state', 'panel.token');
   let panelToken = '';
-  try { panelToken = fs.readFileSync(panelTokenFile, 'utf8').trim(); } catch {}
+  try { panelToken = fs.readFileSync(panelTokenFile, 'utf8').trim(); } catch (error) { logger.warn('panel_token.read_failed', { error: String(error?.message ?? error) }); }
   if (!/^[a-f0-9]{48}$/.test(panelToken)) {
     panelToken = crypto.randomBytes(24).toString('hex');
-    try { fs.mkdirSync(path.dirname(panelTokenFile), { recursive: true }); fs.writeFileSync(panelTokenFile, panelToken, { encoding: 'utf8', mode: 0o600 }); } catch {}
+    try { fs.mkdirSync(path.dirname(panelTokenFile), { recursive: true }); fs.writeFileSync(panelTokenFile, panelToken, { encoding: 'utf8', mode: 0o600 }); } catch (error) { logger.warn('panel_token.write_failed', { error: String(error?.message ?? error) }); }
   }
   const handler = createPanelHandler({
     root: ROOT,
