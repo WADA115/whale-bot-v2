@@ -48,3 +48,15 @@ test('对外写工具一轮最多一次，群聊直接拒绝', () => {
   const groupGate = createWriteGate({ permissions, key: 'group:1', kind: 'group' });
   assert.equal(groupGate.consume('reach_out'), false);
 });
+test('mind seen 追加也有上限', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mind-seen-cap-'));
+  try {
+    const mind = createMindStore({ root });
+    for (let i = 0; i < 30; i += 1) mind.appendSeen(`${i}-` + 'x'.repeat(1000));
+    const text = mind.read().seen;
+    assert.ok(text.length <= 12000, `length ${text.length}`);
+    assert.match(text, /29-/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

@@ -13,9 +13,13 @@ function writeText(file, text) {
   fs.writeFileSync(file, String(text ?? '').trim() + '\n', 'utf8');
 }
 
+function capText(text, maxChars = 12000) {
+  return text.length > maxChars ? text.slice(text.length - maxChars) : text;
+}
+
 function capAppend(before, value, maxChars = 12000) {
   const next = [before, value].filter(Boolean).join('\n\n---\n\n');
-  return next.length > maxChars ? next.slice(next.length - maxChars) : next;
+  return capText(next, maxChars);
 }
 
 function seedSelf(card) {
@@ -212,7 +216,7 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     const file = path.join(base, 'seen.md');
     const before = readText(file);
     const added = [...new Set(list)].filter((line) => !before.includes(line));
-    if (added.length) writeText(file, [before, ...added.map((line) => `- ${line}`)].filter(Boolean).join('\n'));
+    if (added.length) writeText(file, capText([before, ...added.map((line) => `- ${line}`)].filter(Boolean).join('\n')));
     return read();
   }
 
