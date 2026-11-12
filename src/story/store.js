@@ -111,7 +111,9 @@ export function createStoryStore({ root, logger = null } = {}) {
         try {
           const stat = fs.statSync(lock);
           if (Date.now() - stat.mtimeMs > LOCK_STALE_MS) fs.rmSync(lock, { force: true });
-        } catch {}
+        } catch (error) {
+          if (error?.code !== 'ENOENT') logger?.warn('story.lock_inspect_failed', { error: String(error?.message ?? error) });
+        }
         await sleep(10);
       }
     }
@@ -137,7 +139,9 @@ export function createStoryStore({ root, logger = null } = {}) {
           const archive = readText(path.join(full, 'episode.md'));
           return { id: name, title: titleOf(trace) || titleOf(archive), text: trace || archive };
         }
-      } catch {}
+      } catch (error) {
+        if (error?.code !== 'ENOENT') logger?.warn('story.episode_stat_failed', { file: full, error: String(error?.message ?? error) });
+      }
       if (name.endsWith('.md')) {
         const text = readText(full);
         return { id: name, title: titleOf(text), text };
@@ -160,7 +164,9 @@ export function createStoryStore({ root, logger = null } = {}) {
         .slice(-2)
         .map((name) => ({ name, text: readText(path.join(chapterDir, name)) }))
         .filter((x) => x.text);
-    } catch {}
+    } catch (error) {
+      if (error?.code !== 'ENOENT') logger?.warn('story.chapters_read_failed', { error: String(error?.message ?? error) });
+    }
     return {
       self: readFile('self.md'),
       relationship: readFile('relationship.md'),
