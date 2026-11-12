@@ -21,9 +21,11 @@ function wait(ms, interrupted) {
   return new Promise((resolve) => {
     const started = Date.now();
     const timer = setInterval(() => {
-      if (interrupted?.() || Date.now() - started >= ms) {
+      let stop = false;
+      try { stop = Boolean(interrupted?.()); } catch { stop = true; }
+      if (stop || Date.now() - started >= ms) {
         clearInterval(timer);
-        resolve(!interrupted?.());
+        resolve(!stop);
       }
     }, 90);
   });
@@ -82,12 +84,17 @@ export async function sendHumanReply({
         : { type: 'image', data: { file: sticker.url } };
     try {
       await gateway.sendMessage(kind, id, [segment]);
+      stickerSent = true;
     } catch (error) {
       logger?.warn('expression.mface_failed', { error: String(error?.message ?? error) });
-      await gateway.sendMessage(kind, id, [{ type: 'image', data: { file: sticker.url } }]);
+      try {
+        await gateway.sendMessage(kind, id, [{ type: 'image', data: { file: sticker.url } }]);
+        stickerSent = true;
+      } catch (fallbackError) {
+        logger?.warn('expression.fallback_failed', { error: String(fallbackError?.message ?? fallbackError) });
+      }
     }
-    stickerSent = true;
-    logger?.info('expression.sent', { key: `${kind}:${id}`, desc: sticker.desc });
+    if (stickerSent) logger?.info('expression.sent', { key: `${kind}:${id}`, desc: sticker.desc });
   }
 
   let voiceSent = false;

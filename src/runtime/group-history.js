@@ -4,16 +4,19 @@ function nameOf(message) {
 
 function textOf(message) {
   if (Array.isArray(message?.message)) {
-    const text = message.message
-      .filter((segment) => segment?.type === 'text')
-      .map((segment) => String(segment?.data?.text ?? ''))
-      .join('')
-      .trim();
-    if (text) return text;
+    const text = message.message.map((segment) => {
+      if (segment?.type === 'text') return String(segment?.data?.text ?? '');
+      if (segment?.type === 'image') return '[图片]';
+      if (segment?.type === 'mface') return '[表情]';
+      if (segment?.type === 'record') return '[语音]';
+      return '';
+    }).join('').trim();
+    if (text) return text.slice(0, 180);
   }
   return String(message?.raw_message ?? '')
     .replace(/\[CQ:[^\]]+\]/g, '')
-    .trim();
+    .trim()
+    .slice(0, 180);
 }
 
 export async function readGroupHistory({ gateway, groupId, limit = 8 } = {}) {

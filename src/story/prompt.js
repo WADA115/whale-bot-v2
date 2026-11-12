@@ -1,6 +1,7 @@
 function clip(text, max) {
   const value = String(text ?? '').trim();
-  if (!max || value.length <= max) return value;
+  if (max <= 0) return '';
+  if (value.length <= max) return value;
   return value.slice(0, Math.max(0, max)).trimEnd() + '…';
 }
 

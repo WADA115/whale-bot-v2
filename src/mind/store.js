@@ -13,6 +13,11 @@ function writeText(file, text) {
   fs.writeFileSync(file, String(text ?? '').trim() + '\n', 'utf8');
 }
 
+function capAppend(before, value, maxChars = 12000) {
+  const next = [before, value].filter(Boolean).join('\n\n---\n\n');
+  return next.length > maxChars ? next.slice(next.length - maxChars) : next;
+}
+
 function seedSelf(card) {
   return [
     '# 我',
@@ -89,7 +94,7 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     if (!value) return read();
     const file = path.join(base, 'undercurrent.md');
     const before = readText(file);
-    writeText(file, [before, value].filter(Boolean).join('\n\n---\n\n'));
+    writeText(file, capAppend(before, value));
     writePresence({ lastThoughtAt: Date.now() });
     return read();
   }
@@ -100,7 +105,7 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     const file = path.join(base, 'held.md');
     const before = readText(file);
     const line = [meta ? `对${meta}` : '', value].filter(Boolean).join('：');
-    writeText(file, [before, line].filter(Boolean).join('\n\n---\n\n'));
+    writeText(file, capAppend(before, line));
     return read();
   }
 

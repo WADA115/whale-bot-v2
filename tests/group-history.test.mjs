@@ -18,3 +18,19 @@ test('读群历史时只取原话', async () => {
   assert.equal(groupName, '测试群');
   assert.deepEqual(lines, ['甲：今天好累', '乙：早点睡']);
 });
+
+test('群历史保留图片/表情占位并截断长文', async () => {
+  const { lines } = await readGroupHistory({
+    groupId: '1',
+    gateway: {
+      call: async () => ({
+        messages: [
+          { sender: { card: '甲' }, message: [{ type: 'image', data: {} }] },
+          { sender: { card: '乙' }, message: [{ type: 'text', data: { text: '长'.repeat(500) } }] }
+        ]
+      })
+    }
+  });
+  assert.equal(lines[0], '甲：[图片]');
+  assert.ok(lines[1].length <= 24 + 1 + 181);
+});

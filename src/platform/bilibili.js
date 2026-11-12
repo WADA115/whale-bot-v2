@@ -50,10 +50,13 @@ export function createBilibili({ file, logger = null, fetchImpl = fetch } = {}) 
 
   function save() {
     if (!file) return;
+    const tmp = `${file}.tmp-${process.pid}-${Date.now()}`;
     try {
       fs.mkdirSync(path.dirname(file), { recursive: true });
-      fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
+      fs.writeFileSync(tmp, JSON.stringify(data, null, 2), { encoding: 'utf8', mode: 0o600 });
+      fs.renameSync(tmp, file);
     } catch (error) {
+      try { fs.rmSync(tmp, { force: true }); } catch {}
       logger?.warn('bilibili.save_failed', { error: String(error?.message ?? error) });
     }
   }
@@ -353,5 +356,5 @@ export function createBilibili({ file, logger = null, fetchImpl = fetch } = {}) 
     save();
   }
 
-  return { generate, poll, video, popular, search, content, comments, replyComment, dynamics, favorites, history, status, logout, cookieHeader: () => cookieHeader(data.cookies) };
+  return { generate, poll, video, popular, search, content, comments, replyComment, dynamics, favorites, history, status, logout };
 }
