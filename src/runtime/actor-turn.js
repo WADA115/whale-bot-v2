@@ -1,6 +1,6 @@
 import { routeIncoming } from '../character/ingress.js';
 import { buildNarrativePrompt } from '../story/prompt.js';
-import { sanitizeReply, shadowReply } from '../core/reply.js';
+import { shadowReply } from '../core/reply.js';
 import { chooseSticker } from '../character/expression.js';
 import { matchSlang } from '../character/slang.js';
 import { buildNotices } from './notices.js';
@@ -25,6 +25,8 @@ import { buildGroupTools } from './actor-group.js';
 import { createEditorQueue } from './actor-editor.js';
 import { deliverActorReply } from './actor-reply.js';
 import { readMediaContext } from './actor-media.js';
+import { buildToolset } from './actor-toolset.js';
+import { generateActorReply } from './actor-model.js';
 
 export function createActorTurn({
   config,
@@ -238,25 +240,22 @@ export function createActorTurn({
     const prompt = { system: chatSystem, user: boundedUser, chars: chatSystem.length + boundedUser.length };
     logger.info('character.actor_prompt', { key, chars: prompt.chars, story: true });
     logger.info('character.actor_prompt_tail', { key, tail: prompt.user.slice(-700) });
-    let result = null;
-    let generated = '';
+    let reply = '';
+    let provider = '';
     try {
-      result = textRouter.generateWithTools
-        ? await textRouter.generateWithTools({
-          ...prompt,
-          tools: [...biliTools, ...(knowledgeTool ? [knowledgeTool] : []), ...(permissionTool ? [permissionTool] : []), ...(askOwnerTool ? [askOwnerTool] : []), ...(forgetTool ? [forgetTool] : []), ...(confideTool ? [confideTool] : []), ...(milestoneTool ? [milestoneTool] : []), ...(diaryTool ? [diaryTool] : []), ...(readDiaryTool ? [readDiaryTool] : []), ...(screenTool ? [screenTool] : []), ...(momentTool ? [momentTool] : []), ...(speakTool ? [speakTool] : []), ...(drawTool ? [drawTool] : []), ...(singTool ? [singTool] : []), groupTool],
-          execute: createToolExecutor({ lookAtGroups, runKnowledge, config, gateway, moments, milestones, current, screen, visionRouter, logger, key, diaryEntries, diary, contacts, permissions, mansui, tts, rvc, rvcLimiter, runDraw, runSing, bilibili, mind, writeGate }),
-        })
-        : await textRouter.generate(prompt);
+      const generated = await generateActorReply({
+        textRouter,
+        prompt,
+        tools: buildToolset({ biliTools, knowledgeTool, permissionTool, askOwnerTool, forgetTool, confideTool, milestoneTool, diaryTool, readDiaryTool, screenTool, momentTool, speakTool, drawTool, singTool, groupTool }),
+        execute: createToolExecutor({ lookAtGroups, runKnowledge, config, gateway, moments, milestones, current, screen, visionRouter, logger, key, diaryEntries, diary, contacts, permissions, mansui, tts, rvc, rvcLimiter, runDraw, runSing, bilibili, mind, writeGate })
+      });
+      reply = generated.text;
+      provider = generated.provider;
     } catch (error) {
       metrics?.inc('qqbot_errors_total', { area: 'model' });
       logger.error('turn.model_failed', { key, error: String(error?.message ?? error) });
       return;
-    }
-    generated = sanitizeReply(result.text, 0);
-    const reply = generated;
-    const provider = result?.provider || '';
-    if (!reply) {
+    }    if (!reply) {
       logger.info('turn.withheld', { key });
       if (current.dryRun) logger.info('simulate.withheld', { key });
       return;
