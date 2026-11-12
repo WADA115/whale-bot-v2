@@ -40,3 +40,4 @@ import './runtime-lock.test.mjs';
 import './actor-executor.test.mjs';
 import './actor-reply.test.mjs';
 import './actor-toolset.test.mjs';
+import './actor-inbound.test.mjs';
