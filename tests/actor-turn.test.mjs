@@ -1,8 +1,8 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createActorTurn } from '../src/runtime/actor-turn.js';
 
-function setup({ textRouter = null, config: configOverride = {}, message = null } = {}) {
+function setup({ textRouter = null, config: configOverride = {}, message = null, visionRouter = null, contacts = null } = {}) {
   const logs = [];
   const sent = [];
   const writes = [];
@@ -32,7 +32,7 @@ function setup({ textRouter = null, config: configOverride = {}, message = null 
     storyAgency: { touch() {} },
     tasks: { add: () => ({ id: 't1' }) },
     taskExecutor: { runPending: async () => {} },
-    visionRouter: null,
+    visionRouter,
     screen: null,
     asr: null,
     tts: null,
@@ -40,7 +40,7 @@ function setup({ textRouter = null, config: configOverride = {}, message = null 
     mansui: null,
     permissions: null,
     conversationLog: null,
-    contacts: null,
+    contacts,
     moments: null,
     diary,
     milestones: null,
@@ -104,4 +104,34 @@ test('actor 工具调用能执行并回到模型', async () => {
   assert.equal(toolRan, true);
   assert.equal(h.writes[0].text, '留一笔');
   assert.ok(h.logs.includes('character.actor_prompt'));
+});
+
+test('actor 图片会先走视觉再进入回合', async () => {
+  const h = setup({
+    config: { vision: { enabled: true } },
+    visionRouter: { describe: async () => ({ text: '一张图', provider: 'stub' }) },
+    message: {
+      kind: 'private', id: '1', userId: '1', text: '看这个', at: [],
+      images: [{ url: 'https://example.invalid/a.png' }], voices: []
+    }
+  });
+  await h.run();
+  assert.ok(h.logs.includes('character.actor_prompt'));
+  assert.deepEqual(h.sent, ['在。']);
+});
+
+test('actor 工具错误不会打断主回复', async () => {
+  const h = setup({
+    contacts: { forget: () => false },
+    textRouter: {
+      generateWithTools: async ({ execute }) => {
+        const result = await execute('forget_memory', { person: 'nobody', text: 'x' });
+        assert.equal(result.ok, false);
+        return { text: '没找到。', provider: 'stub' };
+      }
+    }
+  });
+  await h.run();
+  assert.ok(h.logs.includes('character.actor_prompt'));
+  assert.deepEqual(h.sent, ['没找到。']);
 });
