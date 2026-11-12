@@ -38,6 +38,7 @@ export function createScreen({ root = 'state', scriptPath = '', powershell = 'po
   }
 
   async function capture() {
+    if (!enabled) throw new Error('screen permission disabled');
     return captureTo(path.join(outDir, `screen-${Date.now()}.png`));
   }
 

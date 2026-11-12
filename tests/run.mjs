@@ -33,3 +33,4 @@ import './drive.test.mjs';
 import './world-observer.test.mjs';
 import './mind.test.mjs';
 import './slang-observer.test.mjs';
+import './security-fixes.test.mjs';

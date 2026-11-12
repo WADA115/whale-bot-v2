@@ -5,9 +5,11 @@ import crypto from 'node:crypto';
 const SCOPES = new Set(['her', 'user']);
 const KINDS = new Set(['image', 'sticker', 'voice']);
 
-function extFor(mime, name = '') {
+const SAFE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.wav', '.mp3', '.ogg', '.webm', '.m4a']);
+
+function extFor(mime, name = '', kind = 'image') {
   const fromName = path.extname(String(name)).toLowerCase();
-  if (fromName && fromName.length <= 6) return fromName;
+  if (SAFE_EXTENSIONS.has(fromName)) return fromName === '.jpeg' ? '.jpg' : fromName;
   if (String(mime).includes('png')) return '.png';
   if (String(mime).includes('webp')) return '.webp';
   if (String(mime).includes('gif')) return '.gif';
@@ -17,7 +19,7 @@ function extFor(mime, name = '') {
   if (String(mime).includes('ogg') || String(mime).includes('opus')) return '.ogg';
   if (String(mime).includes('webm')) return '.webm';
   if (String(mime).includes('mp4')) return '.m4a';
-  return '.bin';
+  return kind === 'voice' ? '.wav' : '.bin';
 }
 
 function mimeFor(kind, mime) {
@@ -62,7 +64,7 @@ export function createMediaLibrary({ root = 'state/media', logger = null, maxByt
     const hash = crypto.createHash('sha256').update(buffer).digest('hex');
     const found = indexes[scope].find((x) => x.hash === hash);
     if (found) return publicItem(scope, found);
-    const ext = extFor(mime, name);
+    const ext = extFor(mime, name, kind);
     const file = `${hash.slice(0, 24)}${ext}`;
     fs.writeFileSync(path.join(base, scope, file), buffer);
     const item = {

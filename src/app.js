@@ -536,7 +536,7 @@ ${task.result}`);
   const roomServer = createRoomServer({
     port: Number(config.room?.port) || 3210,
     root: path.join(ROOT, 'state', 'rooms'),
-    aiName: character.card.name || '小鲸鱼',
+    aiName: character?.card?.name || '小鲸鱼',
     onMessage: (room, message) => roomAI?.observe(room, message),
     onAIEnabled: (room) => roomAI?.greet(room),
     logger

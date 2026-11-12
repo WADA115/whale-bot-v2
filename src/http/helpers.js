@@ -19,7 +19,7 @@ export function text(res, status, body, type = 'text/plain; charset=utf-8') {
 export function sendFile(res, file, type) {
   try {
     const body = fs.readFileSync(file);
-    res.writeHead(200, { 'content-type': type, 'content-length': body.length, 'cache-control': 'no-cache' });
+    res.writeHead(200, { 'content-type': type, 'content-length': body.length, 'cache-control': 'no-cache', 'x-content-type-options': 'nosniff' });
     res.end(body);
   } catch {
     json(res, 404, { error: 'not found' });

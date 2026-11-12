@@ -118,8 +118,13 @@ export function createRoomServer({ port = 3210, root = 'state/rooms', hostName =
       const url = new URL(req.url, `http://${req.headers.host || '127.0.0.1'}`);
       if (req.method === 'GET' && url.pathname.startsWith('/room-media/')) {
         const rel = url.pathname.slice('/room-media/'.length);
-        const file = path.resolve(root, rel);
-        const base = path.resolve(root);
+        const parts = rel.split('/').filter(Boolean);
+        if (parts.length !== 3 || parts[1] !== 'media' || !rooms.has(parts[0])) {
+          return send(res, 403, { error: 'forbidden' });
+        }
+        const roomId = parts[0];
+        const base = path.resolve(mediaDir(roomId));
+        const file = path.resolve(base, path.basename(parts[2]));
         if (!file.startsWith(base + path.sep)) return send(res, 403, { error: 'forbidden' });
         try {
           const body = fs.readFileSync(file);
