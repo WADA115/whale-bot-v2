@@ -21,7 +21,7 @@ export function createPermissions({ file = 'state/permissions.json', ttlMs = 30 
   function inScope(item, key) {
     if (!key) return true;
     const keys = keysOf(item);
-    return !keys.length || keys.includes(key);
+    return keys.length > 0 && keys.includes(key);
   }
 
   function request({ what, why, key = '', keys = [] } = {}) {
@@ -74,9 +74,10 @@ export function createPermissions({ file = 'state/permissions.json', ttlMs = 30 
   }
 
   function decide(id, ok, key = '') {
+    const wanted = String(id || '').trim().toUpperCase();
+    if (!wanted) return null;
     const scoped = list.filter((x) => inScope(x, key) && ['pending', 'granted'].includes(x.status));
-    let item = id ? scoped.find((x) => x.id === String(id).toUpperCase()) : null;
-    if (!item) item = scoped.slice(-1)[0] || null;
+    const item = scoped.find((x) => x.id === wanted);
     if (!item) return null;
 
     if (item.status === 'granted') {
@@ -106,9 +107,10 @@ export function createPermissions({ file = 'state/permissions.json', ttlMs = 30 
   }
 
   function adjust(id = null, { addMinutes = 0, setMinutes = 0, exclude = [] } = {}, key = '') {
+    const wanted = String(id || '').trim().toUpperCase();
+    if (!wanted) return null;
     const scoped = list.filter((x) => inScope(x, key) && ['pending', 'granted'].includes(x.status));
-    let item = id ? scoped.find((x) => x.id === String(id).toUpperCase()) : null;
-    if (!item) item = scoped.slice(-1)[0] || null;
+    const item = scoped.find((x) => x.id === wanted);
     if (!item) return null;
 
     const drop = new Set((Array.isArray(exclude) ? exclude : []).map(String));

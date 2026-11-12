@@ -7,6 +7,7 @@ import { createRoomServer } from '../src/room/server.js';
 import { createMediaLibrary } from '../src/core/media-library.js';
 import { createScreen } from '../src/core/screen.js';
 import { createRoomAI } from '../src/room/ai.js';
+import { createPermissions } from '../src/core/permissions.js';
 
 test('room-media 不能读取房间状态文件', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'room-media-'));
@@ -92,4 +93,29 @@ test('房间 AI 队列满时丢弃新消息', async () => {
   ai.observe(room, { clientId: 'u', name: 'u', text: '三' });
   await new Promise((r) => setTimeout(r, 120));
   assert.equal(calls, 1);
+});
+test('未知权限 id 不会批准最近一条', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'perm-'));
+  try {
+    const p = createPermissions({ file: path.join(root, 'permissions.json') });
+    const item = p.request({ what: '测试权限', key: 'private:a' });
+    assert.equal(p.decide('NOPE', true, 'private:a'), null);
+    assert.equal(p.pending('private:a').length, 1);
+    const approved = p.decide(item.id, true, 'private:a');
+    assert.equal(approved.status, 'granted');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('无 scope 的授权不会泄漏给会话', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'perm-scope-'));
+  try {
+    const p = createPermissions({ file: path.join(root, 'permissions.json') });
+    p.grant({ what: '全局测试' });
+    assert.equal(p.active('private:a').length, 0);
+    assert.equal(p.active('').length, 1);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });

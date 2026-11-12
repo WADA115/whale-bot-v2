@@ -461,7 +461,7 @@ ${task.result}`);
     }
   }
 
-  const groupApprovers = String(config.permissions?.groupApprovers || 'any');
+  const groupApprovers = String(config.permissions?.groupApprovers || 'owner').toLowerCase() === 'any' ? 'any' : 'owner';
 
   async function dispatchMessage(message) {
     if (message.kind === 'group') {

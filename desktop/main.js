@@ -22,6 +22,21 @@ const ROOT = process.env.QQ_BRIDGE_ROOT
   || path.dirname(__dirname);
 fs.appendFileSync(path.join(require('node:os').tmpdir(), 'xiaoyu-desktop.log'), 'root=' + ROOT + ' portable=' + (process.env.PORTABLE_EXECUTABLE_DIR || '') + '\n');
 const PANEL = process.env.QQ_BRIDGE_PANEL || 'http://127.0.0.1:3201/next/';
+const PANEL_ORIGIN = new URL(PANEL).origin;
+
+function isPanelUrl(value) {
+  try { return new URL(value).origin === PANEL_ORIGIN; } catch { return false; }
+}
+
+function guardNavigation(contents) {
+  const handler = (event, url) => {
+    if (isPanelUrl(url)) return;
+    event.preventDefault();
+    if (/^https?:/i.test(url)) shell.openExternal(url);
+  };
+  contents.on('will-navigate', handler);
+  contents.on('will-redirect', handler);
+}
 const ICON = app.isPackaged ? path.join(process.resourcesPath, 'icon.png') : path.join(__dirname, 'assets', 'icon.png');
 const STATE_FILE = path.join(ROOT, 'state', 'desktop-window.json');
 let win = null;
@@ -203,9 +218,11 @@ function createWindow() {
   });
   win.setMenuBarVisibility(false);
   win.removeMenu();
+  guardNavigation(win.webContents);
   win.setTitle('小鲸鱼');
   win.webContents.on('page-title-updated', (event) => { event.preventDefault(); win.setTitle('小鲸鱼'); });
   win.webContents.on('did-create-window', (child) => {
+    guardNavigation(child.webContents);
     child.webContents.once('did-finish-load', () => {
       if (!String(child.webContents.getURL()).includes('/next/local.html')) return;
       chatWindow = child;
@@ -272,9 +289,15 @@ if (!gotLock) {
   app.whenReady().then(() => {
     app.setLoginItemSettings({ openAtLogin: false });
     session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
-      callback(permission === 'media');
+      let origin = '';
+      try { origin = new URL(webContents.getURL()).origin; } catch {}
+      callback(permission === 'media' && origin === PANEL_ORIGIN);
     });
-    session.defaultSession.setPermissionCheckHandler((webContents, permission) => permission === 'media');
+    session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
+      let origin = '';
+      try { origin = new URL(webContents.getURL()).origin; } catch {}
+      return permission === 'media' && origin === PANEL_ORIGIN;
+    });
     createWindow();
     buildTray();
     startLocalWatcher();
