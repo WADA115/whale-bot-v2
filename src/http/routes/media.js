@@ -1,4 +1,4 @@
-export async function handleMediaRoutes({ ctx, req, res, json, readBody }) {
+export function handleMediaRoutes({ ctx, req, res, json, readBody }) {
   const { config, logger } = ctx;
   const { url } = req;
     if (req.url === '/api/local/history' && req.method === 'GET') {

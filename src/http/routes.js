@@ -684,6 +684,7 @@ export function createPanelHandler(ctx) {
       }).catch(() => json(res, 400, { error: 'invalid json' }));
       return;
     }
+  if (handleMediaRoutes({ ctx, req, res, json, readBody })) return;
   if (req.url === '/simulate' && req.method === 'POST') {
       let raw = '';
       req.on('data', (chunk) => {
