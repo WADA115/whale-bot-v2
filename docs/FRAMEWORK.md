@@ -13,7 +13,8 @@
 ```text
 src/app.js                 运行时装配、消息分发、权限审批、跨会话上下文
 src/config.js              配置、角色卡、密钥和路径装载
-src/runtime/actor-turn.js  一次角色回合：上下文、提示、工具、发送
+src/runtime/actor-turn.js  角色回合编排（231 行）
+src/runtime/actor-*.js    上下文 / 工具 / 媒体 / 回复子模块
 src/runtime/notices.js     唤醒、状态和临时提示
 src/runtime/live-group.js  群聊现场感知
 src/character/             角色卡、场景、黑话、表情、表达
@@ -21,7 +22,8 @@ src/mind/                  内在状态、心跳、发呆、离线后的连续�
 src/story/                 关系、共同经历、叙事编辑
 src/core/                  模型路由、语音、权限、搜索、日志等基础能力
 src/platform/              B站、QQ空间等平台动作
-src/http/                  面板与 API
+src/http/routes.js         路由分发
+src/http/routes/*.js       按域拆分的 API
 scripts/                   启动、看门狗、本机路径
 ```
 
@@ -141,7 +143,7 @@ scripts/local.paths.ps1
 ## 当前验证
 
 ```text
-单元/集成测试：119 通过
+单元/集成测试：123 通过
 QQ 网关：3000 / 3001
 面板：3201
 语音服务：按需，当前关闭
