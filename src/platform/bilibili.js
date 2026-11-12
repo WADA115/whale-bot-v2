@@ -100,7 +100,9 @@ export function createBilibili({ file, logger = null, fetchImpl = fetch } = {}) 
         headers: { cookie: cookieHeader(cookies) }
       });
       if (nav?.code === 0) user = { mid: nav.data.mid, name: nav.data.uname, avatar: nav.data.face };
-    } catch {}
+    } catch (error) {
+      logger?.warn('bilibili.nav_failed', { error: String(error?.message ?? error) });
+    }
     data = { loggedIn: true, cookies, user, at: Date.now() };
     save();
     logger?.info('bilibili.logged_in', { mid: user?.mid ?? '', name: user?.name ?? '' });
@@ -146,7 +148,9 @@ export function createBilibili({ file, logger = null, fetchImpl = fetch } = {}) 
         data.buvid = body.data.b_3;
         save();
       }
-    } catch {}
+    } catch (error) {
+      logger?.warn('bilibili.buvid_failed', { error: String(error?.message ?? error) });
+    }
     return data.buvid || '';
   }
 
