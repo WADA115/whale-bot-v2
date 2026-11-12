@@ -25,20 +25,41 @@ function alive(pid) {
   try { process.kill(Number(pid), 0); return true; } catch { return false; }
 }
 
-const existing = readLock();
-if (existing?.pid && alive(existing.pid) && Number(existing.pid) !== process.pid) {
-  let up = false;
-  try {
-    const res = await fetch(healthUrl, { signal: AbortSignal.timeout(3000) });
-    up = res.ok;
-  } catch {}
-  if (up) {
-    log(`watchdog already running pid=${existing.pid}`);
-    process.exit(0);
+async function claimLock() {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      const fd = fs.openSync(lockFile, 'wx');
+      try { fs.writeFileSync(fd, JSON.stringify({ pid: process.pid, at: Date.now() }), 'utf8'); }
+      finally { fs.closeSync(fd); }
+      return true;
+    } catch (error) {
+      if (error?.code !== 'EEXIST') throw error;
+      const existing = readLock();
+      if (existing?.pid && Number(existing.pid) !== process.pid && alive(existing.pid)) {
+        const age = Date.now() - Number(existing.at || 0);
+        if (age < 60_000) {
+          log(`watchdog starting or running pid=${existing.pid}`);
+          return false;
+        }
+        let up = false;
+        try {
+          const res = await fetch(healthUrl, { signal: AbortSignal.timeout(3000) });
+          up = res.ok;
+        } catch {}
+        if (up) {
+          log(`watchdog already running pid=${existing.pid}`);
+          return false;
+        }
+        log(`stale watchdog lock pid=${existing.pid}: health is down, taking over`);
+      }
+      try { fs.rmSync(lockFile, { force: true }); } catch {}
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
   }
-  log(`stale watchdog lock pid=${existing.pid}: health is down, taking over`);
+  return false;
 }
-fs.writeFileSync(lockFile, JSON.stringify({ pid: process.pid, at: Date.now() }), 'utf8');
+
+if (!await claimLock()) process.exit(0);
 
 function portOpen(port) {
   return new Promise((resolve) => {

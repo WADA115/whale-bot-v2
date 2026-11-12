@@ -66,6 +66,7 @@ async function loadState() {
   offline = !data;
   if (data) state = data;
   renderChrome();
+  applyOfflineMode();
   renderToday();
   renderCharacter();
   renderDiscover();
@@ -85,6 +86,19 @@ function renderChrome() {
   const connected = Boolean(status.connected) && !offline;
   $('#topStatus').innerHTML = `<span class="dot ${connected ? 'on' : ''}"></span><span>${offline ? '离线 · 示例数据' : connected ? '已连接' : '未连接'}</span>`;
   $('#dockStatus').textContent = offline ? '离线，显示示例数据' : connected ? `${status.mode || ''} · 在线` : '等待连接';
+}
+
+function applyOfflineMode() {
+  for (const el of document.querySelectorAll('button, input, textarea, select')) {
+    if (el.classList.contains('rail-item')) continue;
+    if (offline) {
+      if (el.dataset.offlineDisabled === undefined) el.dataset.offlineDisabled = el.disabled ? '1' : '0';
+      el.disabled = true;
+    } else if (el.dataset.offlineDisabled !== undefined) {
+      el.disabled = el.dataset.offlineDisabled === '1';
+      delete el.dataset.offlineDisabled;
+    }
+  }
 }
 
 function stripHeadings(text) {
