@@ -26,7 +26,7 @@ const TYPES = {
 function sendPanelHtml(res, file, token) {
   try {
     const html = fs.readFileSync(file, 'utf8');
-    const script = `<script>window.__PANEL_TOKEN__=${JSON.stringify(String(token || ''))};(function(){const f=window.fetch.bind(window);window.fetch=function(input,init){let raw='';try{raw=typeof input==='string'?input:(input&&input.url)||String(input);}catch{}try{const u=new URL(raw,location.href);if(u.origin===location.origin&&u.pathname.startsWith('/api/')){const headers=new Headers((init&&init.headers)||{});headers.set('x-panel-token',window.__PANEL_TOKEN__);init=Object.assign({},init,{headers});}}catch{}return f(input,init);};})();</script>`;
+    const script = `<script>window.__PANEL_TOKEN__=${JSON.stringify(String(token || ''))};(function(){const f=window.fetch.bind(window);window.api=function(input,init){let raw='';try{raw=typeof input==='string'?input:(input&&input.url)||String(input);}catch{}try{const u=new URL(raw,location.href);if(u.origin===location.origin&&u.pathname.startsWith('/api/')){const headers=new Headers((init&&init.headers)||{});headers.set('x-panel-token',window.__PANEL_TOKEN__);init=Object.assign({},init,{headers});}}catch{}return f(input,init);};window.fetch=window.api;})();</script>`;
     const body = html.includes('</head>') ? html.replace('</head>', `${script}</head>`) : script + html;
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-length': Buffer.byteLength(body), 'cache-control': 'no-store' });
     res.end(body);
@@ -104,8 +104,9 @@ export function createPanelHandler(ctx) {
       const allowedHosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`]);
       const origin = String(req.headers.origin || '');
       const site = String(req.headers['sec-fetch-site'] || '');
+      const allowedOrigins = new Set([`http://127.0.0.1:${port}`, `http://localhost:${port}`]);
       if (!allowedHosts.has(host)) return json(res, 403, { error: 'forbidden host' });
-      if (origin && !/^http:\/\/(127\.0\.0\.1|localhost):\d+$/i.test(origin)) return json(res, 403, { error: 'forbidden origin' });
+      if (origin && !allowedOrigins.has(origin)) return json(res, 403, { error: 'forbidden origin' });
       if (site === 'cross-site') return json(res, 403, { error: 'forbidden origin' });
     }
     const needsPanelToken = pathname.startsWith('/api/') && pathname !== '/api/shutdown' && pathname !== '/api/local/history';

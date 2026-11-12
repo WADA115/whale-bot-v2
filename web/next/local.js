@@ -73,7 +73,7 @@ async function upload(file, kind) {
   if (file.size > 18 * 1024 * 1024) throw new Error('文件太大');
   status.textContent = '正在放进本地库…';
   const data = await readBase64(file);
-  const res = await fetch('/api/local/upload', {
+  const res = await api('/api/local/upload', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ kind, data, mime: file.type || '', name: file.name || '' })
@@ -95,7 +95,7 @@ async function submit(attachments = []) {
   typing.hidden = false;
   log.scrollTop = log.scrollHeight;
   try {
-    const res = await fetch('/api/local/chat', {
+    const res = await api('/api/local/chat', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ text, attachments: attachments.map((x) => ({ kind: x.kind, url: x.url })) })
@@ -179,7 +179,7 @@ async function loadStickers() {
   if (!stickerGrid) return;
   stickerGrid.textContent = '读取中…';
   try {
-    const res = await fetch('/api/media/list?scope=user', { cache: 'no-store' });
+    const res = await api('/api/media/list?scope=user', { cache: 'no-store' });
     const data = await res.json();
     const items = (data.items || []).filter((x) => x.kind === 'sticker' || x.kind === 'image');
     stickerGrid.replaceChildren();
@@ -212,7 +212,7 @@ async function renderLibrary() {
   if (!libraryGrid) return;
   libraryGrid.textContent = '读取中…';
   try {
-    const res = await fetch(`/api/media/list?scope=${libraryScope}`, { cache: 'no-store' });
+    const res = await api(`/api/media/list?scope=${libraryScope}`, { cache: 'no-store' });
     const data = await res.json();
     const items = data.items || [];
     libraryGrid.replaceChildren();
@@ -252,7 +252,7 @@ async function renderLibrary() {
       del.title = '删除';
       del.addEventListener('click', async (event) => {
         event.stopPropagation();
-        await fetch('/api/media/delete', {
+        await api('/api/media/delete', {
           method: 'POST', headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ scope: libraryScope, id: item.id })
         });
@@ -324,7 +324,7 @@ $('#importQQStickers')?.addEventListener('click', async () => {
   button.disabled = true;
   button.textContent = '导入中…';
   try {
-    const res = await fetch('/api/stickers/import-qq', { method: 'POST' });
+    const res = await api('/api/stickers/import-qq', { method: 'POST' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || '导入失败');
     for (let i = 0; i < 20; i += 1) {
@@ -346,7 +346,7 @@ screenLook?.addEventListener('click', async () => {
   screenLook.disabled = true;
   status.textContent = '正在看一眼屏幕…';
   try {
-    const res = await fetch('/api/screen/capture', { method: 'POST' });
+    const res = await api('/api/screen/capture', { method: 'POST' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || '截屏失败');
     status.textContent = '';
@@ -419,7 +419,7 @@ voiceToggle?.addEventListener('click', async () => {
 
 async function loadHistory() {
   try {
-    const res = await fetch('/api/local/history', { cache: 'no-store' });
+    const res = await api('/api/local/history', { cache: 'no-store' });
     const data = await res.json();
     for (const turn of data.turns || []) {
       append(turn.role === 'assistant' ? 'assistant' : 'user', String(turn.text || ''), Array.isArray(turn.segments) ? turn.segments : []);

@@ -53,7 +53,7 @@ function autoGrowAll() {
 
 async function getJson(url, fallback = null) {
   try {
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await api(url, { cache: 'no-store' });
     if (!res.ok) return fallback;
     return await res.json();
   } catch {
@@ -205,7 +205,7 @@ async function loadGatewayLog() {
 async function testSend() {
   const text = $('#gwTestText').value.trim() || '在吗';
   try {
-    const res = await fetch('/api/gateway/test-send', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'private', text }) });
+    const res = await api('/api/gateway/test-send', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'private', text }) });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '发送失败');
     $('#gwTestText').value = '';
@@ -219,7 +219,7 @@ async function restartV2() {
   if (!confirm('重启 v2？当前连接会短暂断开。')) return;
   $('#gwLog').textContent = '正在重启 v2…';
   try {
-    const res = await fetch('/api/gateway/restart', { method: 'POST' });
+    const res = await api('/api/gateway/restart', { method: 'POST' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '重启失败');
     setTimeout(() => location.reload(), 8000);
@@ -231,7 +231,7 @@ async function restartV2() {
 async function startGateway() {
   $('#gwLog').textContent = '正在启动网关…';
   try {
-    const res = await fetch('/api/gateway/start', { method: 'POST' });
+    const res = await api('/api/gateway/start', { method: 'POST' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '启动失败');
     $('#gwLog').textContent = data.message || '已提交';
@@ -244,7 +244,7 @@ async function startGateway() {
 async function stopGateway() {
   $('#gwLog').textContent = '正在停止网关…';
   try {
-    const res = await fetch('/api/gateway/stop', { method: 'POST' });
+    const res = await api('/api/gateway/stop', { method: 'POST' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '停止失败');
     $('#gwLog').textContent = data.message || '已提交';
@@ -258,7 +258,7 @@ async function stopAllRuntime() {
   if (!confirm('正常关闭全部服务？QQ 不会被关。')) return;
   $('#gwLog').textContent = '正在正常关闭…';
   try {
-    const res = await fetch('/api/runtime/stop-all', { method: 'POST' });
+    const res = await api('/api/runtime/stop-all', { method: 'POST' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '关闭失败');
     $('#gwLog').textContent = '已提交，页面马上会断开。';
@@ -362,7 +362,7 @@ async function saveConfig() {
   };
   $('#cfgStatus').textContent = '保存中…';
   try {
-    const res = await fetch('/api/config', {
+    const res = await api('/api/config', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(patch)
@@ -379,7 +379,7 @@ async function saveConfig() {
 async function clearTasks() {
   if (!confirm('清空所有任务？')) return;
   try {
-    await fetch('/api/tasks/clear', { method: 'POST' });
+    await api('/api/tasks/clear', { method: 'POST' });
     await loadState();
   } catch {
     $('#cfgStatus').textContent = '清空失败';
@@ -388,7 +388,7 @@ async function clearTasks() {
 
 async function markTaskDone(id) {
   try {
-    await fetch('/api/tasks/done', {
+    await api('/api/tasks/done', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ id })
@@ -402,7 +402,7 @@ async function markTaskDone(id) {
 async function runTasks() {
   $('#cfgStatus').textContent = '执行中…';
   try {
-    const res = await fetch('/api/tasks/run', {
+    const res = await api('/api/tasks/run', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ limit: 3 })
@@ -447,7 +447,7 @@ function fillCardForm(card) {
 }
 
 async function personaRequest(path, body) {
-  const res = await fetch(path, {
+  const res = await api(path, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body)
@@ -516,7 +516,7 @@ async function saveCard() {
   };
   $('#cardStatus').textContent = '保存中…';
   try {
-    const res = await fetch('/api/character', {
+    const res = await api('/api/character', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body)
@@ -534,7 +534,7 @@ async function importCard() {
   if (!file) return;
   try {
     const card = JSON.parse(await file.text());
-    const res = await fetch('/api/character', {
+    const res = await api('/api/character', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(card)
@@ -550,7 +550,7 @@ async function importCard() {
 async function clearScenes() {
   if (!confirm('清空全部场景？她会忘记当前话题。')) return;
   try {
-    await fetch('/api/scenes/clear', { method: 'POST' });
+    await api('/api/scenes/clear', { method: 'POST' });
     await loadState();
   } catch {
     $('#cfgStatus').textContent = '清空场景失败';
@@ -577,7 +577,7 @@ async function saveStory() {
   const key = $('#storyKey').value;
   if (!key) return;
   for (const [section, el] of [['now', '#storyNow'], ['relationship', '#storyRelation'], ['life', '#storyLife'], ['world', '#storyWorld']]) {
-    const res = await fetch('/api/story/section', {
+    const res = await api('/api/story/section', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ key, section, text: $(el).value })
@@ -603,7 +603,7 @@ async function savePerson() {
   const key = $('#storyKey').value;
   const person = $('#storyPersonId').value.trim();
   if (!key || !person) return;
-  const res = await fetch('/api/story/person', {
+  const res = await api('/api/story/person', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
@@ -621,7 +621,7 @@ async function forgetPerson() {
   const key = $('#storyKey').value;
   const person = $('#storyPersonId').value.trim();
   if (!key || !person || !confirm('忘记这个人在这个群里的侧写？')) return;
-  await fetch('/api/story/person/forget', {
+  await api('/api/story/person/forget', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ key, person })
@@ -703,7 +703,7 @@ async function biliLogin() {
   const box = $('#biliQr');
   box.textContent = '正在生成二维码…';
   try {
-    const res = await fetch('/api/bilibili/login', { method: 'POST' });
+    const res = await api('/api/bilibili/login', { method: 'POST' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '登录失败');
     box.replaceChildren();
@@ -723,7 +723,7 @@ async function biliLogin() {
         return;
       }
       try {
-        const poll = await fetch('/api/bilibili/poll', {
+        const poll = await api('/api/bilibili/poll', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ key: data.key })
@@ -760,7 +760,7 @@ async function qzoneSend() {
   if (!confirm(`发布到 QQ 空间？\n\n${label}`)) return;
   $('#qzoneStatus').textContent = '发布中…';
   try {
-    const res = await fetch('/api/qzone/send', {
+    const res = await api('/api/qzone/send', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ content, ugcRight, confirm: true })
@@ -777,7 +777,7 @@ async function qzoneSend() {
 async function biliLogout() {
   if (!confirm('退出 B 站登录？')) return;
   try {
-    await fetch('/api/bilibili/logout', { method: 'POST' });
+    await api('/api/bilibili/logout', { method: 'POST' });
     await loadState();
   } catch {
     $('#biliState').textContent = '退出失败';
@@ -843,7 +843,7 @@ async function saveMind() {
     ['seen', '#mindSeen']
   ];
   for (const [section, selector] of sections) {
-    const res = await fetch('/api/mind/section', {
+    const res = await api('/api/mind/section', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ section, text: $(selector).value })
@@ -889,7 +889,7 @@ $('#biliResults').addEventListener('click', async (event) => {
   if (!button) return;
   button.disabled = true;
   try {
-    const res = await fetch('/api/bilibili/see', {
+    const res = await api('/api/bilibili/see', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -920,7 +920,7 @@ async function loadPermissions() {
   if (!box) return;
   box.textContent = '读取中…';
   try {
-    const res = await fetch('/api/permissions', { cache: 'no-store' });
+    const res = await api('/api/permissions', { cache: 'no-store' });
     const data = await res.json();
     box.replaceChildren();
     const add = (item, kind) => {
@@ -952,7 +952,7 @@ async function loadPermissions() {
 
 async function permissionAction(action, id, extra = {}) {
   try {
-    const res = await fetch('/api/permissions/action', {
+    const res = await api('/api/permissions/action', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ action, id, ...extra })
@@ -971,7 +971,7 @@ async function loadMilestones() {
   if (!box) return;
   box.textContent = '读取中…';
   try {
-    const res = await fetch('/api/milestones', { cache: 'no-store' });
+    const res = await api('/api/milestones', { cache: 'no-store' });
     const data = await res.json();
     box.replaceChildren();
     for (const entry of data.entries || []) {
@@ -996,7 +996,7 @@ async function loadMilestones() {
 
 async function deleteMilestone(at) {
   try {
-    const res = await fetch('/api/milestones/delete', {
+    const res = await api('/api/milestones/delete', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ at })
     });
@@ -1013,7 +1013,7 @@ async function loadDiary() {
   if (!box) return;
   box.textContent = '读取中…';
   try {
-    const res = await fetch('/api/diary', { cache: 'no-store' });
+    const res = await api('/api/diary', { cache: 'no-store' });
     const data = await res.json();
     box.replaceChildren();
     for (const entry of data.entries || []) {
@@ -1038,7 +1038,7 @@ async function loadDiary() {
 
 async function deleteDiary(at) {
   try {
-    const res = await fetch('/api/diary/delete', {
+    const res = await api('/api/diary/delete', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ at })
     });
@@ -1055,7 +1055,7 @@ async function loadMemory() {
   if (!box) return;
   box.textContent = '读取中…';
   try {
-    const res = await fetch('/api/memory/contacts', { cache: 'no-store' });
+    const res = await api('/api/memory/contacts', { cache: 'no-store' });
     const data = await res.json();
     box.replaceChildren();
     for (const c of data.contacts || []) {
@@ -1084,7 +1084,7 @@ async function loadMemory() {
 
 async function forgetMemory(id, text) {
   try {
-    const res = await fetch('/api/memory/forget', {
+    const res = await api('/api/memory/forget', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ id, text })
@@ -1126,7 +1126,7 @@ async function personaChatSend() {
   personaHistory.push({ role: 'user', text: message });
   input.value = '';
   try {
-    const res = await fetch('/api/persona/chat', {
+    const res = await api('/api/persona/chat', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ message, history, card: readCardForm() })
@@ -1157,7 +1157,7 @@ async function loadScreenMode() {
   const continuous = $('#screenContinuous');
   if (!button) return;
   try {
-    const res = await fetch('/api/screen', { cache: 'no-store' });
+    const res = await api('/api/screen', { cache: 'no-store' });
     const data = await res.json();
     const on = Boolean(data.enabled);
     const cont = Boolean(data.continuous);
@@ -1178,7 +1178,7 @@ $('#screenMode').addEventListener('click', async () => {
   button.disabled = true;
   try {
     const on = !button.classList.contains('on');
-    const res = await fetch('/api/screen', {
+    const res = await api('/api/screen', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ enabled: on })
     });
@@ -1204,7 +1204,7 @@ $('#screenContinuous').addEventListener('click', async () => {
   button.disabled = true;
   try {
     const on = !button.classList.contains('on');
-    const res = await fetch('/api/screen', {
+    const res = await api('/api/screen', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ continuous: on })
     });
@@ -1226,7 +1226,7 @@ $('#startAI').addEventListener('click', async () => {
   button.disabled = true;
   button.textContent = '启动中…';
   try {
-    const res = await fetch('/api/ai/start', { method: 'POST' });
+    const res = await api('/api/ai/start', { method: 'POST' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || '启动失败');
     button.textContent = 'AI 已启动';
@@ -1248,7 +1248,7 @@ $('#stopAI').addEventListener('click', async () => {
   button.disabled = true;
   button.textContent = '关闭中…';
   try {
-    const res = await fetch('/api/ai/stop', { method: 'POST' });
+    const res = await api('/api/ai/stop', { method: 'POST' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || '关闭失败');
     button.textContent = 'AI 已关';
@@ -1274,7 +1274,7 @@ $('#stopVoice').addEventListener('click', async () => {
   const el = $('#voiceStatus');
   if (el) el.textContent = '正在关闭…';
   try {
-    const res = await fetch('/api/voice/stop', { method: 'POST' });
+    const res = await api('/api/voice/stop', { method: 'POST' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '关闭失败');
     if (el) el.textContent = '满穗语音服务已关闭';

@@ -111,7 +111,7 @@ async function poll() {
   if (!session) return;
   try {
     const url = `${session.base}/api/room/state?roomId=${encodeURIComponent(session.roomId)}&token=${encodeURIComponent(session.token)}&clientId=${encodeURIComponent(session.clientId)}&memberSecret=${encodeURIComponent(session.memberSecret || '')}&since=${lastAt}`;
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await api(url, { cache: 'no-store' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '连接失败');
     setConn(true);
@@ -155,7 +155,7 @@ async function createRoom() {
   localStorage.setItem('xiaoyu-room-name', name);
   formStatus.textContent = '正在开房…';
   try {
-    const res = await fetch('http://127.0.0.1:3210/api/room/create', {
+    const res = await api('http://127.0.0.1:3210/api/room/create', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ name: roomName, memberName: name, clientId: clientId() })
     });
@@ -185,7 +185,7 @@ async function joinRoom() {
   formStatus.textContent = '正在加入…';
   try {
     const base = `http://${host}:${port}`;
-    const res = await fetch(`${base}/api/room/join`, {
+    const res = await api(`${base}/api/room/join`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ roomId, token, name, clientId: clientId(), memberSecret: session?.roomId === roomId ? session.memberSecret : '' })
     });
@@ -210,7 +210,7 @@ async function sendMessage(event, media = []) {
   if ((!text && !media.length) || !session) return;
   const draft = messageInput.value;
   try {
-    const res = await fetch(`${session.base}/api/room/send`, {
+    const res = await api(`${session.base}/api/room/send`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ roomId: session.roomId, token: session.token, clientId: session.clientId, memberSecret: session.memberSecret, text, media })
     });
@@ -236,7 +236,7 @@ async function uploadRoomMedia(file, kind = 'image') {
     reader.onerror = () => reject(reader.error || new Error('读取失败'));
     reader.readAsDataURL(file);
   });
-  const res = await fetch(`${session.base}/api/room/media`, {
+  const res = await api(`${session.base}/api/room/media`, {
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ roomId: session.roomId, token: session.token, clientId: session.clientId, memberSecret: session.memberSecret, kind, data, mime: file.type || '', name: file.name || '' })
   });
@@ -324,7 +324,7 @@ async function loadGroupStickers() {
   if (!groupStickerGrid) return;
   groupStickerGrid.textContent = '读取中…';
   try {
-    const res = await fetch('/api/media/list?scope=user', { cache: 'no-store' });
+    const res = await api('/api/media/list?scope=user', { cache: 'no-store' });
     const data = await res.json();
     const items = (data.items || []).filter((item) => item.kind === 'sticker' || item.kind === 'image');
     groupStickerGrid.replaceChildren();
@@ -345,7 +345,7 @@ async function loadGroupStickers() {
       img.addEventListener('click', async () => {
         groupStickerPanel.hidden = true;
         try {
-          const res = await fetch(item.url);
+          const res = await api(item.url);
           const blob = await res.blob();
           const file = new File([blob], item.name || 'sticker.jpg', { type: item.mime || blob.type || 'image/jpeg' });
           await sendRoomFile(file, item.kind === 'sticker' ? 'sticker' : 'image');
@@ -372,7 +372,7 @@ groupImportStickers?.addEventListener('click', async () => {
   button.disabled = true;
   button.textContent = '导入中…';
   try {
-    const res = await fetch('/api/stickers/import-qq', { method: 'POST' });
+    const res = await api('/api/stickers/import-qq', { method: 'POST' });
     if (!res.ok) throw new Error('导入失败');
     for (let i = 0; i < 10; i += 1) {
       await new Promise((r) => setTimeout(r, 1500));
@@ -418,7 +418,7 @@ $('#aiToggle')?.addEventListener('click', async () => {
   if (!session?.host || !aiToggle) return;
   aiToggle.disabled = true;
   try {
-    const res = await fetch(`${session.base}/api/room/ai`, {
+    const res = await api(`${session.base}/api/room/ai`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         roomId: session.roomId,

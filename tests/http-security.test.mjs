@@ -1,4 +1,4 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -26,9 +26,15 @@ test('保存配置保留原文件里的密钥，并要求 panel token', async ()
   try {
     const noToken = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ mode: 'shadow' }) });
     assert.equal(noToken.status, 403);
+    const badOrigin = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-panel-token': 'panel-token', origin: 'http://127.0.0.1:9999' },
+      body: JSON.stringify({ mode: 'shadow' })
+    });
+    assert.equal(badOrigin.status, 403);
     const ok = await fetch(url, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-panel-token': 'panel-token' },
+      headers: { 'content-type': 'application/json', 'x-panel-token': 'panel-token', origin: `http://127.0.0.1:${port}` },
       body: JSON.stringify({ mode: 'shadow' })
     });
     assert.equal(ok.status, 200);
