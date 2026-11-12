@@ -34,6 +34,7 @@ import { buildSocialTools } from './actor-social.js';
 import { buildMemoryTools } from './actor-memory.js';
 import { createToolExecutor } from './actor-executor.js';
 import { buildChatContext } from './actor-context.js';
+import { buildGroupTools } from './actor-group.js';
 
 export function createActorTurn({
   config,
@@ -269,36 +270,7 @@ export function createActorTurn({
       }
     }
 
-    const groupTool = {
-      type: 'function',
-      function: {
-        name: 'look_group_history',
-        description: '想看看群里最近的原话时使用。返回群名和原话，不返回摘要。',
-        parameters: { type: 'object', properties: {} }
-      }
-    };
-    const lookAtGroups = async () => {
-      const groupIds = current.kind === 'group'
-        ? [current.id]
-        : (config.allow?.groups || []);
-      const names = [];
-      const blocks = [];
-      for (const groupId of groupIds) {
-        const groupKey = `group:${groupId}`;
-        const live = liveGroup?.recent(groupKey) || [];
-        const liveName = liveGroup?.name(groupKey) || '';
-        if (liveName) names.push(liveName);
-        if (live.length) {
-          blocks.push(`${liveName || groupId}：\n${live.join('\n')}`);
-        } else {
-          const { groupName, lines } = await readGroupHistory({ gateway, groupId });
-          if (groupName) names.push(groupName);
-          if (lines.length) blocks.push(`${groupName || groupId}：\n${lines.join('\n')}`);
-        }
-      }
-      if (!blocks.length) return `你在这些群里：${[...new Set(names)].join('、') || '没有可读的群'}。这段时间没有读到原话。`;
-      return `你在这些群里：${[...new Set(names)].join('、')}\n\n${blocks.join('\n\n')}`;
-    };
+    const { groupTool, lookAtGroups } = buildGroupTools({ current, config, liveGroup, gateway });
     const writeGate = createWriteGate({ kind: current.kind, key, permissions, logger });
     const canWriteBili = writeGate.canUse();
     const biliTools = buildBiliTools({ bilibili, canWriteBili });
