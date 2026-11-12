@@ -685,13 +685,27 @@ async function biliHistory() {
 
 async function biliLogin() {
   const box = $('#biliQr');
-  box.innerHTML = '<span class="muted">正在生成二维码…</span>';
+  box.textContent = '正在生成二维码…';
   try {
     const res = await fetch('/api/bilibili/login', { method: 'POST' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '登录失败');
-    box.innerHTML = `<p class="muted">用 B 站 App 扫码</p><img alt="B站登录二维码" src="${data.qrImage}">`;
+    box.replaceChildren();
+    const hint = document.createElement('p');
+    hint.className = 'muted';
+    hint.textContent = '用 B 站 App 扫码';
+    const img = document.createElement('img');
+    img.alt = 'B站登录二维码';
+    img.src = String(data.qrImage || '');
+    box.append(hint, img);
+    let attempts = 0;
     const timer = setInterval(async () => {
+      attempts += 1;
+      if (attempts > 150) {
+        clearInterval(timer);
+        box.textContent = '二维码超时，请重新生成。';
+        return;
+      }
       try {
         const poll = await fetch('/api/bilibili/poll', {
           method: 'POST',
@@ -700,16 +714,19 @@ async function biliLogin() {
         }).then((r) => r.json());
         if (poll.status === 'ok') {
           clearInterval(timer);
-          box.innerHTML = '<p class="muted">登录成功。</p>';
+          box.textContent = '登录成功。';
           await loadState();
+        } else if (['expired', 'error', 'fail'].includes(String(poll.status || ''))) {
+          clearInterval(timer);
+          box.textContent = '二维码已过期，请重新生成。';
         }
       } catch {
         clearInterval(timer);
-        box.innerHTML = '<p class="muted">登录轮询中断。</p>';
+        box.textContent = '登录轮询中断。';
       }
     }, 2000);
   } catch (error) {
-    box.innerHTML = `<p class="muted">${esc(error.message || error)}</p>`;
+    box.textContent = String(error.message || error);
   }
 }
 

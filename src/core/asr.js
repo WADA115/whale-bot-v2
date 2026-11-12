@@ -54,23 +54,25 @@ export function createAsr({
     return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
   }
 
-  async function fetchAudio(source, index) {
+  async function fetchAudio(source, index, runId, tempFiles) {
     const raw = String(source?.url ?? source?.file ?? '');
     if (!raw) throw new Error('empty voice source');
     const ext = path.extname(raw.split('?')[0]) || '.amr';
-    const file = path.join(tempDir(), `voice-${index}${ext}`);
+    const file = path.join(tempDir(), `voice-${runId}-${index}${ext}`);
     if (/^https?:/i.test(raw)) {
       const res = await fetch(raw, { signal: AbortSignal.timeout(timeoutMs) });
       if (!res.ok) throw new Error(`voice http ${res.status}`);
       fs.writeFileSync(file, Buffer.from(await res.arrayBuffer()));
+      tempFiles.push(file);
       return file;
     }
     if (fs.existsSync(raw)) return raw;
     throw new Error('voice file not found');
   }
 
-  async function toWav(input, index) {
-    const out = path.join(tempDir(), `voice-${index}-conv.wav`);
+  async function toWav(input, index, runId, tempFiles) {
+    const out = path.join(tempDir(), `voice-${runId}-${index}-conv.wav`);
+    tempFiles.push(out);
     const base = ['-y', '-i', input, '-ar', '16000', '-ac', '1', '-c:a', 'pcm_s16le'];
     if (vad) {
       const filter = 'silenceremove=start_periods=1:start_duration=0.08:start_threshold=-45dB:stop_periods=-1:stop_duration=0.25:stop_threshold=-45dB';
@@ -83,35 +85,47 @@ export function createAsr({
     return out;
   }
 
+  function cleanup(files) {
+    for (const file of files) {
+      try { fs.rmSync(file, { force: true }); } catch {}
+    }
+  }
+
   async function transcribe(segments = []) {
+    const runId = crypto.randomUUID().slice(0, 8);
+    const tempFiles = [];
     const records = (segments || []).filter((seg) => seg?.type === 'record' && (seg?.data?.url || seg?.data?.file));
     if (!records.length) return '';
     const texts = [];
-    for (let i = 0; i < records.length && i < 2; i++) {
-      try {
-        const input = await fetchAudio(records[i].data, i);
-        const key = hashFile(input);
-        if (cache[key]) { texts.push(cache[key]); continue; }
-        const wav = await toWav(input, i);
-        const res = await fetch(`${String(url).replace(/\/+$/, '')}/asr`, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ wav }),
-          signal: AbortSignal.timeout(timeoutMs)
-        });
-        if (!res.ok) throw new Error(`asr http ${res.status}`);
-        const data = await res.json();
-        const text = String(data?.text ?? '').trim();
-        if (text) {
-          texts.push(text);
-          cache[key] = text;
-          const keys = Object.keys(cache);
-          while (keys.length > cacheLimit) delete cache[keys.shift()];
-          persistCache();
+    try {
+      for (let i = 0; i < records.length && i < 2; i++) {
+        try {
+          const input = await fetchAudio(records[i].data, i, runId, tempFiles);
+          const key = hashFile(input);
+          if (cache[key]) { texts.push(cache[key]); continue; }
+          const wav = await toWav(input, i, runId, tempFiles);
+          const res = await fetch(`${String(url).replace(/\/+$/, '')}/asr`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ wav }),
+            signal: AbortSignal.timeout(timeoutMs)
+          });
+          if (!res.ok) throw new Error(`asr http ${res.status}`);
+          const data = await res.json();
+          const text = String(data?.text ?? '').trim();
+          if (text) {
+            texts.push(text);
+            cache[key] = text;
+            const keys = Object.keys(cache);
+            while (keys.length > cacheLimit) delete cache[keys.shift()];
+            persistCache();
+          }
+        } catch (error) {
+          logger?.warn('asr.failed', { index: i, error: String(error?.message ?? error) });
         }
-      } catch (error) {
-        logger?.warn('asr.failed', { index: i, error: String(error?.message ?? error) });
       }
+    } finally {
+      cleanup(tempFiles);
     }
     return texts.join('\n').trim();
   }

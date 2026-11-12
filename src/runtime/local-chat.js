@@ -1,4 +1,4 @@
-export function createLocalChat({ gateway, dispatch, media = null, history = null, logger = null, timeoutMs = 120000 } = {}) {
+export function createLocalChat({ gateway, dispatch, media = null, history = null, logger = null, timeoutMs = 45000 } = {}) {
   const originalSendText = gateway.sendText.bind(gateway);
   const originalSendMessage = gateway.sendMessage.bind(gateway);
   let active = null;
@@ -6,13 +6,15 @@ export function createLocalChat({ gateway, dispatch, media = null, history = nul
 
   gateway.sendText = async (kind, id, text) => {
     if (String(id) !== 'local') return originalSendText(kind, id, text);
-    if (active) active.push(String(text ?? ''));
+    if (!active) { logger?.warn('local_chat.no_active_turn', { kind: 'text' }); return { ok: false, reason: 'no-active-turn' }; }
+    active.push(String(text ?? ''));
     return { ok: true };
   };
 
   gateway.sendMessage = async (kind, id, segments) => {
     if (String(id) !== 'local') return originalSendMessage(kind, id, segments);
-    if (active) await active.pushSegments(segments);
+    if (!active) { logger?.warn('local_chat.no_active_turn', { kind: 'segments' }); return { ok: false, reason: 'no-active-turn' }; }
+    await active.pushSegments(segments);
     return { ok: true };
   };
 
@@ -53,18 +55,22 @@ export function createLocalChat({ gateway, dispatch, media = null, history = nul
       let settled = false;
       let timer = null;
       let deadline = null;
+      let turn = null;
       const finish = () => {
         if (settled) return;
         settled = true;
         if (timer) clearTimeout(timer);
         if (deadline) clearTimeout(deadline);
-        active = null;
+        if (turn) turn.closed = true;
+        if (active === turn) active = null;
         const reply = chunks.join('\n').trim();
         history?.add?.({ role: 'assistant', text: reply, segments: output });
         resolve({ ok: true, reply, segments: output });
       };
-      active = {
+      turn = {
+        closed: false,
         push(value) {
+          if (turn.closed) return;
           const body = String(value ?? '').trim();
           if (!body) return;
           chunks.push(body);
@@ -72,14 +78,18 @@ export function createLocalChat({ gateway, dispatch, media = null, history = nul
         },
         async pushSegments(segments) {
           for (const seg of Array.isArray(segments) ? segments : []) {
+            if (turn.closed) return;
             const cached = await cacheSegment(seg);
+            if (turn.closed) return;
             if (cached?.url) output.push(cached);
             else if (seg?.type === 'record') chunks.push('[语音]');
             else if (seg?.type === 'image' || seg?.type === 'local-sticker' || seg?.type === 'mface') chunks.push('[图片]');
           }
+          if (turn.closed) return;
           if (!timer) timer = setTimeout(finish, 500);
         }
       };
+      active = turn;
 
       const base = origin || 'http://127.0.0.1:3201';
       const segments = [];
