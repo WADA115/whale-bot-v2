@@ -33,7 +33,7 @@ test('Editor 写回、长档案与遗忘', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'v2-editor-'));
   const store = createStoryStore({ root: dir });
   store.ensure('private:1', { name: '小鲸鱼', identity: '鱼' });
-  store.addEpisode('private:1', '他第一次说累', '完整档案'.repeat(50), '只记得他累。');
+  await store.addEpisode('private:1', '他第一次说累', '完整档案'.repeat(50), '只记得他累。');
   const editor = createStoryEditor({
     store,
     textRouter: { generate: async () => ({ text: [

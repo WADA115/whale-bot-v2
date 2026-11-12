@@ -58,7 +58,7 @@ export function createWorldObserver({
         if (!key) continue;
         const raw = (await collect(key)).map((line) => String(line ?? '').trim()).filter(Boolean);
         if (!raw.length) continue;
-        const result = storyStore.appendWorld(key, raw, character?.card ?? null);
+        const result = await storyStore.appendWorld(key, raw, character?.card ?? null);
         if (!result.added) continue;
         try {
           const name = character?.card?.name || '她';
@@ -74,7 +74,7 @@ export function createWorldObserver({
             user: ''
           });
           const life = String(answer?.text ?? '').trim();
-          if (life) storyStore.writeSection(key, 'life', life, character?.card ?? null);
+          if (life) await storyStore.writeSection(key, 'life', life, character?.card ?? null);
         } catch (error) {
           logger?.warn('world.life_failed', { key, error: String(error?.message ?? error) });
         }

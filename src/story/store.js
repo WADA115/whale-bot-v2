@@ -35,7 +35,7 @@ function titleOf(text) {
 }
 
 function sleep(ms) {
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function atomicWrite(file, text) {
@@ -98,7 +98,7 @@ export function createStoryStore({ root, logger = null } = {}) {
     return next;
   }
 
-  function withLock(key, fn) {
+  async function withLock(key, fn) {
     const dir = ensure(key);
     const lock = path.join(dir, '.lock');
     const started = Date.now();
@@ -112,13 +112,13 @@ export function createStoryStore({ root, logger = null } = {}) {
           const stat = fs.statSync(lock);
           if (Date.now() - stat.mtimeMs > LOCK_STALE_MS) fs.rmSync(lock, { force: true });
         } catch {}
-        sleep(10);
+        await sleep(10);
       }
     }
     if (fd == null) throw new Error('story lock timeout');
     try {
       fs.writeFileSync(fd, JSON.stringify({ pid: process.pid, at: new Date().toISOString() }), 'utf8');
-      return fn(dir);
+      return await fn(dir);
     } finally {
       try { fs.closeSync(fd); } catch {}
       try { fs.rmSync(lock, { force: true }); } catch {}
@@ -199,7 +199,7 @@ export function createStoryStore({ root, logger = null } = {}) {
     return parsePerson(readText(personFile(dir, personId)), personId);
   }
 
-  function writePerson(key, personId, patch = {}, card = null) {
+  async function writePerson(key, personId, patch = {}, card = null) {
     return withLock(key, (dir) => {
       const file = personFile(dir, personId);
       const current = parsePerson(readText(file), personId);
@@ -237,14 +237,14 @@ export function createStoryStore({ root, logger = null } = {}) {
       .filter((x) => x.head || x.middle || x.tail);
   }
 
-  function forgetPerson(key, personId) {
+  async function forgetPerson(key, personId) {
     return withLock(key, (dir) => {
       try { fs.rmSync(personFile(dir, personId), { force: true }); } catch {}
       bumpMeta(dir, 'person:forget');
       return true;
     });
   }
-  function appendWorld(key, lines, card = null) {
+  async function appendWorld(key, lines, card = null) {
     const list = (Array.isArray(lines) ? lines : [lines])
       .map((line) => String(line ?? '').trim())
       .filter(Boolean);
@@ -261,7 +261,7 @@ export function createStoryStore({ root, logger = null } = {}) {
     });
   }
 
-  function writeSection(key, section, text, card = null) {
+  async function writeSection(key, section, text, card = null) {
     const allowed = new Set(['self', 'relationship', 'now', 'life', 'world']);
     if (!allowed.has(section)) throw new Error('invalid story section');
     return withLock(key, (dir) => {
@@ -281,7 +281,7 @@ export function createStoryStore({ root, logger = null } = {}) {
     return id;
   }
 
-  function addEpisode(key, title, full, traceOrCard = null, card = null) {
+  async function addEpisode(key, title, full, traceOrCard = null, card = null) {
     let ownerCard = card;
     let trace = traceOrCard;
     if (traceOrCard && typeof traceOrCard === 'object') {
@@ -295,7 +295,7 @@ export function createStoryStore({ root, logger = null } = {}) {
     });
   }
 
-  function writeTrace(key, id, text, card = null) {
+  async function writeTrace(key, id, text, card = null) {
     return withLock(key, (dir) => {
       const eventDir = path.join(dir, 'episodes', safe(id));
       fs.mkdirSync(eventDir, { recursive: true });
@@ -311,7 +311,7 @@ export function createStoryStore({ root, logger = null } = {}) {
     return name;
   }
 
-  function addChapter(key, title, text, card = null) {
+  async function addChapter(key, title, text, card = null) {
     return withLock(key, (dir) => {
       const name = addChapterInternal(dir, title, text);
       bumpMeta(dir, 'chapter');
@@ -339,7 +339,7 @@ export function createStoryStore({ root, logger = null } = {}) {
     }
   }
 
-  function apply(key, parsed, card = null, expectedVersion = null) {
+  async function apply(key, parsed, card = null, expectedVersion = null) {
     return withLock(key, (dir) => {
       const before = metaOf(dir);
       if (expectedVersion != null && before.version !== expectedVersion) {

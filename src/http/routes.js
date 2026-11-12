@@ -488,11 +488,11 @@ export function createPanelHandler(ctx) {
     }
     if (req.url === '/api/story/person' && req.method === 'POST') {
       if (!ctx.storyStore) return json(res, 409, { error: 'story disabled' });
-      readBody(req).then((body) => {
+      readBody(req).then(async (body) => {
         const key = String(body?.key || '');
         const person = String(body?.person || '');
         if (!key || !person) return json(res, 400, { error: 'key and person required' });
-        const result = ctx.storyStore.writePerson(key, person, {
+        const result = await ctx.storyStore.writePerson(key, person, {
           head: body?.head,
           middle: body?.middle,
           tail: body?.tail
@@ -503,11 +503,11 @@ export function createPanelHandler(ctx) {
     }
     if (req.url === '/api/story/person/forget' && req.method === 'POST') {
       if (!ctx.storyStore) return json(res, 409, { error: 'story disabled' });
-      readBody(req).then((body) => {
+      readBody(req).then(async (body) => {
         const key = String(body?.key || '');
         const person = String(body?.person || '');
         if (!key || !person) return json(res, 400, { error: 'key and person required' });
-        ctx.storyStore.forgetPerson(key, person);
+        await ctx.storyStore.forgetPerson(key, person);
         return json(res, 200, { ok: true });
       }).catch(() => json(res, 400, { error: 'invalid json' }));
       return;
@@ -519,10 +519,10 @@ export function createPanelHandler(ctx) {
     }
     if (req.url === '/api/story/section' && req.method === 'POST') {
       if (!ctx.storyStore) return json(res, 409, { error: 'story disabled' });
-      readBody(req).then((body) => {
+      readBody(req).then(async (body) => {
         const section = String(body.section ?? '');
         if (!['self', 'relationship', 'now'].includes(section)) return json(res, 400, { error: 'invalid section' });
-        ctx.storyStore.writeSection(String(body.key ?? ''), section, String(body.text ?? ''), ctx.character?.card ?? null);
+        await ctx.storyStore.writeSection(String(body.key ?? ''), section, String(body.text ?? ''), ctx.character?.card ?? null);
         return json(res, 200, { ok: true });
       }).catch(() => json(res, 400, { error: 'invalid json' }));
       return;
