@@ -85,13 +85,12 @@ async function upload(file, kind) {
 }
 
 async function submit(attachments = []) {
-  const text = String(input.value || '').trim();
+  const draft = String(input.value || '');
+  const text = draft.trim();
   if ((!text && !attachments.length) || busy) return;
   busy = true;
   send.disabled = true;
   status.textContent = '';
-  input.value = '';
-  resize();
   append('user', text, attachments);
   typing.hidden = false;
   log.scrollTop = log.scrollHeight;
@@ -103,11 +102,16 @@ async function submit(attachments = []) {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || '本地对话失败');
+    if (input.value === draft) {
+      input.value = '';
+      resize();
+    }
     const reply = String(data.reply || '').trim();
     const segments = Array.isArray(data.segments) ? data.segments : [];
     if (reply || segments.length) append('assistant', reply, segments);
     else append('assistant', '（没回）');
   } catch (error) {
+    if (!input.value) { input.value = draft; resize(); }
     status.textContent = String(error.message || error);
   } finally {
     typing.hidden = true;

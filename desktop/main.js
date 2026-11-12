@@ -46,6 +46,7 @@ let quitting = false;
 let unread = 0;
 let lastAssistantAt = 0;
 let notificationReady = false;
+let lastPollError = '';
 app.setAppUserModelId('com.xiaoyu.panel');
 Menu.setApplicationMenu(null);
 
@@ -105,7 +106,13 @@ async function ensurePanel() {
 }
 
 function desktopLog(message) {
-  try { fs.appendFileSync(path.join(require('node:os').tmpdir(), 'xiaoyu-desktop.log'), `${new Date().toISOString()} ${message}\n`); } catch {}
+  const file = path.join(require('node:os').tmpdir(), 'xiaoyu-desktop.log');
+  try {
+    if (fs.existsSync(file) && fs.statSync(file).size > 2 * 1024 * 1024) {
+      try { fs.renameSync(file, `${file}.1`); } catch {}
+    }
+    fs.appendFileSync(file, `${new Date().toISOString()} ${message}\n`);
+  } catch {}
 }
 
 function updateTrayMenu() {
@@ -162,12 +169,13 @@ async function pollLocalHistory() {
   try {
     const res = await fetch(new URL('/api/local/history', PANEL), { signal: AbortSignal.timeout(4000) });
     if (!res.ok) return;
+    lastPollError = '';
     const data = await res.json();
     const turns = Array.isArray(data.turns) ? data.turns : [];
     const assistants = turns.filter((turn) => turn.role === 'assistant');
     if (!assistants.length) return;
     const latest = Number(assistants[assistants.length - 1].at || 0);
-    desktopLog('poll latest=' + latest + ' last=' + lastAssistantAt + ' ready=' + notificationReady);
+    if (latest !== lastAssistantAt) desktopLog('poll latest=' + latest + ' last=' + lastAssistantAt + ' ready=' + notificationReady);
     if (!notificationReady) {
       lastAssistantAt = latest;
       notificationReady = true;
@@ -186,7 +194,10 @@ async function pollLocalHistory() {
     unread += fresh.length;
     updateTrayMenu();
     notifyReply(fresh[fresh.length - 1].text || '发来一张图或一段语音', unread);
-  } catch (error) { desktopLog('poll_failed ' + String(error)); }
+  } catch (error) {
+    const message = String(error?.message || error);
+    if (message !== lastPollError) { lastPollError = message; desktopLog('poll_failed ' + message); }
+  }
 }
 
 function startLocalWatcher() {

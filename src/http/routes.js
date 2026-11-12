@@ -258,7 +258,7 @@ export function createPanelHandler(ctx) {
           cwd: ctx.root, stdio: 'ignore', windowsHide: true
         });
         child.unref();
-        setTimeout(() => { try { ctx.gateway.connect(); } catch {} }, 2500);
+        setTimeout(() => { try { ctx.gateway.reopen?.() ?? ctx.gateway.connect(); } catch {} }, 2500);
         json(res, 200, { ok: true, message: '网关启动已提交' });
       } catch (error) {
         json(res, 502, { error: String(error?.message ?? error) });

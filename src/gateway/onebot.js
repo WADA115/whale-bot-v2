@@ -58,6 +58,12 @@ export class OneBotGateway extends EventEmitter {
     return { id, nickname: String(data?.nickname ?? '') };
   }
 
+  reopen() {
+    this.closed = false;
+    this.reconnectAttempts = 0;
+    this.connect();
+  }
+
   connect() {
     if (this.closed) return;
     const separator = this.wsUrl.includes('?') ? '&' : '?';

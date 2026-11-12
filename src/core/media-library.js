@@ -79,7 +79,10 @@ export function createMediaLibrary({ root = 'state/media', logger = null, maxByt
       at: Date.now()
     };
     indexes[scope].push(item);
-    while (indexes[scope].length > 600) indexes[scope].shift();
+    while (indexes[scope].length > 600) {
+      const old = indexes[scope].shift();
+      try { fs.rmSync(path.join(base, scope, path.basename(String(old?.file || ''))), { force: true }); } catch {}
+    }
     persist(scope);
     logger?.info('media.added', { scope, kind, bytes: buffer.length });
     return publicItem(scope, item);

@@ -37,9 +37,23 @@ export function createScreen({ root = 'state', scriptPath = '', powershell = 'po
     return out;
   }
 
+  function cleanupOldCaptures(keep = 40) {
+    try {
+      const files = fs.readdirSync(outDir)
+        .filter((name) => /^screen-\d+\.png$/i.test(name))
+        .map((name) => ({ name, at: fs.statSync(path.join(outDir, name)).mtimeMs }))
+        .sort((a, b) => a.at - b.at);
+      for (const item of files.slice(0, Math.max(0, files.length - keep))) {
+        try { fs.rmSync(path.join(outDir, item.name), { force: true }); } catch {}
+      }
+    } catch {}
+  }
+
   async function capture() {
     if (!enabled) throw new Error('screen permission disabled');
-    return captureTo(path.join(outDir, `screen-${Date.now()}.png`));
+    const file = await captureTo(path.join(outDir, `screen-${Date.now()}.png`));
+    cleanupOldCaptures();
+    return file;
   }
 
   function latestFile() { return path.join(outDir, 'latest.png'); }

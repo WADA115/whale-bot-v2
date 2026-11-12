@@ -119,3 +119,16 @@ test('无 scope 的授权不会泄漏给会话', () => {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+test('媒体索引裁剪时删除旧文件', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'media-trim-'));
+  try {
+    const media = createMediaLibrary({ root });
+    for (let i = 0; i < 601; i += 1) {
+      media.addBuffer({ scope: 'user', kind: 'image', name: `x${i}.png`, mime: 'image/png', buffer: Buffer.from(`file-${i}`) });
+    }
+    const files = fs.readdirSync(path.join(root, 'user')).filter((name) => name !== 'index.json');
+    assert.ok(files.length <= 600, `expected <=600 files, got ${files.length}`);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

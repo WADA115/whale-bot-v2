@@ -208,8 +208,7 @@ async function sendMessage(event, media = []) {
   event?.preventDefault();
   const text = messageInput.value.trim();
   if ((!text && !media.length) || !session) return;
-  messageInput.value = '';
-  messageInput.style.height = 'auto';
+  const draft = messageInput.value;
   try {
     const res = await fetch(`${session.base}/api/room/send`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
@@ -217,8 +216,13 @@ async function sendMessage(event, media = []) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '发送失败');
+    if (messageInput.value === draft) {
+      messageInput.value = '';
+      messageInput.style.height = 'auto';
+    }
     if (data.message) { appendMessage(data.message); if (roomStatus) roomStatus.textContent = ''; }
   } catch (error) {
+    if (!messageInput.value) { messageInput.value = draft; messageInput.style.height = 'auto'; }
     if (roomStatus) roomStatus.textContent = String(error.message || error);
   }
 }
