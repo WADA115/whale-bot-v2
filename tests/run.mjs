@@ -37,3 +37,4 @@ import './security-fixes.test.mjs';
 import './hardening.test.mjs';
 import './http-security.test.mjs';
 import './runtime-lock.test.mjs';
+import './actor-executor.test.mjs';
