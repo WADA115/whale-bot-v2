@@ -35,3 +35,4 @@ import './mind.test.mjs';
 import './slang-observer.test.mjs';
 import './security-fixes.test.mjs';
 import './hardening.test.mjs';
+import './http-security.test.mjs';
