@@ -10,11 +10,13 @@ export function json(res, status, payload) {
     'cache-control': 'no-store'
   });
   res.end(body);
+  return true;
 }
 
 export function text(res, status, body, type = 'text/plain; charset=utf-8') {
   res.writeHead(status, { 'content-type': type, 'content-length': Buffer.byteLength(body), 'cache-control': 'no-store' });
   res.end(body);
+  return true;
 }
 export function sendFile(res, file, type) {
   try {
