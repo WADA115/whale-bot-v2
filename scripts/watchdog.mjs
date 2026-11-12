@@ -90,7 +90,8 @@ async function ensureServices() {
         stdio: 'ignore',
         windowsHide: true
       });
-      child.unref();
+      child.on('error', (error) => log('child spawn failed: ' + String(error?.message ?? error)));
+  child.unref();
     }
   }
   if (!await portOpen(3199)) {
@@ -103,7 +104,8 @@ async function ensureServices() {
         stdio: 'ignore',
         windowsHide: true
       });
-      child.unref();
+      child.on('error', (error) => log('child spawn failed: ' + String(error?.message ?? error)));
+  child.unref();
     }
   }
 }
@@ -126,6 +128,8 @@ function startChild() {
     windowsHide: true,
     env: process.env
   });
+  child.on('error', (error) => log('child spawn failed: ' + String(error?.message ?? error)));
+  child.on('exit', (code) => { if (code && code !== 0) log(`v2 exited code=${code}`); });
   child.unref();
 }
 

@@ -1,19 +1,30 @@
-export function createLocalChat({ gateway, dispatch, media = null, history = null, logger = null, timeoutMs = 45000 } = {}) {
+import crypto from 'node:crypto';
+import { AsyncLocalStorage } from 'node:async_hooks';
+
+export function createLocalChat({ gateway, dispatch, media = null, history = null, logger = null, timeoutMs = 45000, maxQueue = 2 } = {}) {
+  const turnContext = new AsyncLocalStorage();
   const originalSendText = gateway.sendText.bind(gateway);
   const originalSendMessage = gateway.sendMessage.bind(gateway);
   let active = null;
+  let queued = 0;
   let chain = Promise.resolve();
 
   gateway.sendText = async (kind, id, text) => {
     if (String(id) !== 'local') return originalSendText(kind, id, text);
-    if (!active) { logger?.warn('local_chat.no_active_turn', { kind: 'text' }); return { ok: false, reason: 'no-active-turn' }; }
+    if (!active || active.closed || turnContext.getStore() !== active.turnId) {
+      logger?.warn('local_chat.no_active_turn', { kind: 'text', inTurn: Boolean(turnContext.getStore()) });
+      return { ok: false, reason: 'no-active-turn' };
+    }
     active.push(String(text ?? ''));
     return { ok: true };
   };
 
   gateway.sendMessage = async (kind, id, segments) => {
     if (String(id) !== 'local') return originalSendMessage(kind, id, segments);
-    if (!active) { logger?.warn('local_chat.no_active_turn', { kind: 'segments' }); return { ok: false, reason: 'no-active-turn' }; }
+    if (!active || active.closed || turnContext.getStore() !== active.turnId) {
+      logger?.warn('local_chat.no_active_turn', { kind: 'segments', inTurn: Boolean(turnContext.getStore()) });
+      return { ok: false, reason: 'no-active-turn' };
+    }
     await active.pushSegments(segments);
     return { ok: true };
   };
@@ -68,6 +79,7 @@ export function createLocalChat({ gateway, dispatch, media = null, history = nul
         resolve({ ok: true, reply, segments: output });
       };
       turn = {
+        turnId: crypto.randomUUID(),
         closed: false,
         push(value) {
           if (turn.closed) return;
@@ -120,7 +132,7 @@ export function createLocalChat({ gateway, dispatch, media = null, history = nul
         raw: null
       };
       Promise.resolve()
-        .then(() => dispatch(message))
+        .then(() => turnContext.run(turn.turnId, () => dispatch(message)))
         .catch((error) => {
           logger?.warn('local_chat.dispatch_failed', { error: String(error?.message ?? error) });
           finish();
@@ -130,9 +142,14 @@ export function createLocalChat({ gateway, dispatch, media = null, history = nul
   }
 
   function send(text, attachments = [], options = {}) {
+    if (queued >= Math.max(1, Number(maxQueue) || 2)) {
+      logger?.warn('local_chat.queue_full', { queued });
+      return Promise.resolve({ ok: false, error: 'busy', reason: 'busy' });
+    }
+    queued += 1;
     const job = chain.then(() => run(text, attachments, options.origin || ''));
     chain = job.catch(() => {});
-    return job;
+    return job.finally(() => { queued = Math.max(0, queued - 1); });
   }
 
   return { send };

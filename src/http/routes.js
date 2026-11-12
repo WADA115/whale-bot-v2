@@ -847,7 +847,7 @@ export function createPanelHandler(ctx) {
       if (!ctx.localChat?.send) return json(res, 503, { error: 'local chat unavailable' });
       const origin = `http://${req.headers.host || '127.0.0.1:3201'}`;
       const result = await ctx.localChat.send(text, attachments, { origin });
-      json(res, 200, result);
+      json(res, result?.reason === 'busy' ? 429 : 200, result);
     }).catch((error) => json(res, 500, { error: String(error?.message ?? error) }));
     return;
   }

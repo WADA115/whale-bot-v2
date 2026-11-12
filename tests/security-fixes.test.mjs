@@ -154,3 +154,23 @@ test('本地聊天超时返回且无 active 时不再假装成功', async () => 
   assert.equal(late.ok, false);
   assert.equal(late.reason, 'no-active-turn');
 });
+test('外部任务不能把消息塞进正在进行的本地轮次', async () => {
+  const gateway = { selfId: '1', sendText: async () => ({ ok: true }), sendMessage: async () => ({ ok: true }) };
+  const chat = createLocalChat({ gateway, dispatch: async () => { await new Promise((r) => setTimeout(r, 80)); }, timeoutMs: 120 });
+  const pending = chat.send('主人这句话');
+  await new Promise((r) => setTimeout(r, 15));
+  const external = await gateway.sendText('private', 'local', '主动发言');
+  assert.equal(external.ok, false);
+  assert.equal(external.reason, 'no-active-turn');
+  await pending;
+});
+
+test('本地聊天队列满时返回 busy', async () => {
+  const gateway = { selfId: '1', sendText: async () => ({ ok: true }), sendMessage: async () => ({ ok: true }) };
+  const chat = createLocalChat({ gateway, dispatch: async () => { await new Promise((r) => setTimeout(r, 80)); }, timeoutMs: 120, maxQueue: 2 });
+  const one = chat.send('一');
+  const two = chat.send('二');
+  const three = await chat.send('三');
+  assert.equal(three.reason, 'busy');
+  await Promise.all([one, two]);
+});
