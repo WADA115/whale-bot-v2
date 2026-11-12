@@ -76,46 +76,6 @@ function switchPage(name) {
   if (name === 'mind') loadMind();
 }
 
-$$('.rail-item').forEach((btn) => btn.addEventListener('click', () => switchPage(btn.dataset.page)));
-$('#storyLoad').addEventListener('click', () => loadStory($('#storyKey').value));
-$('#storySave').addEventListener('click', saveStory);
-$('#storyPersonLoad').addEventListener('click', loadPerson);
-$('#storyPersonForget').addEventListener('click', forgetPerson);
-$('#storyPersonSave').addEventListener('click', savePerson);
-$('#mindDaydream').addEventListener('click', mindDaydream);
-$('#mindSave').addEventListener('click', saveMind);
-$('#biliSearch').addEventListener('click', biliSearch);
-$('#biliResults').addEventListener('click', async (event) => {
-  const button = event.target.closest('[data-see-bvid]');
-  if (!button) return;
-  button.disabled = true;
-  try {
-    const res = await api('/api/bilibili/see', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        bvid: button.dataset.seeBvid,
-        title: button.dataset.seeTitle,
-        owner: button.dataset.seeOwner
-      })
-    });
-    if (!res.ok) throw new Error('保存失败');
-    button.textContent = '已给她';
-  } catch {
-    button.disabled = false;
-    button.textContent = '没存上';
-  }
-});
-$('#biliPopular').addEventListener('click', biliPopular);
-$('#biliContentBtn').addEventListener('click', biliContent);
-$('#biliDynamics').addEventListener('click', biliDynamics);
-$('#biliFavorites').addEventListener('click', biliFavorites);
-$('#biliHistory').addEventListener('click', biliHistory);
-$('#biliLogin').addEventListener('click', biliLogin);
-$('#biliLogout').addEventListener('click', biliLogout);
-$('#qzoneLoad').addEventListener('click', qzoneLoad);
-$('#qzoneSend').addEventListener('click', qzoneSend);
-$('#autoTick').addEventListener('click', autoTick);
 loadState();
 
 const initialPage = new URLSearchParams(location.search).get('page');
