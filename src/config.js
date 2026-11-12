@@ -42,6 +42,7 @@ const DEFAULTS = {
       }
     ]
   },
+  vision: { enabled: false, providers: [] },
   healthPort: 3201,
   secretsFile: 'state/secrets.json',
   shadow: { callModels: false }

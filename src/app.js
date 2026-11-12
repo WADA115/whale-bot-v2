@@ -81,6 +81,8 @@ export async function main(argv = process.argv.slice(2)) {
   const logger = createLogger({ dir: path.join(ROOT, 'state', 'logs'), level: 'info' });
   const runtimeLock = acquireRuntimeLock({ file: path.join(ROOT, 'state', 'runtime.lock'), logger });
   if (!runtimeLock.ok) return { skipped: true, reason: 'already-running' };
+  const lockHeartbeat = setInterval(() => runtimeLock.heartbeat?.(), 30_000);
+  lockHeartbeat.unref?.();
   const shutdownTokenFile = path.join(ROOT, 'state', 'shutdown.token');
   let shutdownToken = '';
   try { shutdownToken = fs.readFileSync(shutdownTokenFile, 'utf8').trim(); } catch {}

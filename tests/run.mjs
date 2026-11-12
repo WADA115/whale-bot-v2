@@ -36,3 +36,4 @@ import './slang-observer.test.mjs';
 import './security-fixes.test.mjs';
 import './hardening.test.mjs';
 import './http-security.test.mjs';
+import './runtime-lock.test.mjs';
