@@ -86,8 +86,14 @@ export function createMediaLibrary({ root = 'state/media', logger = null, maxByt
   }
 
   function addFile({ scope = 'user', kind = 'image', file, mime = '', name = '', desc = '', origin = '' } = {}) {
-    const buffer = fs.readFileSync(file);
-    return addBuffer({ scope, kind, buffer, mime, name: name || path.basename(file), desc, origin });
+    const resolved = path.resolve(String(file || ''));
+    const stateRoot = path.resolve(path.dirname(base));
+    const allowedRoots = [path.resolve(base), path.join(stateRoot, 'voice'), path.join(stateRoot, 'screen')];
+    if (!allowedRoots.some((root) => resolved === root || resolved.startsWith(root + path.sep))) {
+      throw new Error('local media path not allowed');
+    }
+    const buffer = fs.readFileSync(resolved);
+    return addBuffer({ scope, kind, buffer, mime, name: name || path.basename(resolved), desc, origin });
   }
 
   async function addUrl({ scope = 'her', kind = 'sticker', url = '', mime = '', name = '', desc = '', origin = '' } = {}) {

@@ -56,6 +56,7 @@ test('addUrl 拒绝本地文件和本地面板 API', async () => {
   try {
     const media = createMediaLibrary({ root });
     await assert.rejects(() => media.addUrl({ url: 'state/secrets.json' }), /local media path not allowed/);
+    assert.throws(() => media.addFile({ file: 'state/secrets.json' }), /local media path not allowed/);
     await assert.rejects(() => media.addUrl({ url: 'http://127.0.0.1:3201/api/export' }), /private media url not allowed/);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
