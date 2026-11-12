@@ -105,3 +105,11 @@ function renderScenes() {
     : '<p class="muted">还没有场景。</p>';
 }
 
+
+function renderTasks() {
+  const items = state.tasks || [];
+  $('#taskList').innerHTML = items.length
+    ? items.map((t) => `<div class="result-item">${esc(t.text || t.kind || '任务')}<small>${esc(t.key || '')} · ${esc(t.status || 'pending')}</small>${t.status === 'pending' ? `<button class="text-btn task-done" data-id="${esc(t.id)}" type="button">完成</button>` : ''}${t.result ? `<div class="task-result">${esc(t.result)}</div>` : ''}</div>`).join('')
+    : '<p class="muted">还没有任务。</p>';
+}
+
