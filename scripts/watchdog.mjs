@@ -61,6 +61,10 @@ async function claimLock() {
 
 if (!await claimLock()) process.exit(0);
 
+function touchLock() {
+  try { fs.writeFileSync(lockFile, JSON.stringify({ pid: process.pid, at: Date.now() }), 'utf8'); } catch {}
+}
+
 function portOpen(port) {
   return new Promise((resolve) => {
     const socket = net.createConnection({ host: '127.0.0.1', port }, () => {
@@ -130,6 +134,7 @@ let failures = 0;
 let nextStartAt = 0;
 async function tick() {
   if (busy) return;
+  touchLock();
   busy = true;
   try {
     await ensureServices();

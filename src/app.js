@@ -603,7 +603,13 @@ ${task.result}`);
   }
 
   let shutdownHandler = null;
-  const panelToken = crypto.randomBytes(24).toString('hex');
+  const panelTokenFile = path.join(ROOT, 'state', 'panel.token');
+  let panelToken = '';
+  try { panelToken = fs.readFileSync(panelTokenFile, 'utf8').trim(); } catch {}
+  if (!/^[a-f0-9]{48}$/.test(panelToken)) {
+    panelToken = crypto.randomBytes(24).toString('hex');
+    try { fs.mkdirSync(path.dirname(panelTokenFile), { recursive: true }); fs.writeFileSync(panelTokenFile, panelToken, { encoding: 'utf8', mode: 0o600 }); } catch {}
+  }
   const handler = createPanelHandler({
     root: ROOT,
     config,
