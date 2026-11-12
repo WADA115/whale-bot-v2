@@ -6,7 +6,7 @@ import { matchSlang } from '../character/slang.js';
 import { buildNotices } from './notices.js';
 
 export function canUseBiliWrite({ kind = '', key = '', permissions = null } = {}) {
-  return kind === 'private' && Boolean(permissions?.active?.(key)?.length);
+  return createWriteGate({ kind, key, permissions }).canUse();
 }
 
 function untrusted(label, value) {
@@ -26,6 +26,7 @@ import { selectRelevantSlices } from '../story/retrieval.js';
 import { sendHumanReply } from './speech.js';
 import { shouldReflect } from '../story/reflect.js';
 import { readGroupHistory } from './group-history.js';
+import { createWriteGate } from './write-gate.js';
 
 export function createActorTurn({
   config,
@@ -291,7 +292,8 @@ export function createActorTurn({
       if (!blocks.length) return `你在这些群里：${[...new Set(names)].join('、') || '没有可读的群'}。这段时间没有读到原话。`;
       return `你在这些群里：${[...new Set(names)].join('、')}\n\n${blocks.join('\n\n')}`;
     };
-    const canWriteBili = canUseBiliWrite({ kind: current.kind, key, permissions });
+    const writeGate = createWriteGate({ kind: current.kind, key, permissions, logger });
+    const canWriteBili = writeGate.canUse();
     const biliTools = bilibili ? [
       {
         type: 'function',
@@ -371,7 +373,7 @@ export function createActorTurn({
           return [result.title, ...result.list.map((item) => `${item.rpid}｜${item.user}：${item.text.slice(0, 180)}`)].join('\n') || '没有评论。';
         }
         if (name === 'bili_reply_comment') {
-          if (!canWriteBili) { logger.warn('bili.write_denied', { key }); return '没有私聊授权，不能对外发评论。'; }
+          if (!writeGate.consume('bili_reply_comment')) { logger.warn('bili.write_denied', { key }); return '没有私聊授权，不能对外发评论。'; }
           const result = await bilibili.replyComment({ bvid: args.bvid, rpid: args.rpid }, args.message);
           logger.info('bili.comment_replied', { bvid: result.bvid, rpid: result.rpid, chars: String(args.message || '').length });
           return '回复发出去了。';

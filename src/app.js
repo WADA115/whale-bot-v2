@@ -261,8 +261,6 @@ ${task.result}`);
   logger.info('mind.session', { woke: Boolean(session.wake), gap: session.gap });
   const heartbeat = setInterval(() => { try { mind.heartbeat(); } catch {} }, 60 * 1000);
   heartbeat.unref?.();
-  const daydream = createDaydream({ mind, textRouter, storyStore, character, gateway, config, liveGroup, logger });
-  daydream.start();
   const conversationLog = createConversationLog({ limit: 80 });
   const contacts = createContacts({ file: path.join(ROOT, 'state', 'contacts.json'), logger });
   const moments = createMoments({ file: path.join(ROOT, 'state', 'moments.json'), logger });
@@ -284,6 +282,8 @@ ${task.result}`);
     file: path.join(ROOT, 'state', 'permissions.json'),
     logger
   });
+  const daydream = createDaydream({ mind, textRouter, storyStore, character, gateway, permissions, config, liveGroup, logger });
+  daydream.start();
   const screen = createScreen({
     root: path.join(ROOT, 'state'),
     scriptPath: path.join(ROOT, 'scripts', 'capture-screen.ps1'),

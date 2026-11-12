@@ -1,5 +1,6 @@
 import { durationWord } from './time.js';
 import { readGroupHistory } from '../runtime/group-history.js';
+import { createWriteGate } from '../runtime/write-gate.js';
 
 export function createDaydream({
   mind,
@@ -7,6 +8,7 @@ export function createDaydream({
   storyStore = null,
   character = null,
   gateway = null,
+  permissions = null,
   config = {},
   liveGroup = null,
   logger = null
@@ -49,7 +51,10 @@ export function createDaydream({
     const elapsed = lastContact ? Date.now() - lastContact : NaN;
     const when = durationWord(elapsed);
     const memory = await recentMemory();
-    const canReach = Boolean(mind.canReach?.()) && gateway?.ws?.readyState === 1;
+    const writeKey = String(config?.allow?.private?.[0] || '').trim();
+    const writeGate = createWriteGate({ permissions, key: `private:${writeKey}`, kind: 'private', logger });
+    const canWrite = Boolean(writeKey) && writeGate.canUse();
+    const canReach = canWrite && Boolean(mind.canReach?.()) && gateway?.ws?.readyState === 1;
     const places = await candidates();
     const reachTool = canReach && places.length ? {
       type: 'function',
@@ -66,7 +71,7 @@ export function createDaydream({
         }
       }
     } : null;
-    const canQzone = Boolean(mind.canQzone?.()) && gateway?.ws?.readyState === 1;
+    const canQzone = canWrite && Boolean(mind.canQzone?.()) && gateway?.ws?.readyState === 1;
     const qzoneTool = canQzone ? {
       type: 'function',
       function: {
@@ -109,6 +114,7 @@ export function createDaydream({
 
     async function execute(name, args = {}) {
       if (name === 'post_qzone') {
+        if (!writeGate.consume('post_qzone')) return '没有授权，不能发动态。';
         const text = String(args.text ?? '').trim();
         if (!text) return '没写。';
         const visibility = args.visibility === 'all' ? 'all' : 'friends';
@@ -118,6 +124,7 @@ export function createDaydream({
         return '发出去了。';
       }
       if (name !== 'reach_out') return '没有这个动作。';
+      if (!writeGate.consume('reach_out')) return '没有授权，不能主动找人说。';
       const place = places.find((item) => item.label === String(args.conversation ?? '').trim());
       const text = String(args.text ?? '').trim();
       if (!place) return '没有这个地方。';
