@@ -105,14 +105,24 @@ function startChild() {
 }
 
 let busy = false;
+let failures = 0;
+let nextStartAt = 0;
 async function tick() {
   if (busy) return;
   busy = true;
   try {
     await ensureServices();
     if (!(await healthy())) {
-      log('health check failed');
-      startChild();
+      failures += 1;
+      const delay = Math.min(5 * 60_000, 30_000 * (2 ** Math.min(failures - 1, 4)));
+      if (Date.now() >= nextStartAt) {
+        log(`health check failed (failure ${failures}), next restart in ${Math.round(delay / 1000)}s`);
+        startChild();
+        nextStartAt = Date.now() + delay;
+      }
+    } else {
+      failures = 0;
+      nextStartAt = 0;
     }
   } finally {
     busy = false;

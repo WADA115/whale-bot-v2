@@ -97,6 +97,12 @@ export function createPanelHandler(ctx) {
       if (origin && !/^http:\/\/(127\.0\.0\.1|localhost):\d+$/i.test(origin)) return json(res, 403, { error: 'forbidden origin' });
       if (site === 'cross-site') return json(res, 403, { error: 'forbidden origin' });
     }
+    if (pathname === '/api/export' || pathname === '/api/character/export') {
+      const port = Number(config.healthPort) || 3201;
+      const host = String(req.headers.host || '').toLowerCase();
+      if (!new Set([`127.0.0.1:${port}`, `localhost:${port}`]).has(host)) return json(res, 403, { error: 'forbidden host' });
+      if (String(req.headers['sec-fetch-site'] || '') === 'cross-site') return json(res, 403, { error: 'forbidden origin' });
+    }
 
     if (pathname.startsWith('/media/')) {
       const rel = pathname.slice('/media/'.length);
