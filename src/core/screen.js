@@ -21,14 +21,14 @@ export function createScreen({ root = 'state', scriptPath = '', powershell = 'po
     const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
     enabled = Boolean(state.enabled);
     continuous = Boolean(state.continuous);
-  } catch {}
+  } catch (error) { logger?.warn('screen.state_read_failed', { error: String(error?.message ?? error) }); }
   if (!enabled) continuous = false;
 
   let timer = null;
   let capturing = null;
 
   function persist() {
-    try { fs.writeFileSync(stateFile, JSON.stringify({ enabled, continuous }, null, 2) + '\n', 'utf8'); } catch {}
+    try { fs.writeFileSync(stateFile, JSON.stringify({ enabled, continuous }, null, 2) + '\n', 'utf8'); } catch (error) { logger?.warn('screen.state_write_failed', { error: String(error?.message ?? error) }); }
   }
 
   async function captureTo(out) {

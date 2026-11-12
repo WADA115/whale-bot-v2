@@ -160,7 +160,7 @@ export function createVisionRouter({
     try {
       fs.mkdirSync(path.dirname(cacheFile), { recursive: true });
       fs.writeFileSync(cacheFile, JSON.stringify(cache, null, 2) + '\n', 'utf8');
-    } catch {}
+    } catch (error) { logger?.warn('vision.cache_write_failed', { error: String(error?.message ?? error) }); }
   }
 
   async function describe({ message, prompt = DEFAULT_PROMPT } = {}) {

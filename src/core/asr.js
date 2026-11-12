@@ -47,7 +47,7 @@ export function createAsr({
     try {
       fs.mkdirSync(path.dirname(cacheFile), { recursive: true });
       fs.writeFileSync(cacheFile, JSON.stringify(cache, null, 2) + '\n', 'utf8');
-    } catch {}
+    } catch (error) { logger?.warn('asr.cache_write_failed', { error: String(error?.message ?? error) }); }
   }
 
   function hashFile(file) {
