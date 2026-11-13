@@ -22,7 +22,7 @@ export function loadSlang(file, dbPath = '') {
       const item = normalize(raw);
       if (item) entries.set(item.term, item);
     }
-  } catch {}
+  } catch { /* best-effort */ }
   if (dbPath && fs.existsSync(dbPath)) {
     let db = null;
     try {
@@ -39,9 +39,8 @@ export function loadSlang(file, dbPath = '') {
           usage: item.usage || old?.usage || ''
         });
       }
-    } catch {
-    } finally {
-      try { db?.close(); } catch {}
+    } catch { /* best-effort */ } finally {
+      try { db?.close(); } catch { /* best-effort */ }
     }
   }
   return [...entries.values()];

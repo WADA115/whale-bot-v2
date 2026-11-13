@@ -48,6 +48,7 @@ test('发呆后可以自己决定发私聊', async () => {
     mind,
     character: { card },
     config: { allow: { private: ['owner'] } },
+    permissions: { active: () => [{ id: 'allow' }] },
     gateway: { ws: { readyState: 1 }, sendText: async (kind, id, text) => { sent = { kind, id, text }; } },
     textRouter: {
       generateWithTools: async ({ execute }) => {
@@ -80,6 +81,8 @@ test('发呆后可以自己发 QQ 动态并选择可见范围', async () => {
   const daydream = createDaydream({
     mind,
     character: { card },
+    config: { allow: { private: ['owner'] } },
+    permissions: { active: () => [{ id: 'allow' }] },
     gateway: { ws: { readyState: 1 }, sendQzoneMsg: async (payload) => { posted = payload; } },
     textRouter: {
       generateWithTools: async ({ execute }) => {
@@ -109,4 +112,10 @@ test('角色卡是身份的唯一来源，self 保留自己的锚', () => {
   assert.match(self, /新说话/);
   assert.match(self, /如果没人叫我/);
   assert.doesNotMatch(self, /旧的/);
+});
+test('图片描述会留给下一轮', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mind-image-'));
+  const mind = createMindStore({ root, character: { card } });
+  mind.noteImage('画面里他比了一个手势。');
+  assert.match(mind.readPresence().lastImage.text, /手势/);
 });

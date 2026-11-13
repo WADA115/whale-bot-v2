@@ -25,6 +25,12 @@
           <span>DEEPSEEK RUNTIME</span>
         </div>
       </div>
+      <button class="chat-open" id="openGroupChat" type="button">群聊</button>
+      <button class="chat-open" id="openLocalChat" type="button">和她说话</button>
+      <button class="chat-open screen-mode" id="screenMode" type="button">屏幕权限：关</button>
+      <button class="chat-open screen-cont" id="screenContinuous" type="button" hidden>持续看：关</button>
+      <button class="chat-open ai-start" id="startAI" type="button">打开 AI 服务</button>
+      <button class="chat-open ai-stop" id="stopAI" type="button">关闭 AI 服务</button>
       <div class="top-status" id="topStatus">
         <span class="dot"></span>
         <span>连接中</span>
@@ -52,8 +58,7 @@
           </div>
 
           <div class="status-line" id="todayStatus"></div>
-
-          <div class="two-col">
+    <div class="two-col">
             <div>
               <h2>此刻</h2>
               <div class="prose" id="todayNow">还没有故事。</div>
@@ -104,8 +109,13 @@
               <label class="wide-field">身份<textarea id="cardIdentity" rows="3"></textarea></label>
             </div>
             <label>为什么<textarea id="cardDrive" rows="4" placeholder="她为什么愿意动"></textarea></label>
+            <label>说话方式（每行一条，不是固定台词）<textarea id="cardVoice" rows="4" placeholder="短语气样本，例如：哼，才没有等你。"></textarea></label>
             <label>我见过的（具体的事，每行一条）<textarea id="cardWorld" rows="5"></textarea></label>
             <label>运行底线（不泄密 / 不假冒现实操作）<textarea id="cardBounds" rows="4"></textarea></label>
+            <label>个人观（每行一条，是立场不是台词）<textarea id="cardViews" rows="4"></textarea></label>
+            <label>偏好（喜欢/讨厌什么，每行一条）<textarea id="cardTaste" rows="3"></textarea></label>
+            <label>会顶回去的（每行一条）<textarea id="cardLine" rows="3"></textarea></label>
+            <label>不想被看见的样子<textarea id="cardSelfImage" rows="3"></textarea></label>
             <div class="config-actions">
               <button class="text-btn" id="saveCard" type="button">保存角色卡</button>
               <label class="text-btn file-btn">导入 JSON<input id="cardFile" type="file" accept="application/json"></label>
@@ -122,6 +132,13 @@
             <label>再改一点<textarea id="personaInstruction" rows="3" placeholder="例如：再冷一点，别老是反问；把在意的东西写具体一点"></textarea></label>
             <div class="config-actions">
               <button class="text-btn" id="personaRefine" type="button">按这句话精修</button>
+            <div class="config-actions"><h3>精调对话</h3></div>
+            <div id="personaChatLog" class="task-result" style="max-height:260px;overflow:auto"></div>
+            <label>继续聊<textarea id="personaChatInput" rows="2" placeholder="回答她的问题；说“就这样”让她生成角色卡"></textarea></label>
+            <div class="config-actions">
+              <button class="text-btn" id="personaChatSend" type="button">发过去</button>
+              <span class="muted" id="personaChatStatus"></span>
+            </div>
             </div>
           </div>
           <div class="rule"></div>
@@ -358,8 +375,28 @@
             </div>
             <div class="config-actions">
               <button class="text-btn" id="saveConfig" type="button">保存配置</button>
+              <button class="text-btn" id="stopVoice" type="button">关闭满穗语音服务</button>
+              <button class="text-btn" id="loadPermissions" type="button">刷新权限</button>
+              <span class="muted" id="voiceStatus"></span>
               <span class="muted" id="cfgStatus">保存后需要重启服务</span>
             </div>
+            <div class="rule"></div>
+            <h2>权限</h2>
+            <p class="muted">待批和有效的临时许可；可以直接同意、拒绝、撤回或加减时间。</p>
+            <div id="permissionList" class="permission-list"></div>
+            <div class="rule"></div>
+            <h2>记忆</h2>
+            <p class="muted">她记住的人；只展示和删除，不规定她必须怎么回。</p>
+            <p><button class="text-btn" id="loadMemory" type="button">刷新记忆</button></p>
+            <div id="memoryList" class="permission-list"></div>
+            <div class="rule"></div>
+            <h2>她的日记</h2>
+            <p><button class="text-btn" id="loadDiary" type="button">刷新日记</button></p>
+            <div id="diaryList" class="permission-list"></div>
+            <div class="rule"></div>
+            <h2>关系节点</h2>
+            <p><button class="text-btn" id="loadMilestones" type="button">刷新节点</button></p>
+            <div id="milestoneList" class="permission-list"></div>
           </div>
 
           <div class="rule"></div>
@@ -445,6 +482,16 @@
       </aside>
     </div>
   </div>
+  <script src="./demo.js"></script>
+  <script src="./render.js"></script>
+  <script src="./gateway.js"></script>
+  <script src="./bili.js"></script>
+  <script src="./config.js"></script>
+  <script src="./story.js"></script>
+  <script src="./mind.js"></script>
+  <script src="./memory.js"></script>
+  <script src="./lifecycle.js"></script>
   <script src="./app.js"></script>
+  <script src="./events.js"></script>
 </body>
 </html>

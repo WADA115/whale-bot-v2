@@ -32,3 +32,20 @@ test('没有打算不主动', async () => {
   await agency.tick();
   assert.equal(sent.length, 0);
 });
+
+test('同一个打算不会连续重复发送', async () => {
+  const sent = [];
+  const agency = createStoryAgency({
+    store: { read: () => ({ self: '# 我', relationship: '# 我们', now: '# 此刻\n\n先听他说。\n\n# 打算\n\n等会儿想问问他昨天怎么了。', episodes: [] }) },
+    gateway: { sendText: async (_kind, _id, text) => { sent.push(text); return { ok: true }; } },
+    textRouter: { generate: async () => ({ text: '你昨天是不是有事没说？' }) },
+    card: { name: '小鲸鱼' },
+    getScene: () => ({ turns: [] }),
+    config: { enabled: true, minIdleMinutes: 0, maxPerDay: 5, minGapMinutes: 0, quietStart: 0, quietEnd: 0, maxChars: 900 },
+    stateFile: ''
+  });
+  agency.touch('private:1');
+  await agency.tick();
+  await agency.tick();
+  assert.equal(sent.length, 1);
+});

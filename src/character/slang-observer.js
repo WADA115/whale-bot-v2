@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
+import { searchBing } from '../core/web-search.js';
 
 function parseTerms(text) {
   const raw = String(text ?? '').trim();
@@ -11,6 +12,21 @@ function parseTerms(text) {
   } catch {
     return [];
   }
+}
+
+function withTimeout(promise, ms) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error('slang timeout'));
+    }, Math.max(1000, ms));
+    Promise.resolve(promise).then(
+      (value) => { if (settled) return; settled = true; clearTimeout(timer); resolve(value); },
+      (error) => { if (settled) return; settled = true; clearTimeout(timer); reject(error); }
+    );
+  });
 }
 
 function clean(value, max = 200) {
@@ -26,6 +42,7 @@ function imageSummary(message) {
 
 export function createSlangObserver({
   file,
+  search = searchBing,
   dbPath,
   entries = [],
   textRouter,
@@ -36,6 +53,7 @@ export function createSlangObserver({
   const batchSize = Math.max(5, Number(config.batchSize) || 20);
   const intervalMs = Math.max(60_000, Number(config.intervalMs) || 5 * 60 * 1000);
   const maxPerRun = Math.max(1, Number(config.maxPerRun) || 8);
+  const timeoutMs = Math.max(1000, Number(config.timeoutMs) || 15000);
   const pending = new Map();
   const imageQueue = [];
   let imageWorker = false;
@@ -51,7 +69,7 @@ export function createSlangObserver({
     return lines.sort((a, b) => a.at - b.at).slice(-80);
   }
 
-  function remember(term, meaning, usage, evidence) {
+  function remember(term, meaning, usage, evidence, source = '') {
     const old = entries.find((x) => x.term === term);
     if (old) {
       old.meaning = old.meaning || meaning;
@@ -59,7 +77,7 @@ export function createSlangObserver({
       old.evidence = [...(old.evidence || []), evidence].slice(-5);
       return false;
     }
-    entries.push({ term, meaning, usage, evidence: [evidence], status: 'candidate', source: 'group-observer' });
+    entries.push({ term, meaning, usage, evidence: [evidence], status: 'candidate', source: source || 'group-observer' });
     return true;
   }
 
@@ -98,7 +116,7 @@ export function createSlangObserver({
     } catch (error) {
       logger?.warn('slang.db_write_failed', { error: String(error?.message ?? error) });
     } finally {
-      try { db?.close(); } catch {}
+      try { db?.close(); } catch { /* best-effort */ }
     }
   }
 
@@ -125,7 +143,7 @@ export function createSlangObserver({
         let text = imageSummary(item.message);
         if (vision && item.message.images?.length) {
           try {
-            const described = await vision.describe({ message: item.message });
+            const described = await withTimeout(vision.describe({ message: item.message }), timeoutMs);
             const desc = clean(described?.text, 260);
             if (desc) text = `${text || '[图片]'} ${desc}`;
           } catch (error) {
@@ -158,14 +176,24 @@ export function createSlangObserver({
   }
 
   async function waitImages() {
-    while (imageWorker || imageQueue.length) await new Promise((resolve) => setTimeout(resolve, 20));
+    const deadline = Date.now() + timeoutMs;
+    while (imageWorker || imageQueue.length) {
+      if (Date.now() > deadline) { logger?.warn('slang.images_timeout', { queued: imageQueue.length }); break; }
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
   }
 
   async function flush() {
     if (imageWorker || imageQueue.length) await waitImages();
-    if (busy || !total || !textRouter) return;
+    if (busy) {
+      const deadline = Date.now() + timeoutMs;
+      while (busy && Date.now() < deadline) await new Promise((r) => setTimeout(r, 20));
+      if (busy) { logger?.warn('slang.busy_timeout', {}); return; }
+    }
+    if (!total || !textRouter) return;
     busy = true;
     const lines = pendingLines().slice(-24);
+    logger?.info('slang.flush_start', { lines: lines.length });
     pending.clear();
     total = 0;
     try {
@@ -174,7 +202,7 @@ export function createSlangObserver({
       const system = [
         '你在看 QQ 群聊，里面可能有文字、图片和表情包。',
         '只找真正的黑话、梗、网络表达、圈子里的特殊说法。',
-        '普通词、正常聊天、单纯语气词不要。',
+        '只找需要结合网络语境才能解释的群内表达。',
         '图片里的字也算群聊内容。',
         known ? `已经知道的：${known}` : '',
         '',
@@ -182,24 +210,60 @@ export function createSlangObserver({
         transcript,
         '',
         '只输出 JSON 数组，不要解释。',
-        '每项：{"term":"原词","meaning":"在这个群里是什么意思","usage":"怎么用"}',
+        '每项：{"term":"原词","meaning":"在这个群里是什么意思","usage":"怎么用","worth":true}',
+        '只有确实值得记的黑话才 worth=true；不确定、无意义、口癖或发图顺口的字填 false。',
         '没有就输出 []。'
       ].filter(Boolean).join('\n');
-      const answer = await textRouter.generate({ system, user: '' });
+      const answer = await withTimeout(textRouter.generate({ system, user: '', maxTokens: 4000, temperature: 0.4 }), timeoutMs);
+      logger?.info('slang.flushed', { lines: lines.length, chars: String(answer?.text || '').length });
       const terms = parseTerms(answer?.text).slice(0, maxPerRun);
-      let added = 0;
+      const researched = [];
       for (const item of terms) {
+        const term = clean(item?.term, 20);
+        if (!term || item?.worth === false) continue;
+        let enriched = { ...item };
+        let source = '';
+        try {
+          const hits = await withTimeout(search(`${term} 梗 意思 用法`, { limit: 4 }), timeoutMs);
+          if (hits.length) {
+            source = hits.map((x) => x.url).filter(Boolean).join(' ');
+            const snippets = hits.map((x) => `- ${x.title}：${x.snippet}`).join('\n');
+            const check = await withTimeout(textRouter.generate({
+              system: '你在核对 QQ 群黑话。根据群聊原句和网络搜索，判断这个词在群里的真实意思和用法。只有网络能解释、确实值得记的才 worth=true。只输出 JSON：{"meaning":"...","usage":"...","worth":true}，不要 Markdown，不要解释。',
+              user: `词：${term}\n群里的原句：${lines.filter((x) => x.text.includes(term)).slice(0, 2).map((x) => x.text).join('\n')}\n网络搜索：\n${snippets}`,
+              maxTokens: 1200,
+              temperature: 0.3
+            }), timeoutMs);
+            const match = String(check?.text || '').match(/\{[\s\S]*\}/);
+            if (match) {
+              const parsed = JSON.parse(match[0]);
+              if (parsed.meaning) enriched.meaning = clean(parsed.meaning, 160);
+              if (parsed.usage) enriched.usage = clean(parsed.usage, 120);
+              if (parsed.worth === false) enriched.worth = false;
+            }
+          } else {
+            enriched.worth = false;
+          }
+        } catch { /* best-effort */ }
+        logger?.info('slang.researched', { term, meaning: clean(enriched.meaning, 80), source: Boolean(source) });
+        researched.push({ ...enriched, source });
+      }
+      let added = 0;
+      for (const item of researched) {
         const term = clean(item?.term, 20);
         const meaning = clean(item?.meaning, 160);
         const usage = clean(item?.usage, 120);
         if (!term || !meaning) continue;
+        if (item?.worth === false) continue;
+        if (!item.source) continue;
         if (!transcript.includes(term)) continue;
+        if (lines.some((x) => x.sender === term)) continue;
         if (entries.some((x) => x.term === term)) continue;
         const evidence = lines
           .filter((x) => x.text.includes(term))
           .slice(0, 3)
           .map((x) => ({ key: x.key, sender: x.sender, text: x.text, time: x.at }));
-        if (remember(term, meaning, usage, evidence[0] || {})) added += 1;
+        if (remember(term, meaning, usage, evidence[0] || {}, item.source || '')) added += 1;
       }
       if (added) {
         persist();

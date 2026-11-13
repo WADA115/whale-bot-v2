@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { atomicWriteJson } from '../runtime/atomic.js';
 
 export function createTaskInbox({ file, logger = null, max = 200 } = {}) {
   let data = { tasks: [] };
@@ -15,10 +16,7 @@ export function createTaskInbox({ file, logger = null, max = 200 } = {}) {
   function save() {
     if (!file) return;
     try {
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      const tmp = `${file}.tmp`;
-      fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
-      fs.renameSync(tmp, file);
+      atomicWriteJson(file, data);
     } catch (error) {
       logger?.warn('tasks.save_failed', { error: String(error?.message ?? error) });
     }

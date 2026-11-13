@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { durationWord } from './time.js';
+import { atomicWriteFile } from '../runtime/atomic.js';
 
 const FILES = ['self.md', 'worldview.md', 'now.md', 'undercurrent.md', 'unfinished.md', 'seen.md', 'held.md'];
 
@@ -10,7 +11,16 @@ function readText(file) {
 
 function writeText(file, text) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, String(text ?? '').trim() + '\n', 'utf8');
+  atomicWriteFile(file, String(text ?? '').trim() + '\n');
+}
+
+function capText(text, maxChars = 12000) {
+  return text.length > maxChars ? text.slice(text.length - maxChars) : text;
+}
+
+function capAppend(before, value, maxChars = 12000) {
+  const next = [before, value].filter(Boolean).join('\n\n---\n\n');
+  return capText(next, maxChars);
 }
 
 function seedSelf(card) {
@@ -20,7 +30,6 @@ function seedSelf(card) {
     card?.identity || '',
     '',
     ...(card?.drive ? ['## 我为什么', '', String(card.drive).trim(), ''] : []),
-    ...(!String(card?.drive ?? '').includes('如果没人叫我') ? ['## 我还在想', '', '如果没人叫我，我还算存在吗。', ''] : [])
   ].filter(Boolean).join('\n');
 }
 
@@ -89,7 +98,7 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     if (!value) return read();
     const file = path.join(base, 'undercurrent.md');
     const before = readText(file);
-    writeText(file, [before, value].filter(Boolean).join('\n\n---\n\n'));
+    writeText(file, capAppend(before, value));
     writePresence({ lastThoughtAt: Date.now() });
     return read();
   }
@@ -100,15 +109,14 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     const file = path.join(base, 'held.md');
     const before = readText(file);
     const line = [meta ? `对${meta}` : '', value].filter(Boolean).join('：');
-    writeText(file, [before, line].filter(Boolean).join('\n\n---\n\n'));
+    writeText(file, capAppend(before, line));
     return read();
   }
 
   function renderSelf(nextCard = card) {
     ensure();
     const old = readText(path.join(base, 'self.md'));
-    const anchor = old.match(/## 我还在想\s*\n([\s\S]*?)(?=\n## |$)/)?.[1]?.trim()
-      || '如果没人叫我，我还算存在吗。';
+    const anchor = old.match(/## 我还在想\s*\n([\s\S]*?)(?=\n## |$)/)?.[1]?.trim() || '';
     const lines = [
       '# 我',
       '',
@@ -169,6 +177,19 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     try { return JSON.parse(fs.readFileSync(readsFile, 'utf8')); } catch { return []; }
   }
 
+  function noteVoice(text) {
+    const value = String(text ?? '').trim().slice(0, 500);
+    if (value) writePresence({ pendingVoice: { text: value, at: Date.now() } });
+    return value;
+  }
+
+  function takeVoice() {
+    const pending = readPresence().pendingVoice;
+    if (!pending) return '';
+    writePresence({ pendingVoice: null });
+    return String(pending.text || '');
+  }
+
   function noteRead(entry = {}) {
     const list = readReads();
     list.unshift({ ...entry, at: Date.now() });
@@ -194,7 +215,7 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     const file = path.join(base, 'seen.md');
     const before = readText(file);
     const added = [...new Set(list)].filter((line) => !before.includes(line));
-    if (added.length) writeText(file, [before, ...added.map((line) => `- ${line}`)].filter(Boolean).join('\n'));
+    if (added.length) writeText(file, capText([before, ...added.map((line) => `- ${line}`)].filter(Boolean).join('\n')));
     return read();
   }
 
@@ -224,10 +245,16 @@ export function createMindStore({ root, character = null, logger = null } = {}) 
     return Date.now() - last > 6 * 60 * 60 * 1000 && presence.qzoneDay !== day;
   }
 
+  function noteImage(text) {
+    const value = String(text ?? '').trim();
+    if (!value) return readPresence();
+    return writePresence({ lastImage: { text: value.slice(0, 600), at: Date.now() } });
+  }
+
   function noteQzone() {
     return writePresence({ lastQzoneAt: Date.now(), qzoneDay: new Date().toISOString().slice(0, 10), lastContactAt: Date.now() });
   }
 
-  try { syncCard(card); } catch {}
-  return { ensure, read, writeSection, appendUndercurrent, appendHeld, appendSeen, noteRead, readReads, setPendingRead, peekPendingRead, touchContact, touchThought, readPresence, beginSession, heartbeat, markShutdown, peekWake, takeWake, canReach, noteReach, canQzone, noteQzone, syncCard, base };
+  try { syncCard(card); } catch { /* best-effort */ }
+  return { ensure, read, writeSection, appendUndercurrent, appendHeld, appendSeen, noteRead, readReads, setPendingRead, peekPendingRead, touchContact, touchThought, readPresence, beginSession, heartbeat, markShutdown, peekWake, takeWake, canReach, noteReach, canQzone, noteQzone, noteImage, noteVoice, takeVoice, syncCard, base };
 }

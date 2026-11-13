@@ -3,7 +3,7 @@
 离线跑情境，不接 QQ，不写真实 `state/`。
 
 ```powershell
-cd E:\deepseek_qq.bot\qq-bridge-v2
+cd <项目目录>
 node training\run.mjs --pack basic
 node training\run.mjs --pack habit --remember
 ```

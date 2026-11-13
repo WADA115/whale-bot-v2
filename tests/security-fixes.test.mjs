@@ -1,0 +1,176 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { createRoomServer } from '../src/room/server.js';
+import { createMediaLibrary } from '../src/core/media-library.js';
+import { createScreen } from '../src/core/screen.js';
+import { createRoomAI } from '../src/room/ai.js';
+import { createPermissions } from '../src/core/permissions.js';
+import { createLocalChat } from '../src/runtime/local-chat.js';
+
+test('room-media 不能读取房间状态文件', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'room-media-'));
+  const port = 34000 + Math.floor(Math.random() * 1000);
+  const server = createRoomServer({ port, root, logger: null });
+  assert.equal(await server.start(), true);
+  try {
+    const created = await fetch(`http://127.0.0.1:${port}/api/room/create`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'security', memberName: 'host', clientId: 'host-1' })
+    }).then((res) => res.json());
+    const upload = await fetch(`http://127.0.0.1:${port}/api/room/media`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ roomId: created.roomId, token: created.token, clientId: 'host-1', memberSecret: created.memberSecret, kind: 'image', mime: 'image/png', data: Buffer.from('fake-image').toString('base64') })
+    }).then((res) => res.json());
+    assert.match(upload.media.url, /\?token=/);
+    const noMediaToken = await fetch(`http://127.0.0.1:${port}${upload.media.url.replace(/\?token=.*$/, '')}`);
+    assert.equal(noMediaToken.status, 403);
+    const withMediaToken = await fetch(`http://127.0.0.1:${port}${upload.media.url}`);
+    assert.equal(withMediaToken.status, 200);
+    const status = await fetch(`http://127.0.0.1:${port}/room-media/${created.roomId}.json`);
+    assert.ok([403, 404].includes(status.status), 'room state must not be readable');
+    const traversal = await fetch(`http://127.0.0.1:${port}/room-media/${created.roomId}/media/..%2F..%2F${created.roomId}.json`);
+    assert.ok([403, 404].includes(traversal.status), 'room state traversal must be blocked');
+  } finally {
+    server.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('媒体扩展名白名单拒绝 html', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'media-ext-'));
+  try {
+    const media = createMediaLibrary({ root });
+    const item = media.addBuffer({ scope: 'user', kind: 'image', name: 'x.html', mime: 'text/html', buffer: Buffer.from('<html>') });
+    assert.equal(path.extname(item.url), '.bin');
+    const image = media.addBuffer({ scope: 'user', kind: 'image', name: 'x.png', mime: 'image/png', buffer: Buffer.from('png') });
+    assert.equal(path.extname(image.url), '.png');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('屏幕权限关闭时 capture 拒绝', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'screen-test-'));
+  try {
+    const screen = createScreen({ root, scriptPath: 'noop.ps1' });
+    await assert.rejects(() => screen.capture(), /screen permission disabled/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('addUrl 拒绝本地文件和本地面板 API', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'media-url-'));
+  try {
+    const media = createMediaLibrary({ root });
+    await assert.rejects(() => media.addUrl({ url: 'state/secrets.json' }), /local media path not allowed/);
+    assert.throws(() => media.addFile({ file: 'state/secrets.json' }), /local media path not allowed/);
+    await assert.rejects(() => media.addUrl({ url: 'http://127.0.0.1:3201/api/export' }), /private media url not allowed/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('房间坏 JSON 隔离且不阻止其它房间加载', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'room-corrupt-'));
+  const valid = { id: 'abc123', name: 'ok', token: 'token', hostName: 'host', createdAt: Date.now(), messages: [], members: [] };
+  fs.writeFileSync(path.join(root, 'abc123.json'), JSON.stringify(valid), 'utf8');
+  fs.writeFileSync(path.join(root, 'bad.json'), '{bad json', 'utf8');
+  const server = createRoomServer({ port: 34999, root });
+  try {
+    assert.equal(server.rooms.size, 1);
+    assert.ok(fs.readdirSync(root).some((name) => name.includes('.corrupt-')));
+  } finally {
+    server.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('房间 AI 队列满时丢弃新消息', async () => {
+  let calls = 0;
+  const ai = createRoomAI({
+    roomServer: { sendAI: () => null },
+    textRouter: { generate: async () => { calls += 1; await new Promise((r) => setTimeout(r, 40)); return { text: '嗯。' }; } },
+    character: { card: { name: '小鲸鱼' } },
+    maxQueue: 1
+  });
+  const room = { id: 'q1', aiEnabled: true, messages: [], name: 'q' };
+  ai.observe(room, { clientId: 'u', name: 'u', text: '一' });
+  ai.observe(room, { clientId: 'u', name: 'u', text: '二' });
+  ai.observe(room, { clientId: 'u', name: 'u', text: '三' });
+  await new Promise((r) => setTimeout(r, 120));
+  assert.equal(calls, 1);
+});
+test('未知权限 id 不会批准最近一条', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'perm-'));
+  try {
+    const p = createPermissions({ file: path.join(root, 'permissions.json') });
+    const item = p.request({ what: '测试权限', key: 'private:a' });
+    assert.equal(p.decide('NOPE', true, 'private:a'), null);
+    assert.equal(p.pending('private:a').length, 1);
+    const approved = p.decide(item.id, true, 'private:a');
+    assert.equal(approved.status, 'granted');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('无 scope 的授权不会泄漏给会话', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'perm-scope-'));
+  try {
+    const p = createPermissions({ file: path.join(root, 'permissions.json') });
+    p.grant({ what: '全局测试' });
+    assert.equal(p.active('private:a').length, 0);
+    assert.equal(p.active('').length, 1);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+test('媒体索引裁剪时删除旧文件', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'media-trim-'));
+  try {
+    const media = createMediaLibrary({ root });
+    for (let i = 0; i < 601; i += 1) {
+      media.addBuffer({ scope: 'user', kind: 'image', name: `x${i}.png`, mime: 'image/png', buffer: Buffer.from(`file-${i}`) });
+    }
+    const files = fs.readdirSync(path.join(root, 'user')).filter((name) => name !== 'index.json');
+    assert.ok(files.length <= 600, `expected <=600 files, got ${files.length}`);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+test('本地聊天超时返回且无 active 时不再假装成功', async () => {
+  const gateway = { selfId: '1', sendText: async () => ({ ok: true }), sendMessage: async () => ({ ok: true }) };
+  const chat = createLocalChat({ gateway, dispatch: async () => {}, timeoutMs: 50 });
+  const started = Date.now();
+  const result = await chat.send('在吗');
+  assert.equal(result.ok, true);
+  assert.equal(result.reply, '');
+  assert.ok(Date.now() - started < 1000);
+  const late = await gateway.sendText('private', 'local', '迟到的话');
+  assert.equal(late.ok, false);
+  assert.equal(late.reason, 'no-active-turn');
+});
+test('外部任务不能把消息塞进正在进行的本地轮次', async () => {
+  const gateway = { selfId: '1', sendText: async () => ({ ok: true }), sendMessage: async () => ({ ok: true }) };
+  const chat = createLocalChat({ gateway, dispatch: async () => { await new Promise((r) => setTimeout(r, 80)); }, timeoutMs: 120 });
+  const pending = chat.send('主人这句话');
+  await new Promise((r) => setTimeout(r, 15));
+  const external = await gateway.sendText('private', 'local', '主动发言');
+  assert.equal(external.ok, false);
+  assert.equal(external.reason, 'no-active-turn');
+  await pending;
+});
+
+test('本地聊天队列满时返回 busy', async () => {
+  const gateway = { selfId: '1', sendText: async () => ({ ok: true }), sendMessage: async () => ({ ok: true }) };
+  const chat = createLocalChat({ gateway, dispatch: async () => { await new Promise((r) => setTimeout(r, 80)); }, timeoutMs: 120, maxQueue: 2 });
+  const one = chat.send('一');
+  const two = chat.send('二');
+  const three = await chat.send('三');
+  assert.equal(three.reason, 'busy');
+  await Promise.all([one, two]);
+});

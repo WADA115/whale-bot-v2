@@ -42,6 +42,7 @@ const DEFAULTS = {
       }
     ]
   },
+  vision: { enabled: false, providers: [] },
   healthPort: 3201,
   secretsFile: 'state/secrets.json',
   shadow: { callModels: false }
@@ -143,6 +144,7 @@ export function loadConfig({ configPath = path.join(ROOT, 'config.json') } = {})
     const apiKey = String(process.env[model.apiKeyEnv ?? ''] ?? keyFromSecrets ?? model.apiKey ?? '').trim();
     return { ...model, apiKey };
   });
+  config.vision = config.vision && typeof config.vision === 'object' ? config.vision : {};
   config.vision.providers = (config.vision.providers ?? []).map((provider) => {
     const key = String(
       process.env[provider.apiKeyEnv ?? '']

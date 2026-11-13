@@ -107,23 +107,23 @@ export function createStoryEditor({ store, textRouter, logger = null }) {
     if (!parsed) return null;
     try {
       if (typeof store.apply === 'function') {
-        store.apply(key, parsed, card, Number.isFinite(story.version) ? story.version : null);
+        await store.apply(key, parsed, card, Number.isFinite(story.version) ? story.version : null);
       } else {
-        if (parsed.now) store.writeSection(key, 'now', parsed.now, card);
-        if (parsed.relationship) store.writeSection(key, 'relationship', parsed.relationship, card);
+        if (parsed.now) await store.writeSection(key, 'now', parsed.now, card);
+        if (parsed.relationship) await store.writeSection(key, 'relationship', parsed.relationship, card);
         if (parsed.event?.title) {
-          store.addEpisode(key, parsed.event.title, parsed.event.full || parsed.event.trace || '', parsed.event.trace || parsed.event.full || '', card);
+          await store.addEpisode(key, parsed.event.title, parsed.event.full || parsed.event.trace || '', parsed.event.trace || parsed.event.full || '', card);
         }
         if (parsed.old?.title && parsed.old.trace) {
-          const found = store.findEpisode(key, parsed.old.title);
-          if (found) store.writeTrace(key, found.id, parsed.old.trace, card);
+          const found = await store.findEpisode(key, parsed.old.title);
+          if (found) await store.writeTrace(key, found.id, parsed.old.trace, card);
         }
         if (parsed.chapter?.title) {
-          store.addChapter(key, parsed.chapter.title, parsed.chapter.text, card);
+          await store.addChapter(key, parsed.chapter.title, parsed.chapter.text, card);
         }
       }
       if (personId && parsed.person && (parsed.person.head || parsed.person.middle || parsed.person.tail)) {
-        store.writePerson?.(key, personId, parsed.person, card);
+        await store.writePerson?.(key, personId, parsed.person, card);
       }
     } catch (error) {
       if (error?.code === 'STORY_CONFLICT') {

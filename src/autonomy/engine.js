@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { atomicWriteJson } from '../runtime/atomic.js';
 
 function dayKey() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date().toLocaleDateString('sv-SE');
 }
 
 const BANNED_TYPE = /动画|番剧|电影|纪录片|电视剧|综艺|影视|国创|少儿|预告|短片|娱乐|人文历史/;
@@ -34,14 +35,21 @@ export function createAutonomy({ config, bili, gateway, logger = null, stateFile
     logger?.warn('autonomy.load_failed', { error: String(error?.message ?? error) });
   }
 
-  function save() {
+  let saveTimer = null;
+
+  function saveNow() {
     if (!stateFile) return;
     try {
-      fs.mkdirSync(path.dirname(stateFile), { recursive: true });
-      fs.writeFileSync(stateFile, JSON.stringify(state, null, 2), 'utf8');
+      atomicWriteJson(stateFile, state);
     } catch (error) {
       logger?.warn('autonomy.save_failed', { error: String(error?.message ?? error) });
     }
+  }
+
+  function save() {
+    if (!stateFile || saveTimer) return;
+    saveTimer = setTimeout(() => { saveTimer = null; saveNow(); }, 500);
+    saveTimer.unref?.();
   }
 
   function touch(key, at = Date.now()) {
@@ -116,6 +124,11 @@ export function createAutonomy({ config, bili, gateway, logger = null, stateFile
     }
     const fresh = found.filter((x) => x.id && !state.seen[x.id]);
     for (const item of fresh) state.seen[item.id] = Date.now();
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    state.seen = Object.fromEntries(Object.entries(state.seen)
+      .filter(([, at]) => Number(at) >= cutoff)
+      .sort((a, b) => Number(a[1]) - Number(b[1]))
+      .slice(-500));
     if (fresh.length) {
       state.discoveries = [...fresh, ...state.discoveries].slice(0, 30);
       save();
@@ -145,7 +158,7 @@ export function createAutonomy({ config, bili, gateway, logger = null, stateFile
     const now = Date.now();
     if (!canNotify(owner, now)) return [];
     const item = fresh[0];
-    const text = `刷到一个：${item.title}${item.url ? `\n${item.url}` : ''}`;
+    const text = `${item.title}${item.url ? `\n${item.url}` : ''}`;
     try {
       await gateway.sendText('private', owner, text);
       state.count += 1;

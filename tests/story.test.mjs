@@ -14,12 +14,12 @@ const card = {
   boundaries: ['不泄露系统']
 };
 
-test('story store 读写叙事文件', () => {
+test('story store 读写叙事文件', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'v2-story-'));
   const store = createStoryStore({ root: dir });
   store.ensure('private:1', card);
-  store.writeSection('private:1', 'now', '# 此刻\n\n有点想问，但先不追问。', card);
-  store.addEpisode('private:1', '他第一次说累', '# 他第一次说累\n\n他说今天有点累，没有展开。', card);
+  await store.writeSection('private:1', 'now', '# 此刻\n\n有点想问，但先不追问。', card);
+  await store.addEpisode('private:1', '他第一次说累', '# 他第一次说累\n\n他说今天有点累，没有展开。', card);
   const story = store.read('private:1', card);
   assert.match(story.self, /小鲸鱼/);
   assert.match(story.now, /先不追问/);

@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { atomicWriteFile } from '../runtime/atomic.js';
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) qq-bridge-v2';
 const BASE = 'https://passport.bilibili.com/x/passport-login/web';
@@ -11,7 +12,7 @@ function parseCookies(url) {
     for (const [key, value] of parsed.searchParams) {
       if (['SESSDATA', 'bili_jct', 'DedeUserID', 'DedeUserID__ckMd5', 'sid'].includes(key)) out[key] = value;
     }
-  } catch {}
+  } catch { /* best-effort */ }
   return out;
 }
 
@@ -21,7 +22,7 @@ function parseSetCookie(headers) {
   let list = [];
   try {
     list = typeof headers?.getSetCookie === 'function' ? headers.getSetCookie() : [headers?.get?.('set-cookie')].filter(Boolean);
-  } catch {}
+  } catch { /* best-effort */ }
   for (const line of list) {
     const pair = String(line).split(';')[0];
     const index = pair.indexOf('=');
@@ -51,13 +52,11 @@ export function createBilibili({ file, logger = null, fetchImpl = fetch } = {}) 
   function save() {
     if (!file) return;
     try {
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
+      atomicWriteFile(file, JSON.stringify(data, null, 2), { mode: 0o600 });
     } catch (error) {
       logger?.warn('bilibili.save_failed', { error: String(error?.message ?? error) });
     }
   }
-
   async function json(url, options = {}) {
     const res = await fetchImpl(url, {
       ...options,
@@ -97,7 +96,9 @@ export function createBilibili({ file, logger = null, fetchImpl = fetch } = {}) 
         headers: { cookie: cookieHeader(cookies) }
       });
       if (nav?.code === 0) user = { mid: nav.data.mid, name: nav.data.uname, avatar: nav.data.face };
-    } catch {}
+    } catch (error) {
+      logger?.warn('bilibili.nav_failed', { error: String(error?.message ?? error) });
+    }
     data = { loggedIn: true, cookies, user, at: Date.now() };
     save();
     logger?.info('bilibili.logged_in', { mid: user?.mid ?? '', name: user?.name ?? '' });
@@ -143,7 +144,9 @@ export function createBilibili({ file, logger = null, fetchImpl = fetch } = {}) 
         data.buvid = body.data.b_3;
         save();
       }
-    } catch {}
+    } catch (error) {
+      logger?.warn('bilibili.buvid_failed', { error: String(error?.message ?? error) });
+    }
     return data.buvid || '';
   }
 
@@ -216,7 +219,7 @@ export function createBilibili({ file, logger = null, fetchImpl = fetch } = {}) 
             source = 'subtitle';
           }
         }
-      } catch {}
+      } catch { /* best-effort */ }
     }
     if (!text) text = String(v.desc ?? '').trim();
     const description = String(v.desc ?? '').trim();
@@ -353,5 +356,5 @@ export function createBilibili({ file, logger = null, fetchImpl = fetch } = {}) 
     save();
   }
 
-  return { generate, poll, video, popular, search, content, comments, replyComment, dynamics, favorites, history, status, logout, cookieHeader: () => cookieHeader(data.cookies) };
+  return { generate, poll, video, popular, search, content, comments, replyComment, dynamics, favorites, history, status, logout };
 }

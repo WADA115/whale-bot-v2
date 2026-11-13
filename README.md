@@ -446,8 +446,10 @@ GET /api/metrics        JSON 快照
 
 ```text
 src/app.js                 组合根
-src/runtime/actor-turn.js  actor 回合
-src/http/routes.js         HTTP 路由
+src/runtime/actor-turn.js  actor 编排（231 行）
+src/runtime/actor-*.js     prompt / tools / media / reply 等子模块
+src/http/routes.js         路由分发（121 行）
+src/http/routes/*.js        ops / account / mind / bili / media / config
 src/http/helpers.js        响应 / 配置 / 日志
 src/gateway/onebot.js      OneBot 适配
 src/core/                  actor / policy / router / vision / asr / tts
@@ -456,6 +458,8 @@ src/story/                 叙事状态 / prompt / editor / agency
 src/platform/              B 站
 src/autonomy/              主动发现
 web/next/                  本地工作台
+  app.js                   boot（31 行）
+  render / events / lifecycle / actions 分文件
 tests/                     离线测试
 ```
 
@@ -465,7 +469,13 @@ tests/                     离线测试
 npm test
 ```
 
-当前覆盖：
+当前测试：
+
+```text
+138 pass / 0 fail
+```
+
+覆盖：
 
 ```text
 actor 串行 / 合并 / 队列上限

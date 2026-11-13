@@ -10,31 +10,40 @@ export function json(res, status, payload) {
     'cache-control': 'no-store'
   });
   res.end(body);
+  return true;
 }
 
 export function text(res, status, body, type = 'text/plain; charset=utf-8') {
   res.writeHead(status, { 'content-type': type, 'content-length': Buffer.byteLength(body), 'cache-control': 'no-store' });
   res.end(body);
+  return true;
 }
 export function sendFile(res, file, type) {
   try {
     const body = fs.readFileSync(file);
-    res.writeHead(200, { 'content-type': type, 'content-length': body.length, 'cache-control': 'no-cache' });
+    res.writeHead(200, { 'content-type': type, 'content-length': body.length, 'cache-control': 'no-cache', 'x-content-type-options': 'nosniff' });
     res.end(body);
   } catch {
     json(res, 404, { error: 'not found' });
   }
 }
 
-export function readBody(req) {
+export function readBody(req, maxBytes = 200_000) {
   return new Promise((resolve, reject) => {
-    let raw = '';
+    const chunks = [];
+    let size = 0;
     req.on('data', (chunk) => {
-      raw += chunk;
-      if (raw.length > 200_000) req.destroy();
+      size += chunk.length;
+      if (size > maxBytes) {
+        req.destroy();
+        reject(new Error('body too large'));
+        return;
+      }
+      chunks.push(chunk);
     });
     req.on('end', () => {
-      try { resolve(JSON.parse(raw || '{}')); } catch (error) { reject(error); }
+      try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')); }
+      catch (error) { reject(error); }
     });
     req.on('error', reject);
   });

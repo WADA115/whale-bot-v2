@@ -58,6 +58,12 @@ export class OneBotGateway extends EventEmitter {
     return { id, nickname: String(data?.nickname ?? '') };
   }
 
+  reopen() {
+    this.closed = false;
+    this.reconnectAttempts = 0;
+    this.connect();
+  }
+
   connect() {
     if (this.closed) return;
     const separator = this.wsUrl.includes('?') ? '&' : '?';
@@ -98,7 +104,7 @@ export class OneBotGateway extends EventEmitter {
 
     ws.addEventListener('error', () => {
       this.log?.warn('gateway.socket_error', {});
-      try { ws.close(); } catch {}
+      try { ws.close(); } catch { /* best-effort */ }
     });
   }
 
@@ -118,6 +124,7 @@ export class OneBotGateway extends EventEmitter {
     const userId = String(payload.sender?.user_id ?? payload.user_id ?? '');
     const selfId = String(payload.self_id ?? this.selfId ?? '');
     const segments = Array.isArray(payload.message) ? payload.message : [];
+    const replySegment = segments.find((seg) => seg?.type === 'reply');
     return {
       kind,
       id,
@@ -131,6 +138,7 @@ export class OneBotGateway extends EventEmitter {
       images: segments.filter((seg) => seg?.type === 'image' && (seg?.data?.url || seg?.data?.file)).map((seg) => seg.data),
       voices: segments.filter((seg) => (seg?.type === 'record' || seg?.type === 'voice') && (seg?.data?.url || seg?.data?.file)).map((seg) => seg.data),
       at: atList(payload.message, selfId),
+      replyTo: replySegment?.data?.id ? String(replySegment.data.id) : '',
       senderName: String(payload.sender?.card || payload.sender?.nickname || userId),
       raw: payload
     };
@@ -138,6 +146,17 @@ export class OneBotGateway extends EventEmitter {
 
   isSelf(message) {
     return Boolean(message.selfId && message.userId === message.selfId);
+  }
+
+  async getMessage(messageId) {
+    const data = await this.call('get_msg', { message_id: String(messageId) }, { timeoutMs: 8000 });
+    return {
+      messageId: String(messageId),
+      text: textOf(data?.message),
+      userId: String(data?.sender?.user_id ?? data?.user_id ?? ''),
+      senderName: String(data?.sender?.card || data?.sender?.nickname || data?.sender?.user_id || ''),
+      raw: data
+    };
   }
 
   async getGroupHistory({ groupId, count = 20 } = {}) {
@@ -154,7 +173,9 @@ export class OneBotGateway extends EventEmitter {
     const params = kind === 'group'
       ? { group_id: id, message }
       : { user_id: id, message };
-    return this.call(action, params);
+    const result = await this.call(action, params);
+    this.emit('sent', { kind, id: String(id), segments: message, result });
+    return result;
   }
 
   async getQzoneFeeds({ pageNum = 1, count = 5, cursor = '' } = {}) {
@@ -171,6 +192,6 @@ export class OneBotGateway extends EventEmitter {
     this.closed = true;
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     this.reconnectTimer = null;
-    try { this.ws?.close(); } catch {}
+    try { this.ws?.close(); } catch { /* best-effort */ }
   }
 }

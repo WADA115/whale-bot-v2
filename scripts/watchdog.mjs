@@ -4,12 +4,18 @@ import net from 'node:net';
 import { spawn } from 'node:child_process';
 import { ROOT } from '../src/config.js';
 
-const healthUrl = 'http://127.0.0.1:3201/healthz';
-const lockFile = path.join(ROOT, 'state', 'watchdog.lock');
-const logFile = path.join(ROOT, 'state', 'logs', 'watchdog.log');
-const snowHome = process.env.SNOWLUMA_DIR || 'E:\\新建文件夹 (3)';
-const asrPython = process.env.ASR_PY || 'E:\\AI\\ComfyUI\\venv\\Scripts\\python.exe';
-const asrScript = process.env.ASR_SCRIPT || 'E:\\deepseek_qq.bot\\qq-bridge\\src\\asr-server.py';
+const configFile = process.env.WATCHDOG_CONFIG || path.join(ROOT, 'state', 'watchdog.json');
+let fileConfig = {};
+try { fileConfig = JSON.parse(fs.readFileSync(configFile, 'utf8')); } catch {}
+const healthUrl = process.env.WATCHDOG_HEALTH_URL || fileConfig.healthUrl || 'http://127.0.0.1:3201/healthz';
+const lockFile = process.env.WATCHDOG_LOCK || fileConfig.lockFile || path.join(ROOT, 'state', 'watchdog.lock');
+const logFile = process.env.WATCHDOG_LOG || fileConfig.logFile || path.join(ROOT, 'state', 'logs', 'watchdog.log');
+const v1Root = process.env.QQ_BRIDGE_V1_ROOT || fileConfig.v1Root || path.resolve(ROOT, '..', 'qq-bridge');
+const snowHome = process.env.SNOWLUMA_DIR || fileConfig.snowHome || '';
+const asrPython = process.env.ASR_PY || fileConfig.asrPython || path.join(v1Root, 'venv', 'Scripts', 'python.exe');
+const asrScript = process.env.ASR_SCRIPT || fileConfig.asrScript || path.join(v1Root, 'src', 'asr-server.py');
+const asrCwd = process.env.ASR_CWD || fileConfig.asrCwd || v1Root;
+const v2Root = process.env.WATCHDOG_V2_ROOT || fileConfig.v2Root || ROOT;
 fs.mkdirSync(path.dirname(logFile), { recursive: true });
 
 function log(message) {
@@ -25,20 +31,51 @@ function alive(pid) {
   try { process.kill(Number(pid), 0); return true; } catch { return false; }
 }
 
-const existing = readLock();
-if (existing?.pid && alive(existing.pid) && Number(existing.pid) !== process.pid) {
-  let up = false;
-  try {
-    const res = await fetch(healthUrl, { signal: AbortSignal.timeout(3000) });
-    up = res.ok;
-  } catch {}
-  if (up) {
-    log(`watchdog already running pid=${existing.pid}`);
-    process.exit(0);
+async function claimLock() {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      const fd = fs.openSync(lockFile, 'wx');
+      try { fs.writeFileSync(fd, JSON.stringify({ pid: process.pid, at: Date.now() }), 'utf8'); }
+      finally { fs.closeSync(fd); }
+      return true;
+    } catch (error) {
+      if (error?.code !== 'EEXIST') throw error;
+      const existing = readLock();
+      if (existing?.pid && Number(existing.pid) !== process.pid && alive(existing.pid)) {
+        const age = Date.now() - Number(existing.at || 0);
+        if (age < 60_000) {
+          log(`watchdog starting or running pid=${existing.pid}`);
+          return false;
+        }
+        let up = false;
+        try {
+          const res = await fetch(healthUrl, { signal: AbortSignal.timeout(3000) });
+          up = res.ok;
+        } catch {}
+        if (up) {
+          log(`watchdog already running pid=${existing.pid}`);
+          return false;
+        }
+        log(`stale watchdog lock pid=${existing.pid}: health is down, taking over`);
+      }
+      try { fs.rmSync(lockFile, { force: true }); } catch {}
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
   }
-  log(`stale watchdog lock pid=${existing.pid}: health is down, taking over`);
+  return false;
 }
-fs.writeFileSync(lockFile, JSON.stringify({ pid: process.pid, at: Date.now() }), 'utf8');
+
+if (!await claimLock()) process.exit(0);
+
+if (process.env.WATCHDOG_DRY === '1') {
+  log('watchdog dry hold');
+  await new Promise((resolve) => setTimeout(resolve, Number(process.env.WATCHDOG_HOLD_MS) || 1500));
+  process.exit(0);
+}
+
+function touchLock() {
+  try { fs.writeFileSync(lockFile, JSON.stringify({ pid: process.pid, at: Date.now() }), 'utf8'); } catch {}
+}
 
 function portOpen(port) {
   return new Promise((resolve) => {
@@ -55,7 +92,7 @@ let lastSnowStart = 0;
 let lastAsrStart = 0;
 async function ensureServices() {
   const now = Date.now();
-  if (process.env.GATEWAY_AUTOSTART === '1' && ((!await portOpen(3000)) || (!await portOpen(3001)))) {
+  if (snowHome && process.env.GATEWAY_AUTOSTART === '1' && ((!await portOpen(3000)) || (!await portOpen(3001)))) {
     if (now - lastSnowStart > 20000) {
       lastSnowStart = now;
       log('starting SnowLuma');
@@ -65,20 +102,22 @@ async function ensureServices() {
         stdio: 'ignore',
         windowsHide: true
       });
-      child.unref();
+      child.on('error', (error) => log('child spawn failed: ' + String(error?.message ?? error)));
+  child.unref();
     }
   }
-  if (!await portOpen(3199)) {
+  if (asrPython && asrScript && !await portOpen(3199)) {
     if (now - lastAsrStart > 20000) {
       lastAsrStart = now;
       log('starting ASR');
       const child = spawn(asrPython, [asrScript, '--port', '3199'], {
-        cwd: 'E:\\deepseek_qq.bot\\qq-bridge',
+        cwd: asrCwd,
         detached: true,
         stdio: 'ignore',
         windowsHide: true
       });
-      child.unref();
+      child.on('error', (error) => log('child spawn failed: ' + String(error?.message ?? error)));
+  child.unref();
     }
   }
 }
@@ -94,25 +133,38 @@ async function healthy() {
 
 function startChild() {
   log('starting v2 child');
-  const child = spawn(process.execPath, ['src/index.js'], {
-    cwd: ROOT,
+  const child = spawn(process.execPath, [path.join(v2Root, 'src', 'index.js')], {
+    cwd: v2Root,
     detached: true,
     stdio: 'ignore',
     windowsHide: true,
     env: process.env
   });
+  child.on('error', (error) => log('child spawn failed: ' + String(error?.message ?? error)));
+  child.on('exit', (code) => { if (code && code !== 0) log(`v2 exited code=${code}`); });
   child.unref();
 }
 
 let busy = false;
+let failures = 0;
+let nextStartAt = 0;
 async function tick() {
   if (busy) return;
+  touchLock();
   busy = true;
   try {
     await ensureServices();
     if (!(await healthy())) {
-      log('health check failed');
-      startChild();
+      failures += 1;
+      const delay = Math.min(5 * 60_000, 30_000 * (2 ** Math.min(failures - 1, 4)));
+      if (Date.now() >= nextStartAt) {
+        log(`health check failed (failure ${failures}), next restart in ${Math.round(delay / 1000)}s`);
+        startChild();
+        nextStartAt = Date.now() + delay;
+      }
+    } else {
+      failures = 0;
+      nextStartAt = 0;
     }
   } finally {
     busy = false;

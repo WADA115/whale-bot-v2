@@ -21,9 +21,11 @@ function wait(ms, interrupted) {
   return new Promise((resolve) => {
     const started = Date.now();
     const timer = setInterval(() => {
-      if (interrupted?.() || Date.now() - started >= ms) {
+      let stop = false;
+      try { stop = Boolean(interrupted?.()); } catch { stop = true; }
+      if (stop || Date.now() - started >= ms) {
         clearInterval(timer);
-        resolve(!interrupted?.());
+        resolve(!stop);
       }
     }, 90);
   });
@@ -74,9 +76,25 @@ export async function sendHumanReply({
 
   let stickerSent = false;
   if (sticker && !stopped) {
-    await gateway.sendMessage(kind, id, [{ type: 'image', data: { file: sticker.url } }]);
-    stickerSent = true;
-    logger?.info('expression.sent', { key: `${kind}:${id}`, desc: sticker.desc });
+    const emojiId = String(sticker.md5 || (String(sticker.resId || sticker.id || '').match(/[0-9a-fA-F]{32}/)?.[0]) || '');
+    const segment = String(id) === 'local'
+      ? { type: 'local-sticker', data: { url: sticker.url || '', text: sticker.desc || '[表情]' } }
+      : emojiId
+        ? { type: 'mface', data: { emojiId, emojiPackageId: String(sticker.emojiPackageId || ''), emojiKey: String(sticker.resId || sticker.id || ''), text: sticker.desc || '[表情]' } }
+        : { type: 'image', data: { file: sticker.url } };
+    try {
+      await gateway.sendMessage(kind, id, [segment]);
+      stickerSent = true;
+    } catch (error) {
+      logger?.warn('expression.mface_failed', { error: String(error?.message ?? error) });
+      try {
+        await gateway.sendMessage(kind, id, [{ type: 'image', data: { file: sticker.url } }]);
+        stickerSent = true;
+      } catch (fallbackError) {
+        logger?.warn('expression.fallback_failed', { error: String(fallbackError?.message ?? fallbackError) });
+      }
+    }
+    if (stickerSent) logger?.info('expression.sent', { key: `${kind}:${id}`, desc: sticker.desc });
   }
 
   let voiceSent = false;

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { buildNarrativePrompt } from './prompt.js';
 
 function dayKey() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date().toLocaleDateString('sv-SE');
 }
 
 function pendingPlan(now) {
@@ -45,45 +45,58 @@ export function createStoryAgency({ store, gateway, textRouter, card, getScene, 
     return hour >= Number(config.quietStart ?? 0) && hour < Number(config.quietEnd ?? 8);
   }
 
+  let busy = false;
+
   function canSend(key, now) {
     if (!config.enabled) return false;
     if (quiet()) return false;
     if (state.day !== dayKey()) state = { day: dayKey(), count: 0, sent: {}, lastSentAt: 0 };
     if (state.count >= Number(config.maxPerDay ?? 1)) return false;
     if (now - Number(activity.get(key) || 0) < Number(config.minIdleMinutes ?? 180) * 60_000) return false;
+    if (now - Number(state.sent[key] || 0) < Number(config.minGapMinutes ?? 360) * 60_000) return false;
     if (now - Number(state.lastSentAt || 0) < Number(config.minGapMinutes ?? 360) * 60_000) return false;
     return true;
   }
 
   async function tick() {
-    const now = Date.now();
-    for (const key of activity.keys()) {
-      if (!key.startsWith('private:')) continue;
-      if (!canSend(key, now)) continue;
-      const story = store.read(key, card);
-      const plan = pendingPlan(story.now);
-      if (!plan) continue;
-      const scene = getScene?.(key) ?? {};
-      const prompt = buildNarrativePrompt({
-        card,
-        story,
-        turns: scene.turns ?? [],
-        intent: `按此刻的打算主动说一句，不执行任务：${plan}`,
-        maxChars: Number(config.maxChars || 2500)
-      });
-      try {
-        const result = await textRouter.generate(prompt);
-        const reply = String(result.text ?? '').trim().slice(0, 160);
-        if (!reply) continue;
-        await gateway.sendText('private', key.slice('private:'.length), reply);
-        state.count += 1;
-        state.lastSentAt = now;
-        state.sent[key] = now;
-        save();
-        logger?.info('agency.sent', { key, chars: reply.length });
-      } catch (error) {
-        logger?.warn('agency.failed', { key, error: String(error?.message ?? error) });
+    if (busy) return;
+    busy = true;
+    try {
+      const now = Date.now();
+      for (const key of activity.keys()) {
+        if (!key.startsWith('private:')) continue;
+        if (!canSend(key, now)) continue;
+        const story = store.read(key, card);
+        const plan = pendingPlan(story.now);
+        if (!plan) continue;
+        const planKey = plan.replace(/\s+/g, ' ').trim();
+        if (state.planSent?.[key] === planKey) continue;
+        const scene = getScene?.(key) ?? {};
+        const prompt = buildNarrativePrompt({
+          card,
+          story,
+          turns: scene.turns ?? [],
+          intent: `按此刻的打算主动说一句，不执行任务：${plan}`,
+          maxChars: Number(config.maxChars || 2500)
+        });
+        try {
+          const result = await textRouter.generate(prompt);
+          const reply = String(result.text ?? '').trim().slice(0, 160);
+          if (!reply) continue;
+          const delivered = await gateway.sendText('private', key.slice('private:'.length), reply);
+          if (delivered?.ok === false) continue;
+          state.count += 1;
+          state.lastSentAt = now;
+          state.sent[key] = now;
+          state.planSent = { ...(state.planSent || {}), [key]: planKey };
+          save();
+          logger?.info('agency.sent', { key, chars: reply.length });
+        } catch (error) {
+          logger?.warn('agency.failed', { key, error: String(error?.message ?? error) });
+        }
       }
+    } finally {
+      busy = false;
     }
   }
 

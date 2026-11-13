@@ -93,7 +93,7 @@ export function createKnowledge({ dbPath, topK = 4, logger = null } = {}) {
   }
 
   function close() {
-    try { db?.close(); } catch {}
+    try { db?.close(); } catch { /* best-effort */ }
     db = null;
   }
   return { search, close };

@@ -15,10 +15,10 @@ function tempStore() {
   return store;
 }
 
-test('人物 U 型：头部、中部、尾部可读写', () => {
+test('人物 U 型：头部、中部、尾部可读写', async () => {
   const store = tempStore();
   assert.deepEqual(store.readPerson('private:1', '20002'), { id: '20002', head: '', middle: '', tail: '' });
-  store.writePerson('private:1', '20002', {
+  await store.writePerson('private:1', '20002', {
     head: '他嘴硬，但答应的事会做。',
     middle: '他今天突然道歉了，不像他。',
     tail: '他今天很累，可能不想说话。'
@@ -27,15 +27,15 @@ test('人物 U 型：头部、中部、尾部可读写', () => {
   assert.match(person.head, /嘴硬/);
   assert.match(person.middle, /道歉/);
   assert.match(person.tail, /很累/);
-  store.forgetPerson('private:1', '20002');
+  await store.forgetPerson('private:1', '20002');
   assert.equal(store.readPerson('private:1', '20002').head, '');
 });
 
-test('人物不跨群共享', () => {
+test('人物不跨群共享', async () => {
   const store = tempStore();
   store.ensure('group:1', { name: '小鲸鱼', identity: '鱼' });
-  store.writePerson('private:1', '20002', { head: '私聊里的他' });
-  store.writePerson('group:1', '20002', { head: '群里的他' });
+  await store.writePerson('private:1', '20002', { head: '私聊里的他' });
+  await store.writePerson('group:1', '20002', { head: '群里的他' });
   assert.match(store.readPerson('private:1', '20002').head, /私聊/);
   assert.match(store.readPerson('group:1', '20002').head, /群里/);
 });
@@ -69,7 +69,7 @@ test('prompt 带人物 U 型和通报', () => {
 
 test('Editor 写人物尾部，不覆盖头部', async () => {
   const store = tempStore();
-  store.writePerson('private:1', '20002', { head: '他嘴硬，但会做事' });
+  await store.writePerson('private:1', '20002', { head: '他嘴硬，但会做事' });
   const editor = createStoryEditor({
     store,
     textRouter: {

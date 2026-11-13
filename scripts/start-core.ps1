@@ -3,6 +3,9 @@ $v2 = Split-Path -Parent $PSScriptRoot
 $v1 = Join-Path (Split-Path -Parent $v2) 'qq-bridge'
 $localPaths = Join-Path $PSScriptRoot 'local.paths.ps1'
 if (Test-Path $localPaths) { . $localPaths }
+if ($env:COSYVOICE_DIR -and (Test-Path $env:COSYVOICE_DIR)) {
+  try { Remove-Item -LiteralPath $env:COSYVOICE_DIR -Recurse -Force -ErrorAction SilentlyContinue } catch {}
+}
 $maintenance = Join-Path $v2 'state\maintenance.flag'
 $log = Join-Path $v2 'state\logs\core.log'
 
@@ -26,8 +29,14 @@ if (-not (Get-NetTCPConnection -LocalPort 3199 -State Listen -ErrorAction Silent
   }
 }
 
+if (-not (Get-NetTCPConnection -LocalPort 9881 -State Listen -ErrorAction SilentlyContinue)) {
+  if ($env:RVC_SERVER_SCRIPT -and $env:RVC_PYTHON -and (Test-Path $env:RVC_SERVER_SCRIPT)) {
+    $rvcDir = if ($env:RVC_DIR) { $env:RVC_DIR } else { Split-Path -Parent $env:RVC_SERVER_SCRIPT }
+    Start-Process -FilePath $env:RVC_PYTHON -ArgumentList @($env:RVC_SERVER_SCRIPT, '--port', '9881', '--model', 'atri_e20_s700.pth', '--device', 'cuda') -WorkingDirectory $rvcDir -WindowStyle Hidden
+  }
+}
 if (-not (Get-NetTCPConnection -LocalPort 11434 -State Listen -ErrorAction SilentlyContinue)) {
-  $ollama = 'E:\ollama\app\ollama.exe'
+  $ollama = if ($env:OLLAMA_EXE) { $env:OLLAMA_EXE } else { Join-Path (Split-Path -Parent $v2) 'ollama\app\ollama.exe' }
   if (Test-Path $ollama) {
     Write-Log 'starting Ollama'
     Start-Process -FilePath $ollama -ArgumentList 'serve' -WindowStyle Hidden
@@ -36,6 +45,13 @@ if (-not (Get-NetTCPConnection -LocalPort 11434 -State Listen -ErrorAction Silen
   }
 }
 
+if (-not (Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue)) {
+  $gateway = Join-Path $PSScriptRoot 'start-gateway.ps1'
+  if (Test-Path $gateway) {
+    Write-Log 'starting gateway'
+    Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $gateway) -WindowStyle Hidden
+  }
+}
 $listener = Get-NetTCPConnection -LocalPort 3201 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($listener) {
   Write-Log 'v2 already listening'
